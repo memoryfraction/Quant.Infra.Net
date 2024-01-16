@@ -4,7 +4,8 @@ using System.Text;
 
 namespace Quant.Infra.Net.Services
 {
-    internal class AccountService
+    public class AccountService
     {
+
     }
 }

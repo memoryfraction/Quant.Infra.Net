@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Quant.Infra.Net.Services
 {
-    internal class OrderService
+    public class OrderService: IOrderService
     {
     }
 }

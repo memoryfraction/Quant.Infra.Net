@@ -1,10 +1,11 @@
 ﻿using AutoMapper;
-using Quant.Infra.Net.Models;
+using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.SourceData.Model;
 using System;
 using System.Threading.Tasks;
 using YahooFinanceApi;
 
-namespace Quant.Infra.Net.Services
+namespace Quant.Infra.Net.SourceData.Service
 {
     public class SourceDataService : ISourceDataService
     {
@@ -16,12 +17,12 @@ namespace Quant.Infra.Net.Services
         }
 
 
-        public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Models.Period Period = Models.Period.Daily)
+        public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Shared.Model.Period Period = Shared.Model.Period.Daily)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<Ohlcvs> GetOhlcvsAsync(string symbol, DateTime startDt, DateTime endDt, Models.Period period = Models.Period.Daily, DataSource dataSource = DataSource.YahooFinance)
+        public async Task<Ohlcvs> GetOhlcvsAsync(string symbol, DateTime startDt, DateTime endDt, Shared.Model.Period period = Shared.Model.Period.Daily, DataSource dataSource = DataSource.YahooFinance)
         {
             var ohlcvs = new Ohlcvs();
             var yahooFinancePeriod = _mapper.Map<YahooFinanceApi.Period>(period);

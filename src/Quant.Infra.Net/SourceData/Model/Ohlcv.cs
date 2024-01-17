@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Quant.Infra.Net.Models
+namespace Quant.Infra.Net.SourceData.Model
 {
     public class Ohlcv
     {

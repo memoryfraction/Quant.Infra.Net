@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Quant.Infra.Net.Services
+namespace Quant.Infra.Net.Order.Model
 {
-    public class NotificationService
+    public class Order
     {
-
     }
 }

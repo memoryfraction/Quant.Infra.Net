@@ -6,6 +6,8 @@ namespace Quant.Infra.Net.Tests
     [TestClass]
     public class YahooFinanceApiUnitTests
     {
+
+
         [TestMethod]
         public async Task GetDailyData_Should_Work()
         {

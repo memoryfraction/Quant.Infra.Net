@@ -21,3 +21,27 @@ Period: daily, weekly, monthly
 首先实现支持Binance，可以支持更多的交易所
 
 
+
+
+
+# Quant.Infra.Net
+## Introduction
+Quant backtesting and real-time infrastructure, the common types of a project usually include: notification module, order management module, account management module, data source module. Convenient for unified calling and maintenance.
+
+### Data source module SourceDataService
+#### YahooFinance data source
+Including but not limited to: U.S. stock stock data, options data, mainstream digital currency data
+Data format: Open, High, Low, Close, Adj Close
+Period: daily, weekly, monthly
+
+
+## Notification module
+### DingTalk
+
+### Enterprise WeChat
+
+## Order management module
+First, support Binance, which can support more exchanges.
+
+## Account management module
+First, support Binance, which can support more exchanges.

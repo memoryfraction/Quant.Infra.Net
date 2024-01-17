@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text;
 
-namespace Quant.Infra.Net.Models
+namespace Quant.Infra.Net.Shared.Model
 {
     public enum Period
     {
@@ -23,7 +23,8 @@ namespace Quant.Infra.Net.Models
         Tick
     }
 
-    public enum DataSource { 
+    public enum DataSource
+    {
         YahooFinance
     }
 }

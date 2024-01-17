@@ -1,9 +1,10 @@
-﻿using Quant.Infra.Net.Models;
+﻿using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.SourceData.Model;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Quant.Infra.Net.Services
+namespace Quant.Infra.Net.SourceData.Service
 {
     /// <summary>
     /// 原始数据接口， 同步原始数据;
@@ -20,6 +21,6 @@ namespace Quant.Infra.Net.Services
         /// <returns></returns>
         Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Period Period = Period.Daily);
 
-        Task<Ohlcvs> GetOhlcvsAsync( string symbol, DateTime startDt, DateTime endDt, Period Period = Period.Daily, DataSource dataSource = DataSource.YahooFinance);
+        Task<Ohlcvs> GetOhlcvsAsync(string symbol, DateTime startDt, DateTime endDt, Period Period = Period.Daily, DataSource dataSource = DataSource.YahooFinance);
     }
 }

@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Quant.Infra.Net.Models;
+using Quant.Infra.Net.SourceData.Model;
 using YahooFinanceApi;
 
 namespace Quant.Infra.Net
@@ -9,7 +9,7 @@ namespace Quant.Infra.Net
         public MappingProfile()
         {
             // 添加其他映射信息
-            CreateMap<Models.Period, YahooFinanceApi.Period>().ReverseMap();
+            CreateMap<Shared.Model.Period, YahooFinanceApi.Period>().ReverseMap();
             CreateMap<Candle, Ohlcv>().ReverseMap();
         }
     }

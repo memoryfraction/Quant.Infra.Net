@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.Extensions.DependencyInjection;
-using Quant.Infra.Net.Services;
+using Quant.Infra.Net.SourceData.Service;
 using System;
 
 namespace Quant.Infra.Net.Tests

@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Quant.Infra.Net.Shared.Model;
 
-namespace Quant.Infra.Net.Models
+namespace Quant.Infra.Net.SourceData.Model
 {
     public class Ohlcvs
     {

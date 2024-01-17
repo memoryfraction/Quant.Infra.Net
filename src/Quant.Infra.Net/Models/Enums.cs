@@ -22,4 +22,8 @@ namespace Quant.Infra.Net.Models
         [EnumMember(Value = "t")]
         Tick
     }
+
+    public enum DataSource { 
+        YahooFinance
+    }
 }

@@ -1,13 +1,25 @@
-﻿using System;
+﻿using Quant.Infra.Net.Models;
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Services
 {
+    /// <summary>
+    /// 原始数据接口， 同步原始数据;
+    /// </summary>
     public interface ISourceDataService
     {
-        Task BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt);
+        /// <summary>
+        /// 开始同步数据，在指定路径形成数据文件， 返回Ohlcvs
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="startDt"></param>
+        /// <param name="endDt"></param>
+        /// <param name="Period"></param>
+        /// <returns></returns>
+        Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Period Period = Period.Daily);
 
-
-             
+        Task<Ohlcvs> GetOhlcvsAsync( string symbol, DateTime startDt, DateTime endDt, Period Period = Period.Daily, DataSource dataSource = DataSource.YahooFinance);
     }
 }

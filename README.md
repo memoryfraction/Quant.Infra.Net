@@ -6,6 +6,7 @@ Quant回测、实盘的基础设施， 一个项目的通用类型通常包括�
 #### YahooFinance数据源
 包括但不限于：美股正股数据，期权数据，主流数字货币数据
 数据格式: Open, High, Low, Close, Adj Close
+
 Period: daily, weekly, monthly
 
 
@@ -32,6 +33,7 @@ Quant backtesting and real-time infrastructure, the common types of a project us
 #### YahooFinance data source
 Including but not limited to: U.S. stock stock data, options data, mainstream digital currency data
 Data format: Open, High, Low, Close, Adj Close
+
 Period: daily, weekly, monthly
 
 

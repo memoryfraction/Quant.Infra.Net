@@ -23,7 +23,7 @@ namespace Quant.Infra.Net.Tests
         {
             // 依赖注入
             _services = new ServiceCollection();
-            _services.AddScoped<INotificationService, DingtalkService>();
+            _services.AddScoped<IDingtalkService, DingtalkService>();
 
             // Read Secret
             _configuration = new ConfigurationBuilder()
@@ -41,7 +41,7 @@ namespace Quant.Infra.Net.Tests
         {
             using (var sp = _services.BuildServiceProvider())
             {
-                var dingtalkService = sp.GetRequiredService<INotificationService>();
+                var dingtalkService = sp.GetRequiredService<IDingtalkService>();
                 var response = await dingtalkService.SendNotificationAsync("test123", _accessToken, _secret);
                 Console.WriteLine(response.Content);
                 Assert.IsTrue(response.StatusCode == System.Net.HttpStatusCode.OK);

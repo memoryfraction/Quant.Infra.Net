@@ -9,13 +9,11 @@ namespace Quant.Infra.Net.SourceData.Service
 {
     public class SourceDataService : ISourceDataService
     {
-        private bool _isBusy;
         private readonly IMapper _mapper;
         public SourceDataService(IMapper mapper)
         {
             _mapper = mapper;
         }
-
 
         public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Shared.Model.Period Period = Shared.Model.Period.Daily)
         {

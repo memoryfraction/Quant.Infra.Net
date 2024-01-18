@@ -29,7 +29,7 @@ namespace Quant.Infra.Net.Tests
             _configuration = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                .AddJsonFile("appsettings.json")
-               .AddUserSecrets<DingTalkTests>()
+               .AddUserSecrets<BinanceTests>()
                .Build();
 
             _apiKey = _configuration["CryptoExchange:apiKey"];

@@ -9,21 +9,20 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Tests
 {
-
     [TestClass]
-    public  class DingTalkTests
+    public class NotificationTests
     {
-
         // IOC
         private ServiceCollection _services;
-        private string _accessToken, _secret;
+        private string _wechatWebHook;
         private IConfigurationRoot _configuration;
 
-        public DingTalkTests()
+        public NotificationTests()
         {
             // 依赖注入
             _services = new ServiceCollection();
             _services.AddScoped<IDingtalkService, DingtalkService>();
+            _services.AddScoped<IWeChatService, WeChatService>();
 
             // Read Secret
             _configuration = new ConfigurationBuilder()
@@ -32,21 +31,20 @@ namespace Quant.Infra.Net.Tests
                .AddUserSecrets<DingTalkTests>()
                .Build();
 
-            _accessToken = _configuration["DingDing:accessToken"];
-            _secret = _configuration["DingDing:secret"];
+            _wechatWebHook = _configuration["WeChatRobotWebHook"];
+           
         }
-
         [TestMethod]
-        public async Task TestMethod()
+        public async Task SendWeChatRobotNotification_Should_Work()
         {
             using (var sp = _services.BuildServiceProvider())
             {
-                var dingtalkService = sp.GetRequiredService<IDingtalkService>();
-                var response = await dingtalkService.SendNotificationAsync("test123", _accessToken, _secret);
-                Console.WriteLine(response.Content);
-                Assert.IsTrue(response.StatusCode == System.Net.HttpStatusCode.OK);
+                var weChatService = sp.GetRequiredService<IWeChatService>();
+                var response = await weChatService.SendNotificationAsync("this is a test message from Quant.Infra.Net Unit Test.", _wechatWebHook);
+                Console.WriteLine($"ErrorMessage:{response.ErrorMessage}");
+                Console.WriteLine($"Status:{response.StatusCode}");
+                Assert.IsTrue(response.IsSuccessful);
             }
         }
-
     }
 }

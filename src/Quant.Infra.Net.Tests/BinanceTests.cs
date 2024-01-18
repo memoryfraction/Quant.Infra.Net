@@ -23,7 +23,7 @@ namespace Quant.Infra.Net.Tests
         public BinanceTests() {
             // 依赖注入
             _services = new ServiceCollection();
-            _services.AddScoped<INotificationService, DingtalkService>();
+            _services.AddScoped<IDingtalkService, DingtalkService>();
 
             // Read Secret
             _configuration = new ConfigurationBuilder()

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Notification.Service
 {
-    public class DingtalkService : INotificationService
+    public class DingtalkService : IDingtalkService
     {
         public async Task<RestResponse> SendNotificationAsync(string content, string accessToken, string secret)
         {

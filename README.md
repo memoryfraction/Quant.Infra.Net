@@ -13,7 +13,7 @@ Period: daily, weekly, monthly
 ## 通知模块
 ### 钉钉
 
-### 企业微信
+### 微信群聊机器人
 
 ## 订单管理模块
 首先实现支持Binance，可以支持更多的交易所
@@ -40,7 +40,7 @@ Period: daily, weekly, monthly
 ## Notification module
 ### DingTalk
 
-### Enterprise WeChat
+### WeChat Group chat Robot
 
 ## Order management module
 First, support Binance, which can support more exchanges.

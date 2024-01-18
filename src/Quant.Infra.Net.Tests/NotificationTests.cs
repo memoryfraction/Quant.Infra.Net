@@ -40,7 +40,7 @@ namespace Quant.Infra.Net.Tests
             using (var sp = _services.BuildServiceProvider())
             {
                 var weChatService = sp.GetRequiredService<IWeChatService>();
-                var response = await weChatService.SendNotificationAsync("this is a test message from Quant.Infra.Net Unit Test.", _wechatWebHook);
+                var response = await weChatService.SendTextNotificationAsync("this is a test message from Quant.Infra.Net Unit Test.", _wechatWebHook);
                 Console.WriteLine($"ErrorMessage:{response.ErrorMessage}");
                 Console.WriteLine($"Status:{response.StatusCode}");
                 Assert.IsTrue(response.IsSuccessful);

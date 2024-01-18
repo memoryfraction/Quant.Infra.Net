@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Notification.Service;
+using Quant.Infra.Net.Order.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,13 +18,15 @@ namespace Quant.Infra.Net.Tests
 
         // IOC
         private ServiceCollection _services;
-        private string _apiKey, _apiSecret, _email;
+        private string _apiKey, _apiSecret;
         private IConfigurationRoot _configuration;
+        private ServiceProvider _serviceProvider;
 
         public BinanceTests() {
             // 依赖注入
             _services = new ServiceCollection();
             _services.AddScoped<IDingtalkService, DingtalkService>();
+            _services.AddScoped<IBinanceOrderService, BinanceOrderService>();
 
             // Read Secret
             _configuration = new ConfigurationBuilder()
@@ -31,10 +34,12 @@ namespace Quant.Infra.Net.Tests
                .AddJsonFile("appsettings.json")
                .AddUserSecrets<BinanceTests>()
                .Build();
+            _services.AddSingleton<IConfiguration>(_configuration);
+
+            _serviceProvider = _services.BuildServiceProvider();
 
             _apiKey = _configuration["CryptoExchange:apiKey"];
             _apiSecret = _configuration["CryptoExchange:apiSecret"];
-            _email = _configuration["CryptoExchange:email"];
         }
 
 
@@ -145,7 +150,19 @@ namespace Quant.Infra.Net.Tests
         #endregion
 
 
-        #region Order
+        #region Order Management
+        [TestMethod]
+        public async Task GetAllOpenOrderAsync_Should_Work()
+        {
+            // arrange
+
+            // act
+            var binanceOrderService = _serviceProvider.GetRequiredService<IBinanceOrderService>();
+            var openOrders = await binanceOrderService.GetAllSpotOpenOrdersAsync();
+
+            // assert
+            Assert.IsNotNull(openOrders);
+        }
 
         #endregion 
     }

@@ -17,19 +17,21 @@ namespace Quant.Infra.Net.Order.Service
     public class BinanceOrderService : IBinanceOrderService
     {
 
-        private readonly string _apiKey, _apiSecret;
+        private string _apiKey, _apiSecret;
         public BinanceOrderService(IConfiguration configuration)
         {
             _apiKey    = configuration["CryptoExchange:apiKey"]; 
             _apiSecret = configuration["CryptoExchange:apiSecret"];
-        }
 
-        public async Task<BinanceOrderBase> CancelSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3)
-        {
             Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
             {
                 options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
             });
+        }
+
+      
+        public async Task<BinanceOrderBase> CancelSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3)
+        {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var result = await ExecuteWithRetry(() => client.SpotApi.Trading.CancelOrderAsync(symbol, orderId), retryAttempts);
@@ -40,10 +42,6 @@ namespace Quant.Infra.Net.Order.Service
 
         public async Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, decimal quantity, OrderSide side, SpotOrderType type, decimal? price = null, int retryCount = 3)
         {
-            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
-            {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
-            });
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, side, type, quantity, price: price), retryCount);
@@ -53,10 +51,6 @@ namespace Quant.Infra.Net.Order.Service
 
         public async Task<IEnumerable<BinanceOrder>> GetAllSpotOpenOrdersAsync(string symbol=null, int retryAttempts = 3)
         {
-            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
-            {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
-            });
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var result = await ExecuteWithRetry(() => client.SpotApi.Trading.GetOpenOrdersAsync(symbol),retryAttempts);
@@ -66,10 +60,6 @@ namespace Quant.Infra.Net.Order.Service
 
         public async Task<BinanceOrder> GetSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3)
         {
-            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
-            {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
-            });
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var result = await ExecuteWithRetry(() => client.SpotApi.Trading.GetOrderAsync(symbol,orderId), retryAttempts);
@@ -88,6 +78,12 @@ namespace Quant.Infra.Net.Order.Service
                 var result = await ExecuteWithRetry(() => client.SpotApi.Trading.ReplaceOrderAsync(symbol:symbol, side:side, type:type,cancelOrderId: cancelOrderId, cancelReplaceMode: cancelReplaceMode), retryAttempts);
                 return result.Data;
             }
+        }
+
+        public void SetBinanceCredential(string apiKey, string apiSecret)
+        {
+            _apiKey = apiKey;
+            _apiSecret = apiSecret;
         }
 
         private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, int retryCount)

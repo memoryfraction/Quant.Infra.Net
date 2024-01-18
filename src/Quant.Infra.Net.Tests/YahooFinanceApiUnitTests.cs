@@ -13,7 +13,7 @@ namespace Quant.Infra.Net.Tests
         {
             // 设置时间范围（过去1年）
             var toDate = DateTime.UtcNow;
-            var fromDate = toDate.AddYears(-1);
+            var fromDate = toDate.AddMonths(-1);
 
             // 创建一个标的（BTC/USD）并请求历史数据
             var symbol = "BTC-USD";

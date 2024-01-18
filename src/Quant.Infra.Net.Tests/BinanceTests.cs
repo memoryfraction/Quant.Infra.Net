@@ -3,12 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Notification.Service;
 using Quant.Infra.Net.Order.Service;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using YahooFinanceApi;
 
 namespace Quant.Infra.Net.Tests
 {

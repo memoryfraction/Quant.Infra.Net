@@ -14,7 +14,7 @@ namespace Quant.Infra.Net.Tests
     {
         // IOC
         private ServiceCollection _services;
-        private string _wechatWebHook;
+        private string _wechatWebHook, _dingTalkAccessToken,_dingTalkSecret;
         private IConfigurationRoot _configuration;
 
         public NotificationTests()
@@ -28,11 +28,14 @@ namespace Quant.Infra.Net.Tests
             _configuration = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                .AddJsonFile("appsettings.json")
-               .AddUserSecrets<DingTalkTests>()
+               .AddUserSecrets<NotificationTests>()
                .Build();
 
-            _wechatWebHook = _configuration["WeChatRobotWebHook"];
-           
+            _wechatWebHook = _configuration["Notification:WeChatRobotWebHook"];
+
+            _dingTalkAccessToken = _configuration["DingTalk:accessToken"];
+            _dingTalkSecret = _configuration["DingTalk:secret"];
+
         }
         [TestMethod]
         public async Task SendWeChatRobotNotification_Should_Work()
@@ -44,6 +47,18 @@ namespace Quant.Infra.Net.Tests
                 Console.WriteLine($"ErrorMessage:{response.ErrorMessage}");
                 Console.WriteLine($"Status:{response.StatusCode}");
                 Assert.IsTrue(response.IsSuccessful);
+            }
+        }
+
+        [TestMethod]
+        public async Task DingTalkSendNotification_Should_Work()
+        {
+            using (var sp = _services.BuildServiceProvider())
+            {
+                var dingtalkService = sp.GetRequiredService<IDingtalkService>();
+                var response = await dingtalkService.SendNotificationAsync("test123", _dingTalkAccessToken, _dingTalkSecret);
+                Console.WriteLine(response.Content);
+                Assert.IsTrue(response.StatusCode == System.Net.HttpStatusCode.OK);
             }
         }
     }

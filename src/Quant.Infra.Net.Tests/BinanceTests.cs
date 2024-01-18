@@ -37,6 +37,9 @@ namespace Quant.Infra.Net.Tests
             _email = _configuration["CryptoExchange:email"];
         }
 
+
+        #region Account
+
         [TestMethod]
         public async Task GetBinanceAccountSpotBalance_Should_Work()
         {
@@ -139,7 +142,11 @@ namespace Quant.Infra.Net.Tests
             }
         }
 
+        #endregion
 
 
+        #region Order
+
+        #endregion 
     }
 }

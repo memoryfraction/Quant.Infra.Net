@@ -29,11 +29,11 @@ namespace Quant.Infra.Net.Tests
         
 
         [TestMethod]
-        public void GetOhlcvs_Should_Work()
+        public void DownloadOhlcvListAsync_Should_Work()
         {
             var mapper = _serviceProvider.GetRequiredService<IMapper>();
             var sourceDataService = _serviceProvider.GetRequiredService<ISourceDataService>();
-            var ohlcvs = sourceDataService.GetOhlcvsAsync("BTC-USD", DateTime.UtcNow.AddYears(-1), DateTime.UtcNow).Result;
+            var ohlcvs = sourceDataService.DownloadOhlcvListAsync("BTC-USD", DateTime.UtcNow.AddYears(-1), DateTime.UtcNow).Result;
             Assert.IsNotNull(ohlcvs);
             Assert.IsTrue(ohlcvs.OhlcvList.Any());
         }

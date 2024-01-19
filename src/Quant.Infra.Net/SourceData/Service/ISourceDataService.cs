@@ -21,6 +21,10 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <returns></returns>
         Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Period Period = Period.Daily);
 
-        Task<Ohlcvs> GetOhlcvsAsync(string symbol, DateTime startDt, DateTime endDt, Period Period = Period.Daily, DataSource dataSource = DataSource.YahooFinance);
+        Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Period Period = Period.Daily, DataSource dataSource = DataSource.YahooFinance);
+
+        Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFilename);
+
+        Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName);
     }
 }

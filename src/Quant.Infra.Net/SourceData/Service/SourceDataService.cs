@@ -31,7 +31,7 @@ namespace Quant.Infra.Net.SourceData.Service
         {
             var ohlcvs = new Ohlcvs();
             var yahooFinancePeriod = _mapper.Map<YahooFinanceApi.Period>(period);
-            var candles = await Yahoo.GetHistoricalAsync(symbol, startDt, endDt, yahooFinancePeriod); // Daily, Weekly, Monthly
+            IEnumerable<Candle> candles = await Yahoo.GetHistoricalAsync(symbol, startDt, endDt, yahooFinancePeriod); // Daily, Weekly, Monthly
             foreach (var candle in candles)
             {
                 var ohlcv = _mapper.Map<Ohlcv>(candle);

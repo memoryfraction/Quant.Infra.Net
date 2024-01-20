@@ -1,4 +1,4 @@
-﻿namespace Quant.Infra.Net
+namespace Quant.Infra.Net
 {
     public class Order
     {

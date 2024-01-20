@@ -9,6 +9,7 @@ namespace Quant.Infra.Net
 {
     /// <summary>
     /// 传入参数，负责与订单相关的操作。 比如: 增加订单，获取所有订单，取消订单等
+    /// Pass in parameters and be responsible for order-related operations. For example: add orders, get all orders, cancel orders, etc.
     /// </summary>
     public interface IBinanceOrderService
     {
@@ -20,6 +21,7 @@ namespace Quant.Infra.Net
         
         /// <summary>
         /// 允许手工设定apiKey和apiSecret
+        /// Allow to set apiKey and apiSecret manually
         /// </summary>
         /// <param name="apiKey"></param>
         /// <param name="apiSecret"></param>

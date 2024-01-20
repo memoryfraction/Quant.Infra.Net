@@ -22,7 +22,6 @@ namespace Quant.Infra.Net.SourceData.Service
             _mapper = mapper;
         }
 
-
         public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Shared.Model.Period Period = Shared.Model.Period.Daily)
         {
             throw new NotImplementedException();

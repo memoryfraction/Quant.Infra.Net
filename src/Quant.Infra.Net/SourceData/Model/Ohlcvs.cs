@@ -1,7 +1,6 @@
-﻿using System;
+﻿using Quant.Infra.Net.Shared.Model;
+using System;
 using System.Collections.Generic;
-using System.Text;
-using Quant.Infra.Net.Shared.Model;
 
 namespace Quant.Infra.Net.SourceData.Model
 {

@@ -1,4 +1,5 @@
-﻿using Binance.Net.Enums;
+﻿using AutoMapper;
+using Binance.Net.Enums;
 using Binance.Net.Objects.Models;
 using Binance.Net.Objects.Models.Spot;
 using CryptoExchange.Net.Authentication;
@@ -9,16 +10,18 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Quant.Infra.Net.Order.Service
+
+namespace Quant.Infra.Net
 {
     public class BinanceOrderService : IBinanceOrderService
     {
-
         private string _apiKey, _apiSecret;
-        public BinanceOrderService(IConfiguration configuration)
+        private readonly IMapper _mapper;
+        public BinanceOrderService(IConfiguration configuration, IMapper mapper)
         {
             _apiKey    = configuration["CryptoExchange:apiKey"]; 
             _apiSecret = configuration["CryptoExchange:apiSecret"];
+            _mapper = mapper;
 
             Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
             {
@@ -37,11 +40,13 @@ namespace Quant.Infra.Net.Order.Service
         }
 
 
-        public async Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, decimal quantity, OrderSide side, SpotOrderType type, decimal? price = null, int retryCount = 3)
+        public async Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, decimal quantity, OrderSide orderSide, SpotOrderType spotOrderType, decimal? price = null, int retryCount = 3)
         {
+            var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
+            var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(spotOrderType);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, side, type, quantity, price: price), retryCount);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, binanceOrderSide, binanceOrderType, quantity, price: price), retryCount);
                 return result.Data;
             }
         }
@@ -64,15 +69,14 @@ namespace Quant.Infra.Net.Order.Service
             }
         }
 
-        public async Task<BinanceReplaceOrderResult> ReplaceSpotOrderAsync(string symbol, OrderSide side, SpotOrderType type, CancelReplaceMode cancelReplaceMode, long? cancelOrderId = null, string? cancelClientOrderId = null, string? newCancelClientOrderId = null, string? newClientOrderId = null, decimal? quantity = null, decimal? quoteQuantity = null, decimal? price = null, TimeInForce? timeInForce = null, decimal? stopPrice = null, decimal? icebergQty = null, OrderResponseType? orderResponseType = null, int? trailingDelta = null, int? strategyId = null, int? strategyType = null, CancelRestriction? cancelRestriction = null, int? receiveWindow = null, CancellationToken ct = default(CancellationToken), int retryAttempts = 3)
+        public async Task<BinanceReplaceOrderResult> ReplaceSpotOrderAsync(string symbol, OrderSide orderSide, SpotOrderType orderType, CancelReplaceMode cancelReplaceMode, long? cancelOrderId = null, string? cancelClientOrderId = null, string? newCancelClientOrderId = null, string? newClientOrderId = null, decimal? quantity = null, decimal? quoteQuantity = null, decimal? price = null, TimeInForce? timeInForce = null, decimal? stopPrice = null, decimal? icebergQty = null, OrderResponseType? orderResponseType = null, int? trailingDelta = null, int? strategyId = null, int? strategyType = null, CancelRestriction? cancelRestriction = null, int? receiveWindow = null, CancellationToken ct = default(CancellationToken), int retryAttempts = 3)
         {
-            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
-            {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
-            });
+            var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
+            var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(orderType);
+            var binanceCancelReplaceMode = _mapper.Map<Binance.Net.Enums.CancelReplaceMode>(cancelReplaceMode);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.ReplaceOrderAsync(symbol:symbol, side:side, type:type,cancelOrderId: cancelOrderId, cancelReplaceMode: cancelReplaceMode), retryAttempts);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.ReplaceOrderAsync(symbol:symbol, side: binanceOrderSide, type: binanceOrderType, cancelOrderId: cancelOrderId, cancelReplaceMode: binanceCancelReplaceMode), retryAttempts);
                 return result.Data;
             }
         }

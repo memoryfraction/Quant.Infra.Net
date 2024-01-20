@@ -1,8 +1,7 @@
-﻿using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Notification.Service;
-using Quant.Infra.Net.Order.Service;
 
 namespace Quant.Infra.Net.Tests
 {

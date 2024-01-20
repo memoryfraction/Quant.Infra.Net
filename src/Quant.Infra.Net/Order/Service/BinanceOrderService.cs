@@ -2,13 +2,10 @@
 using Binance.Net.Objects.Models;
 using Binance.Net.Objects.Models.Spot;
 using CryptoExchange.Net.Authentication;
-using CryptoExchange.Net.CommonObjects;
 using Microsoft.Extensions.Configuration;
 using Polly;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Quant.Infra.Net.SourceData.Model
 {
@@ -16,7 +14,7 @@ namespace Quant.Infra.Net.SourceData.Model
 
         public decimal Close { get; set; }
 
-        public long Volume { get; set; }
+        public decimal Volume { get; set; }
 
         public decimal AdjustedClose { get; set; }
     }

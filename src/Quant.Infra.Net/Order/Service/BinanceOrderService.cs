@@ -40,13 +40,13 @@ namespace Quant.Infra.Net
         }
 
 
-        public async Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, decimal quantity, OrderSide orderSide, SpotOrderType spotOrderType, decimal? price = null, int retryCount = 3)
+        public async Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, OrderSide orderSide, SpotOrderType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3)
         {
             var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
             var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(spotOrderType);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, binanceOrderSide, binanceOrderType, quantity, price: price), retryCount);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, binanceOrderSide, binanceOrderType, quantity: quantity, price: price, quoteQuantity:quoteQuantity), retryCount);
                 return result.Data;
             }
         }
@@ -93,6 +93,10 @@ namespace Quant.Infra.Net
             return await policy.ExecuteAsync(operation);
         }
 
-
+        public Task<IEnumerable<BinanceOrderBase>> CancelAllOrdersAsync(string symbol, int retryAttempts = 3)
+        {
+            // todo 
+            throw new NotImplementedException();
+        }
     }
 }

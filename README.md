@@ -22,7 +22,9 @@ Period: daily, weekly, monthly
 首先实现支持Binance，可以支持更多的交易所
 
 ## 版本
+
 V1.0.0 20240121
+
 Binance订单服务已经实现(增、删、改、查)， 钉钉、微信通知已经实现，YahooFinance Api的金融数据已经实现
 
 

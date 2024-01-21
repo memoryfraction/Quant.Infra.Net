@@ -21,13 +21,16 @@ Period: daily, weekly, monthly
 ## 账户管理模块
 首先实现支持Binance，可以支持更多的交易所
 
+## 版本
+V1.0.0 20240121
+Binance订单服务已经实现(增、删、改、查)， 钉钉、微信通知已经实现，YahooFinance Api的金融数据已经实现
 
 
 
 
 # Quant.Infra.Net
 ## Introduction
-Quant backtesting and real-time infrastructure, the common types of a project usually include: notification module, order management module, account management module, data source module. Convenient for unified calling and maintenance.
+Quant backtesting and real-time infrastructure, the common types of a project usually include notification module, order management module, account management module, data source module. Convenient for unified calling and maintenance.
 
 ### Data source module SourceDataService
 #### YahooFinance data source
@@ -47,3 +50,7 @@ First, support Binance, which can support more exchanges.
 
 ## Account management module
 First, support Binance, which can support more exchanges.
+
+## Version
+V1.0.0 20240121
+Binance order services have been implemented (add, delete, modify, check), DingTalk and WeChat notifications have been implemented, and YahooFinance Api’s financial data has been implemented

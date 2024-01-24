@@ -1,6 +1,7 @@
 ﻿using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.SourceData.Service
@@ -25,5 +26,6 @@ namespace Quant.Infra.Net.SourceData.Service
         Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFilename);
 
         Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName);
+
     }
 }

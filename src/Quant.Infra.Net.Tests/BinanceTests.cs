@@ -1,3 +1,4 @@
+using AutoMapper;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,12 +28,20 @@ namespace Quant.Infra.Net.Tests
                .AddJsonFile("appsettings.json")
                .AddUserSecrets<BinanceTests>()
                .Build();
+
             _services.AddSingleton<IConfiguration>(_configuration);
-
+            _services.AddSingleton<IMapper>(sp =>
+            {
+                var autoMapperConfiguration = new MapperConfiguration(cfg =>
+                {
+                    cfg.AddProfile<MappingProfile>();
+                });
+                return new Mapper(autoMapperConfiguration);
+            });
             _serviceProvider = _services.BuildServiceProvider();
-
-            _apiKey = _configuration["CryptoExchange:apiKey"];
-            _apiSecret = _configuration["CryptoExchange:apiSecret"];
+            
+            _apiKey = _configuration["Exchange:apiKey"];
+            _apiSecret = _configuration["Exchange:apiSecret"];
         }
 
 
@@ -151,6 +160,7 @@ namespace Quant.Infra.Net.Tests
 
             // act
             var binanceOrderService = _serviceProvider.GetRequiredService<IBinanceOrderService>();
+            binanceOrderService.SetBinanceCredential(_apiKey, _apiSecret);
             var openOrders = await binanceOrderService.GetAllSpotOpenOrdersAsync();
 
             // assert

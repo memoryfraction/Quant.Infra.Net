@@ -27,9 +27,8 @@ namespace Quant.Infra.Net.Tests
                .Build();
 
             _wechatWebHook = _configuration["Notification:WeChatRobotWebHook"];
-
-            _dingTalkAccessToken = _configuration["DingTalk:accessToken"];
-            _dingTalkSecret = _configuration["DingTalk:secret"];
+            _dingTalkAccessToken = _configuration["Notification:DingTalk:accessToken"];
+            _dingTalkSecret = _configuration["Notification:DingTalk:secret"];
 
         }
         [TestMethod]

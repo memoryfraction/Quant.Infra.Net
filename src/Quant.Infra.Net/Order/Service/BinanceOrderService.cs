@@ -3,7 +3,6 @@ using Binance.Net.Enums;
 using Binance.Net.Objects.Models;
 using Binance.Net.Objects.Models.Spot;
 using CryptoExchange.Net.Authentication;
-using Microsoft.Extensions.Configuration;
 using Polly;
 using System;
 using System.Collections.Generic;
@@ -17,16 +16,16 @@ namespace Quant.Infra.Net
     {
         private string _apiKey, _apiSecret;
         private readonly IMapper _mapper;
-        public BinanceOrderService(IConfiguration configuration, IMapper mapper)
+        public BinanceOrderService(IMapper mapper)
         {
-            _apiKey    = configuration["CryptoExchange:apiKey"]; 
-            _apiSecret = configuration["CryptoExchange:apiSecret"];
+            //_apiKey    = configuration["Exchange:apiKey"]; 
+            //_apiSecret = configuration["Exchange:apiSecret"];
             _mapper = mapper;
 
-            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
-            {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
-            });
+            //Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            //{
+            //    options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            //});
         }
 
       
@@ -85,6 +84,11 @@ namespace Quant.Infra.Net
         {
             _apiKey = apiKey;
             _apiSecret = apiSecret;
+
+            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
         }
 
         private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, int retryCount)

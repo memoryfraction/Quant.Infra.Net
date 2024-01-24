@@ -11,8 +11,9 @@ namespace Quant.Infra.Net
     /// 传入参数，负责与订单相关的操作。 比如: 增加订单，获取所有订单，取消订单等
     /// Pass in parameters and be responsible for order-related operations. For example: add orders, get all orders, cancel orders, etc.
     /// </summary>
-    public interface IBinanceOrderService
+    public interface IBinanceService
     {
+        Task<IEnumerable<string>> GetAllSymbolsAsync();
         Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, OrderSide orderSide, SpotOrderType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3);
         Task<BinanceOrder> GetSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3);
         Task<IEnumerable<BinanceOrder>> GetAllSpotOpenOrdersAsync(string symbol = null, int retryAttempts = 3);

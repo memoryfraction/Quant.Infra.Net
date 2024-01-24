@@ -6,17 +6,18 @@ using CryptoExchange.Net.Authentication;
 using Polly;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 
 namespace Quant.Infra.Net
 {
-    public class BinanceOrderService : IBinanceOrderService
+    public class BinanceService : IBinanceService
     {
         private string _apiKey, _apiSecret;
         private readonly IMapper _mapper;
-        public BinanceOrderService(IMapper mapper)
+        public BinanceService(IMapper mapper)
         {
             //_apiKey    = configuration["Exchange:apiKey"]; 
             //_apiSecret = configuration["Exchange:apiSecret"];
@@ -97,10 +98,23 @@ namespace Quant.Infra.Net
             return await policy.ExecuteAsync(operation);
         }
 
-        public Task<IEnumerable<BinanceOrderBase>> CancelAllOrdersAsync(string symbol, int retryAttempts = 3)
+        public async Task<IEnumerable<BinanceOrderBase>> CancelAllOrdersAsync(string symbol, int retryAttempts = 3)
         {
-            // todo 
-            throw new NotImplementedException();
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                var ordersResponse = await client.SpotApi.Trading.CancelAllOrdersAsync(symbol);
+                return ordersResponse.Data;
+            }
+        }
+
+        public async Task<IEnumerable<string>> GetAllSymbolsAsync()
+        {
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                var exchangeInfo = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
+                var symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
+                return symbols;
+            }
         }
     }
 }

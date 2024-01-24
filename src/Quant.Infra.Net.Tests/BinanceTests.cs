@@ -20,7 +20,7 @@ namespace Quant.Infra.Net.Tests
             // 依赖注入
             _services = new ServiceCollection();
             _services.AddScoped<IDingtalkService, DingtalkService>();
-            _services.AddScoped<IBinanceOrderService, BinanceOrderService>();
+            _services.AddScoped<IBinanceService, BinanceService>();
 
             // Read Secret
             _configuration = new ConfigurationBuilder()
@@ -159,7 +159,7 @@ namespace Quant.Infra.Net.Tests
             // arrange
 
             // act
-            var binanceOrderService = _serviceProvider.GetRequiredService<IBinanceOrderService>();
+            var binanceOrderService = _serviceProvider.GetRequiredService<IBinanceService>();
             binanceOrderService.SetBinanceCredential(_apiKey, _apiSecret);
             var openOrders = await binanceOrderService.GetAllSpotOpenOrdersAsync();
 

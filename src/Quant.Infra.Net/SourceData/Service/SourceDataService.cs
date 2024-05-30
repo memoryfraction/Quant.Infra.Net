@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Quant.Infra.Net.Shared.Service;
 using YahooFinanceApi;
+using Flurl.Util;
 
 namespace Quant.Infra.Net.SourceData.Service
 {
@@ -81,5 +82,6 @@ namespace Quant.Infra.Net.SourceData.Service
             using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
             await csv.WriteRecordsAsync(ohlcvList);
         }
+
     }
 }

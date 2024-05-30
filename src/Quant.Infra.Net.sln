@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34408.163
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Quant.Infra.Net.Tests", "Quant.Infra.Net.Tests\Quant.Infra.Net.Tests.csproj", "{51FE4E76-EBC7-4CAD-920F-9E9184C8381A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Quant.Infra.Net", "Quant.Infra.Net\Quant.Infra.Net.csproj", "{70E19226-664D-495E-A609-AE8ECC266F26}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{51FE4E76-EBC7-4CAD-920F-9E9184C8381A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51FE4E76-EBC7-4CAD-920F-9E9184C8381A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51FE4E76-EBC7-4CAD-920F-9E9184C8381A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51FE4E76-EBC7-4CAD-920F-9E9184C8381A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70E19226-664D-495E-A609-AE8ECC266F26}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70E19226-664D-495E-A609-AE8ECC266F26}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70E19226-664D-495E-A609-AE8ECC266F26}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70E19226-664D-495E-A609-AE8ECC266F26}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {32161C17-D81E-4AF5-A8E8-D9C05F8E7808}
+	EndGlobalSection
+EndGlobal

@@ -24,4 +24,27 @@ namespace Quant.Infra.Net.Shared.Model
     {
         YahooFinance
     }
+
+
+    public enum OrderAction
+    {
+        Buy,
+        Sell
+    }
+
+    public enum OrderType
+    {
+        Market,
+        Limit
+    }
+
+    public enum ContractSecurityType
+    {
+        Stock
+    }
+
+    public enum Currency
+    {
+        USD
+    }
 }

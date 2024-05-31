@@ -3,10 +3,12 @@ using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Notification.Service;
+using System.Runtime.Serialization;
 
 namespace Quant.Infra.Net.Tests
 {
     [TestClass]
+    [Ignore] // Binance blocks IP from China and US
     public class BinanceTests
     {
 

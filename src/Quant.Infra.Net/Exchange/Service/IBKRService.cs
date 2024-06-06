@@ -15,44 +15,56 @@ namespace Quant.Infra.Net.Exchange.Service
         public IBKRService(IMapper mapper)
         {
             _mapper = mapper;
-            if(_client == null)
-                _client = InterReactClient.ConnectAsync().Result;
         }
 
-        public Task PlaceMarketOrderAsync(
-            Order order, string exchange = "SMART", 
+        public async Task<int> PlaceOrderAsync(
+            OrderAbstract order, 
+            string exchange = "SMART", 
             Quant.Infra.Net.Shared.Model.ContractSecurityType securityType = Quant.Infra.Net.Shared.Model.ContractSecurityType.Stock, 
             Quant.Infra.Net.Shared.Model.Currency currency = Quant.Infra.Net.Shared.Model.Currency.USD
             )
         {
             // https://github.com/dshe/InterReact/blob/master/InterReact.Tests/SystemTests/Orders/PlaceOrderTests.cs
 
-            return Task.Run(() =>
+            _client = await InterReactClient.ConnectAsync();
+            InterReact.Contract interReactContract = new()
             {
-                // Your existing code...
+                SecurityType = InterReact.ContractSecurityType.Stock,
+                Symbol = order.Symbol,
+                Currency = currency.ToString(),
+                Exchange = exchange
+            };
 
-                InterReact.Contract interReactContract = new()
+            int orderId = _client.Request.GetNextId();
+            InterReact.Order interReactOrder = new InterReact.Order();
+            if (order.OrderType == Quant.Infra.Net.OrderType.Limit)
+            {
+                interReactOrder = new()
                 {
-                    SecurityType = InterReact.ContractSecurityType.Stock,
-                    Symbol = "AMZN",
-                    Currency = "USD",
-                    Exchange = "SMART"
+                    Action = order.OrderSide.ToString(),
+                    TotalQuantity = order.Quantity == null ? 0 : order.Quantity.Value,
+                    OrderType = OrderTypes.Limit,
+                    LimitPrice = order.Price == null ? 0.0: (double)order.Price.Value,
+                    OutsideRegularTradingHours = true // 允许盘前盘后成交
                 };
-
-                int orderId = _client.Request.GetNextId();
-
-                InterReact.Order interReactOrder = new()
+            }
+            else if (order.OrderType == Quant.Infra.Net.OrderType.Market)
+            {
+                interReactOrder = new InterReact.Order()
                 {
-                    //todo need change
-                    Action = OrderAction.Buy,
-                    TotalQuantity = 100,
-                    OrderType = OrderTypes.Market
+                    Action = order.OrderSide.ToString(),
+                    TotalQuantity = order.Quantity == null ? 0.0m : order.Quantity.Value, // 需要测试结果;
+                    OrderType = OrderTypes.Market,
+                    OutsideRegularTradingHours = true // 允许盘前盘后成交
                 };
-
-                _client.Request.PlaceOrder(orderId, interReactOrder, interReactContract);
-            });
-
- 
+            }
+            else
+            {
+                throw new ArgumentException("Invalid order type");
+            }
+            _client.Request.PlaceOrder(orderId, interReactOrder, interReactContract);
+            await _client.DisposeAsync();
+            return orderId;
         }
 
         

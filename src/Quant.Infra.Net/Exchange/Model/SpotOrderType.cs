@@ -1,6 +1,6 @@
 ﻿namespace Quant.Infra.Net
 {
-    public enum SpotOrderType
+    public enum OrderType
     {
         /// <summary>
         /// Limit orders will be placed at a specific price. If the price isn't available in the order book for that asset the order will be added in the order book for someone to fill.

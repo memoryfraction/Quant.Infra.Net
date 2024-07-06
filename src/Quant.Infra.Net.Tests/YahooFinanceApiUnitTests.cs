@@ -6,8 +6,6 @@ namespace Quant.Infra.Net.Tests
     [TestClass]
     public class YahooFinanceApiUnitTests
     {
-
-
         [TestMethod]
         public async Task GetDailyData_Should_Work()
         {
@@ -15,8 +13,8 @@ namespace Quant.Infra.Net.Tests
             var toDate = DateTime.UtcNow;
             var fromDate = toDate.AddMonths(-1);
 
-            // 创建一个标的（BTC/USD）并请求历史数据
-            var symbol = "BTC-USD";
+            // 创建一个标的 VOO并请求历史数据
+            var symbol = "VOO";
             var candles = await Yahoo.GetHistoricalAsync(symbol, fromDate, toDate, Period.Daily); // Daily, Weekly, Monthly
 
             // 访问OHLCV数据

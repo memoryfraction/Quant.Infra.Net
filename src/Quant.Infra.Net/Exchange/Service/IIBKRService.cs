@@ -1,4 +1,5 @@
-﻿using Quant.Infra.Net.Shared.Model;
+﻿using Quant.Infra.Net.Exchange.Model.InteractiveBroker;
+using Quant.Infra.Net.Shared.Model;
 using System.Threading.Tasks;
 
 
@@ -10,7 +11,7 @@ namespace Quant.Infra.Net.Exchange.Service
     public interface IIBKRService
     {
         // 获取账户信息
-
+        public Task<AccountSummaryIBKR> GetAccountSummaryAsync();
 
         #region Orders
         /// <summary>
@@ -26,11 +27,11 @@ namespace Quant.Infra.Net.Exchange.Service
         // Task<Order> GetOrderAsync(int orderId);
 
         // Task<IEnumerable<Order>> GetOrdersAsync(IEnumerable<int> orderIds);
-       
+
         #endregion
 
         // 获取持仓信息
-
+        public Task<PositionIBKR> GetPositionAsync();
 
         // 获取历史数据
 

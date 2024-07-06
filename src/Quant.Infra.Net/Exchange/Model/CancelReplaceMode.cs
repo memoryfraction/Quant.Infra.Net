@@ -1,6 +1,4 @@
-﻿using CryptoExchange.Net.Attributes;
-
-namespace Quant.Infra.Net
+﻿namespace Quant.Infra.Net
 {
     public enum CancelReplaceMode
     {

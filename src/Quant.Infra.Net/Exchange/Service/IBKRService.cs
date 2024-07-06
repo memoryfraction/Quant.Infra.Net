@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using InterReact;
+using Quant.Infra.Net.Exchange.Model.InteractiveBroker;
 using System;
 using System.Threading.Tasks;
 
@@ -15,6 +16,20 @@ namespace Quant.Infra.Net.Exchange.Service
         public IBKRService(IMapper mapper)
         {
             _mapper = mapper;
+        }
+
+
+        public Task<AccountSummaryIBKR> GetAccountSummaryAsync()
+        {
+            // Todo GetAccountSummaryAsync
+            throw new NotImplementedException();
+        }
+
+
+        public Task<PositionIBKR> GetPositionAsync()
+        {
+            // Todo GetPositionAsync
+            throw new NotImplementedException();
         }
 
         public async Task<int> PlaceOrderAsync(
@@ -66,7 +81,6 @@ namespace Quant.Infra.Net.Exchange.Service
             await _client.DisposeAsync();
             return orderId;
         }
-
         
 
     }

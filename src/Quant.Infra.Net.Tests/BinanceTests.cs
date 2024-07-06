@@ -1,11 +1,14 @@
+using AutoMapper;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Notification.Service;
+using System.Runtime.Serialization;
 
 namespace Quant.Infra.Net.Tests
 {
     [TestClass]
+    [Ignore] // Binance blocks IP from China and US
     public class BinanceTests
     {
 
@@ -19,7 +22,7 @@ namespace Quant.Infra.Net.Tests
             // 依赖注入
             _services = new ServiceCollection();
             _services.AddScoped<IDingtalkService, DingtalkService>();
-            _services.AddScoped<IBinanceOrderService, BinanceOrderService>();
+            _services.AddScoped<IBinanceService, BinanceService>();
 
             // Read Secret
             _configuration = new ConfigurationBuilder()
@@ -27,12 +30,20 @@ namespace Quant.Infra.Net.Tests
                .AddJsonFile("appsettings.json")
                .AddUserSecrets<BinanceTests>()
                .Build();
+
             _services.AddSingleton<IConfiguration>(_configuration);
-
+            _services.AddSingleton<IMapper>(sp =>
+            {
+                var autoMapperConfiguration = new MapperConfiguration(cfg =>
+                {
+                    cfg.AddProfile<MappingProfile>();
+                });
+                return new Mapper(autoMapperConfiguration);
+            });
             _serviceProvider = _services.BuildServiceProvider();
-
-            _apiKey = _configuration["CryptoExchange:apiKey"];
-            _apiSecret = _configuration["CryptoExchange:apiSecret"];
+            
+            _apiKey = _configuration["Exchange:apiKey"];
+            _apiSecret = _configuration["Exchange:apiSecret"];
         }
 
 
@@ -150,7 +161,8 @@ namespace Quant.Infra.Net.Tests
             // arrange
 
             // act
-            var binanceOrderService = _serviceProvider.GetRequiredService<IBinanceOrderService>();
+            var binanceOrderService = _serviceProvider.GetRequiredService<IBinanceService>();
+            binanceOrderService.SetBinanceCredential(_apiKey, _apiSecret);
             var openOrders = await binanceOrderService.GetAllSpotOpenOrdersAsync();
 
             // assert

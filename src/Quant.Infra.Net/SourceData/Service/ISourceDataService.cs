@@ -26,5 +26,6 @@ namespace Quant.Infra.Net.SourceData.Service
         Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFilename);
 
         Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName);
+
     }
 }

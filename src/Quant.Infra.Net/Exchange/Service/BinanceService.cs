@@ -3,30 +3,30 @@ using Binance.Net.Enums;
 using Binance.Net.Objects.Models;
 using Binance.Net.Objects.Models.Spot;
 using CryptoExchange.Net.Authentication;
-using Microsoft.Extensions.Configuration;
 using Polly;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 
 namespace Quant.Infra.Net
 {
-    public class BinanceOrderService : IBinanceOrderService
+    public class BinanceService : IBinanceService
     {
         private string _apiKey, _apiSecret;
         private readonly IMapper _mapper;
-        public BinanceOrderService(IConfiguration configuration, IMapper mapper)
+        public BinanceService(IMapper mapper)
         {
-            _apiKey    = configuration["CryptoExchange:apiKey"]; 
-            _apiSecret = configuration["CryptoExchange:apiSecret"];
+            //_apiKey    = configuration["Exchange:apiKey"]; 
+            //_apiSecret = configuration["Exchange:apiSecret"];
             _mapper = mapper;
 
-            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
-            {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
-            });
+            //Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            //{
+            //    options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            //});
         }
 
       
@@ -40,13 +40,13 @@ namespace Quant.Infra.Net
         }
 
 
-        public async Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, decimal quantity, OrderSide orderSide, SpotOrderType spotOrderType, decimal? price = null, int retryCount = 3)
+        public async Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, OrderSide orderSide, SpotOrderType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3)
         {
             var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
             var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(spotOrderType);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, binanceOrderSide, binanceOrderType, quantity, price: price), retryCount);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, binanceOrderSide, binanceOrderType, quantity: quantity, price: price, quoteQuantity:quoteQuantity), retryCount);
                 return result.Data;
             }
         }
@@ -85,6 +85,11 @@ namespace Quant.Infra.Net
         {
             _apiKey = apiKey;
             _apiSecret = apiSecret;
+
+            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
         }
 
         private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, int retryCount)
@@ -93,6 +98,23 @@ namespace Quant.Infra.Net
             return await policy.ExecuteAsync(operation);
         }
 
+        public async Task<IEnumerable<BinanceOrderBase>> CancelAllOrdersAsync(string symbol, int retryAttempts = 3)
+        {
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                var ordersResponse = await client.SpotApi.Trading.CancelAllOrdersAsync(symbol);
+                return ordersResponse.Data;
+            }
+        }
 
+        public async Task<IEnumerable<string>> GetAllSymbolsAsync()
+        {
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                var exchangeInfo = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
+                var symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
+                return symbols;
+            }
+        }
     }
 }

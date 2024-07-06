@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Notification.Service;
 using System.Globalization;
+using Quant.Infra.Net.Shared.Service;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -165,56 +166,11 @@ namespace Quant.Infra.Net.Tests
             var fullPathFileName = Path.Combine(path, fileName);
             var endDt = DateTime.Now;
             var startDt = endDt.AddYears(-5);
-            await SaveKlinesToCsv(symbol, interval, startDt,endDt,fullPathFileName);
+            await UtilityService.SaveOhlcvsToCsv(symbol, interval, startDt,endDt,fullPathFileName);
         }
 
 
-        public async Task SaveKlinesToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName)
-        {
-            // 确保路径存在
-            var directory = Path.GetDirectoryName(fullPathFileName);
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-            if (File.Exists(fullPathFileName))
-                File.Delete(fullPathFileName);
-            using (var client = new BinanceRestClient())
-            {
-                var klinesResult = await client.SpotApi.ExchangeData.GetKlinesAsync(symbol, interval, startDt, endDt); // 获取历史K线数据
-
-                // Save klinesResult to fullPathFileName using csvHelper
-                if (klinesResult.Success)
-                {
-                    using (var writer = new StreamWriter(fullPathFileName))
-                    using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)))
-                    {
-                        // Write header
-                        csv.WriteHeader<Kline>();
-                        csv.NextRecord();
-
-                        foreach (var line in klinesResult.Data)
-                        {
-                            csv.WriteRecord(new Kline
-                            {
-                                DateTime = line.OpenTime,
-                                Open = line.OpenPrice,
-                                High = line.HighPrice,
-                                Low = line.LowPrice,
-                                Close = line.ClosePrice,
-                                Volume = line.Volume
-                            });
-                            csv.NextRecord();
-                        }
-                    }
-                    Console.WriteLine($"Klines data saved successfully for {symbol}.");
-                }
-                else
-                {
-                    Console.WriteLine($"Error: {klinesResult.Error}");
-                }
-            }
-        }
+        
 
         #endregion
 

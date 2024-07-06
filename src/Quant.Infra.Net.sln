@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Quant.Infra.Net.Tests", "Qu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Quant.Infra.Net", "Quant.Infra.Net\Quant.Infra.Net.csproj", "{70E19226-664D-495E-A609-AE8ECC266F26}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InterReact", "..\..\InterReact\InterReact\InterReact.csproj", "{BCF5E66E-D727-46FA-9B9B-E32D7D11C614}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{70E19226-664D-495E-A609-AE8ECC266F26}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{70E19226-664D-495E-A609-AE8ECC266F26}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{70E19226-664D-495E-A609-AE8ECC266F26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCF5E66E-D727-46FA-9B9B-E32D7D11C614}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCF5E66E-D727-46FA-9B9B-E32D7D11C614}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCF5E66E-D727-46FA-9B9B-E32D7D11C614}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCF5E66E-D727-46FA-9B9B-E32D7D11C614}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,14 +1,19 @@
 using AutoMapper;
+using Binance.Net.Clients;
 using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.CommonObjects;
+using CsvHelper.Configuration;
+using CsvHelper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Notification.Service;
-using System.Runtime.Serialization;
+using System.Globalization;
+using Quant.Infra.Net.Shared.Service;
 
 namespace Quant.Infra.Net.Tests
 {
     [TestClass]
-    [Ignore] // Binance blocks IP from China and US
+    //[Ignore] // Binance blocks IP from China and US
     public class BinanceTests
     {
 
@@ -150,6 +155,22 @@ namespace Quant.Infra.Net.Tests
                 Assert.IsTrue(symbolList.Data.Symbols.Count() > 0);
             }
         }
+
+        [TestMethod]
+        public async Task SaveKlinesToCsv()
+        {
+            var symbol = "BTCUSDT";
+            var path = AppDomain.CurrentDomain.BaseDirectory + "\\data\\spot\\";
+            var interval = Binance.Net.Enums.KlineInterval.OneDay; // 时间间隔为一天
+            var fileName = $"{symbol}.cvs";
+            var fullPathFileName = Path.Combine(path, fileName);
+            var endDt = DateTime.Now;
+            var startDt = endDt.AddYears(-5);
+            await UtilityService.SaveOhlcvsToCsv(symbol, interval, startDt,endDt,fullPathFileName);
+        }
+
+
+        
 
         #endregion
 

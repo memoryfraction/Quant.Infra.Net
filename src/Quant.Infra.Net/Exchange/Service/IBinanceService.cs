@@ -14,11 +14,11 @@ namespace Quant.Infra.Net
     public interface IBinanceService
     {
         Task<IEnumerable<string>> GetAllSymbolsAsync();
-        Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, OrderSide orderSide, SpotOrderType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3);
+        Task<BinancePlacedOrder> CreateSpotOrderAsync(string symbol, OrderSide orderSide, OrderType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3);
         Task<BinanceOrder> GetSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3);
         Task<IEnumerable<BinanceOrder>> GetAllSpotOpenOrdersAsync(string symbol = null, int retryAttempts = 3);
         Task<BinanceOrderBase> CancelSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3);
-        Task<BinanceReplaceOrderResult> ReplaceSpotOrderAsync(string symbol, OrderSide side, SpotOrderType type, CancelReplaceMode cancelReplaceMode, long? cancelOrderId = null, string? cancelClientOrderId = null, string? newCancelClientOrderId = null, string? newClientOrderId = null, decimal? quantity = null, decimal? quoteQuantity = null, decimal? price = null, TimeInForce? timeInForce = null, decimal? stopPrice = null, decimal? icebergQty = null, OrderResponseType? orderResponseType = null, int? trailingDelta = null, int? strategyId = null, int? strategyType = null, CancelRestriction? cancelRestriction = null, int? receiveWindow = null, CancellationToken ct = default(CancellationToken), int retryAttempts = 3);
+        Task<BinanceReplaceOrderResult> ReplaceSpotOrderAsync(string symbol, OrderSide side, OrderType type, CancelReplaceMode cancelReplaceMode, long? cancelOrderId = null, string? cancelClientOrderId = null, string? newCancelClientOrderId = null, string? newClientOrderId = null, decimal? quantity = null, decimal? quoteQuantity = null, decimal? price = null, TimeInForce? timeInForce = null, decimal? stopPrice = null, decimal? icebergQty = null, OrderResponseType? orderResponseType = null, int? trailingDelta = null, int? strategyId = null, int? strategyType = null, CancelRestriction? cancelRestriction = null, int? receiveWindow = null, CancellationToken ct = default(CancellationToken), int retryAttempts = 3);
         Task<IEnumerable<BinanceOrderBase>> CancelAllOrdersAsync(string symbol, int retryAttempts = 3);
 
         /// <summary>

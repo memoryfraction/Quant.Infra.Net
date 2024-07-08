@@ -20,4 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\InterReact\InterReact\InterReact.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Analysis\" />
+  </ItemGroup>
 </Project>

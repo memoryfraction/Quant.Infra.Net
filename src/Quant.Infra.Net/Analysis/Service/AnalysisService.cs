@@ -32,7 +32,7 @@ namespace Quant.Infra.Net.Analysis.Service
         /// 0.05 - 显著
         /// 0.1  - 较显著
         /// </remarks>
-        public bool PerformADFTest(double[] timeSeries, double threshold = 0.05)
+        public bool AugmentedDickeyFullerTest(double[] timeSeries, double threshold = 0.05)
         {
             // Ensure the input time series is not null or empty
             if (timeSeries == null || timeSeries.Length == 0)

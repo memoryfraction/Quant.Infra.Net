@@ -3,6 +3,7 @@ using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearRegression;
 using MathNet.Numerics.Statistics;
 using System;
+using System.Linq;
 
 namespace Quant.Infra.Net.Analysis.Service
 {
@@ -110,6 +111,14 @@ namespace Quant.Infra.Net.Analysis.Service
             {
                 return false;
             }
+        }
+
+        public double[] CalculateZScores(double[] data)
+        {
+            double mean = data.Average();
+            double stdDev = Math.Sqrt(data.Average(v => Math.Pow(v - mean, 2)));
+
+            return data.Select(x => (x - mean) / stdDev).ToArray();
         }
     }
 }

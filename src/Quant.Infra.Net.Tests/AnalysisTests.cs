@@ -43,7 +43,7 @@ namespace Quant.Infra.Net.Tests
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            bool isStationary = _analysisService.PerformADFTest(stationarySeries,0.05);
+            bool isStationary = _analysisService.AugmentedDickeyFullerTest(stationarySeries,0.05);
 
             // Assert
             Assert.AreEqual(true, isStationary);
@@ -57,7 +57,7 @@ namespace Quant.Infra.Net.Tests
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            bool isStationary = _analysisService.PerformADFTest(nonStationarySeries, 0.05);
+            bool isStationary = _analysisService.AugmentedDickeyFullerTest(nonStationarySeries, 0.05);
 
             // Assert
             Assert.AreEqual(false, isStationary);
@@ -168,5 +168,22 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(false, isNormal);
         }
 
+        [TestMethod]
+        public void CalculateZScores_ShouldReturnCorrectZScores()
+        {
+            // Arrange
+            double[] data = { 1, 2, 3, 4, 5 };
+            double[] expectedZScores = { -1.414213562, -0.707106781, 0, 0.707106781, 1.414213562 };
+
+            // Act
+            var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
+            double[] actualZScores = _analysisService.CalculateZScores(data);
+
+            // Assert
+            CollectionAssert.AreEqual(expectedZScores, actualZScores, new DoubleComparer());
+        }
+
     }
+
+    
 }

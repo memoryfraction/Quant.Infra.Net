@@ -1,3 +1,4 @@
+﻿using Microsoft.Extensions.DependencyInjection;
 ﻿using AutoMapper;
 using Flurl.Util;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,15 +17,6 @@ namespace Quant.Infra.Net.Tests
         public AnalysisTests()
         {
             ServiceCollection _serviceCollection = new ServiceCollection();
-            // Register the Automapper to container
-            _serviceCollection.AddSingleton<IMapper>(sp =>
-            {
-                var autoMapperConfiguration = new MapperConfiguration(cfg =>
-                {
-                    cfg.AddProfile<MappingProfile>();
-                });
-                return new Mapper(autoMapperConfiguration);
-            });
             _serviceCollection.AddScoped<ISourceDataService, SourceDataService>();
             _serviceCollection.AddScoped<IAnalysisService, AnalysisService>();
             _serviceCollection.AddScoped<UtilityService>();
@@ -149,6 +141,34 @@ namespace Quant.Infra.Net.Tests
 
             // Open the generated image using the default program
             Process.Start(new ProcessStartInfo(fullPathFilename) { UseShellExecute = true });
+        }
+
+        [TestMethod]
+        public void NormalDistributionTest_Should_Work()
+        {
+            // Arrange
+            double[] normalDistribution = { 10.0, 12.0, 11.0, 13.0, 10.5, 12.5, 11.5, 13.5, 10.2, 12.2, 11.2, 13.2 };
+
+            // Act
+            var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
+            bool isNormal = _analysisService.PerformShapiroWilkTest(normalDistribution, 0.05);
+
+            // Assert
+            Assert.AreEqual(true, isNormal);
+        }
+
+        [TestMethod]
+        public void NonNormalDistributionTest_Should_Work()
+        {
+            // Arrange
+            double[] nonNormalDistribution = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000 };
+
+            // Act
+            var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
+            bool isNormal = _analysisService.PerformShapiroWilkTest(nonNormalDistribution, 0.05);
+
+            // Assert
+            Assert.AreEqual(false, isNormal);
         }
 
     }

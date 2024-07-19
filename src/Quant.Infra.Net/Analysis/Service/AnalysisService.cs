@@ -1,4 +1,5 @@
-﻿using MathNet.Numerics.LinearAlgebra;
+﻿using Accord.Statistics.Testing;
+using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearRegression;
 using MathNet.Numerics.Statistics;
 using System;
@@ -79,6 +80,36 @@ namespace Quant.Infra.Net.Analysis.Service
         {
             var regression = SimpleRegression.Fit(seriesA, seriesB);
             return (regression.Item2, regression.Item1); // Slope, Intercept
+        }
+
+        /// <summary>
+        /// 正态分布检验
+        /// </summary>
+        /// <param name="timeSeries"></param>
+        /// <param name="threshold"></param>
+        /// <returns></returns>
+        public bool PerformShapiroWilkTest(double[] timeSeries, double threshold = 0.05)
+        {
+            // 创建Shapiro-Wilk检验对象
+            var swTest = new ShapiroWilkTest(timeSeries);
+
+            // 获取统计值和p值
+            double W = swTest.Statistic;
+            double pValue = swTest.PValue;
+
+            // 输出结果
+            Console.WriteLine($"Shapiro-Wilk W: {W}");
+            Console.WriteLine($"p-value: {pValue}");
+
+            // 根据阈值判断样本是否符合正态分布
+            if (pValue > threshold)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
     }
 }

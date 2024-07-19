@@ -1,7 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-﻿using AutoMapper;
-using Flurl.Util;
-using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Analysis.Service;
 using Quant.Infra.Net.Shared.Service;
 using Quant.Infra.Net.SourceData.Service;

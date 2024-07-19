@@ -16,6 +16,8 @@ namespace Quant.Infra.Net.Exchange.Service
         public IBKRService(IMapper mapper)
         {
             _mapper = mapper;
+            if(_client == null)
+                _client = InterReactClient.ConnectAsync().Result;
         }
 
 
@@ -82,6 +84,7 @@ namespace Quant.Infra.Net.Exchange.Service
             return orderId;
         }
         
+
 
     }
 }

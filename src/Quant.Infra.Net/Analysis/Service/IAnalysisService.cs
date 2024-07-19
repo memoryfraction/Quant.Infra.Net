@@ -18,5 +18,7 @@
 
         bool PerformShapiroWilkTest(double[] timeSeries, double threshold = 0.05);
 
+        double[] CalculateZScores(double[] data);
+
     }
 }

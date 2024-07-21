@@ -103,7 +103,7 @@ namespace Quant.Infra.Net.Tests
         }
 
         [TestMethod]
-        public async Task LinearRegression3_Should_Work()
+        public async Task LinearRegressionResultShowChart_Should_Work()
         {
             // Generate simulated stock price data
             // Fixed simulated stock price data for PepsiCo and Coca-Cola
@@ -142,6 +142,63 @@ namespace Quant.Infra.Net.Tests
             string fullPathFilename = Path.Combine(AppContext.BaseDirectory, "output", "diff_bar_chart.png");
             await UtilityService.IsPathExistAsync(fullPathFilename);
             plt.SaveJpeg(fullPathFilename, 600, 400);
+
+            // Open the generated image using the default program
+            Process.Start(new ProcessStartInfo(fullPathFilename) { UseShellExecute = true });
+        }
+
+        [TestMethod]
+        public async Task ShowChartAndStdLines_Should_Work()
+        {
+            // Fixed simulated stock price data for PepsiCo and Coca-Cola
+            double[] pricesA = new double[] { 169.89, 170.0, 169.5, 170.2, 169.8, 170.1, 169.9, 170.3, 169.7, 170.4, 169.6, 170.5, 169.8, 170.2, 169.9, 170.1, 169.7, 170.3, 169.8, 170.0, 169.9, 170.2, 169.7, 170.4, 169.6, 170.5, 169.8, 170.2, 169.9, 170.1 };
+            double[] pricesB = new double[] { 65.21, 65.25, 65.1, 65.3, 65.2, 65.4, 65.15, 65.35, 65.2, 65.4, 65.1, 65.3, 65.2, 65.35, 65.15, 65.4, 65.2, 65.35, 65.1, 65.3, 65.2, 65.4, 65.15, 65.35, 65.2, 65.4, 65.1, 65.3, 65.2, 65.35 };
+
+            // Act
+            var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
+            var (slope, intercept) = _analysisService.PerformLinearRegression(pricesA, pricesB);
+
+            // Assert
+            Assert.AreEqual(0.31196395040950814, slope);
+            Assert.AreEqual(12.221565751700417, intercept);
+            Console.WriteLine($"diff = B - ({slope} * A) - ({intercept})");
+
+            // Calculate diff
+            List<double> diffList = new List<double>();
+            for (int i = 0; i < pricesA.Length; i++)
+            {
+                var tmpDiff = pricesB[i] - (slope * pricesA[i] + intercept);
+                diffList.Add(tmpDiff);
+            }
+
+            //  生成相同数量的元素到dateList
+            List<DateTime> dateList = Enumerable.Range(0, pricesA.Length)
+                                    .Select(i => new DateTime(2023, 1, 1).AddDays(i))
+                                    .ToList();
+
+            // 根据diffList生成1x, 2x, 3x, -1x,-2x, -3x的6根标准差虚线，也绘制在chart中
+            // Calculate standard deviations
+            double mean = diffList.Average();
+            double stdDev = Math.Sqrt(diffList.Average(v => Math.Pow(v - mean, 2)));
+            double[] stdLines = new double[] { mean + stdDev, mean + 2 * stdDev, mean + 3 * stdDev, mean - stdDev, mean - 2 * stdDev, mean - 3 * stdDev };
+
+            // Plot diff using ScottPlot
+            var plt = new Plot();
+            plt.Add.Scatter<DateTime, double>(dateList, diffList);
+            plt.Axes.DateTimeTicksBottom();
+            plt.Title($"diff = B - {slope} * A - {intercept}");
+            plt.XLabel("Date");
+            plt.YLabel("Difference");
+
+            // Add standard deviation lines, 设计6根，只显示了4根。
+            foreach (var line in stdLines)
+            {
+                plt.Add.HorizontalLine(line, pattern:LinePattern.Dashed);
+            }
+
+            string fullPathFilename = Path.Combine(AppContext.BaseDirectory, "output", "diff_bar_chart.png");
+            await UtilityService.IsPathExistAsync(fullPathFilename);
+            plt.SaveJpeg(fullPathFilename, 600, 00);
 
             // Open the generated image using the default program
             Process.Start(new ProcessStartInfo(fullPathFilename) { UseShellExecute = true });

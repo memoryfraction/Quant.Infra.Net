@@ -120,25 +120,33 @@ namespace Quant.Infra.Net.Tests
             Console.WriteLine($"diff = B - ({slope} * A) - ({intercept})");
 
             // Calculate diff
-            double[] diff = new double[pricesA.Length];
+            List<double> diffList = new List<double>();
             for (int i = 0; i < pricesA.Length; i++)
             {
-                diff[i] = pricesB[i] - (slope * pricesA[i] + intercept);
+                var tmpDiff = pricesB[i] - (slope * pricesA[i] + intercept);
+                diffList.Add(tmpDiff);
             }
+            
+            //  生成相同数量的元素到dateList
+            List<DateTime> dateList = Enumerable.Range(0, pricesA.Length)
+                                    .Select(i => new DateTime(2023, 1, 1).AddDays(i))
+                                    .ToList();
 
             // Plot diff using ScottPlot
             var plt = new Plot();
-            plt.Add.Bars(diff);
-            plt.Title($"Differences chart - diff[i] = B - {slope} * A + {intercept}");
-            plt.XLabel("Day");
+            plt.Add.Scatter<DateTime,double>(dateList, diffList);
+            plt.Axes.DateTimeTicksBottom();
+            plt.Title($"diff = B - {slope} * A - {intercept}");
+            plt.XLabel("Date");
             plt.YLabel("Difference");
             string fullPathFilename = Path.Combine(AppContext.BaseDirectory, "output", "diff_bar_chart.png");
             await UtilityService.IsPathExistAsync(fullPathFilename);
-            plt.SaveJpeg(fullPathFilename, 600,400);
+            plt.SaveJpeg(fullPathFilename, 600, 400);
 
             // Open the generated image using the default program
             Process.Start(new ProcessStartInfo(fullPathFilename) { UseShellExecute = true });
         }
+
 
         [TestMethod]
         public void NormalDistributionTest_Should_Work()

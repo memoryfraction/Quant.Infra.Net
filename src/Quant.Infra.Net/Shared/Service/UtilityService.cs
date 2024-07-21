@@ -1,12 +1,11 @@
 ﻿using Binance.Net.Clients;
-using CryptoExchange.Net.CommonObjects;
-using CsvHelper.Configuration;
 using CsvHelper;
+using CsvHelper.Configuration;
+using Quant.Infra.Net.SourceData.Model;
 using System;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
-using Quant.Infra.Net.SourceData.Model;
 
 namespace Quant.Infra.Net.Shared.Service
 {

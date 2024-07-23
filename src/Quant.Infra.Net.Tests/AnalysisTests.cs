@@ -147,6 +147,10 @@ namespace Quant.Infra.Net.Tests
             Process.Start(new ProcessStartInfo(fullPathFilename) { UseShellExecute = true });
         }
 
+        /// <summary>
+        /// scotplot 5 cookbook: https://scottplot.net/cookbook/5.0/DateTimeAxes/
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task ShowChartAndStdLines_Should_Work()
         {

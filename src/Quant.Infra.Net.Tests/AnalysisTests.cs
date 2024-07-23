@@ -1,9 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using CsvHelper.Configuration;
+using CsvHelper;
+using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Analysis.Service;
 using Quant.Infra.Net.Shared.Service;
 using Quant.Infra.Net.SourceData.Service;
 using ScottPlot;
 using System.Diagnostics;
+using System.Globalization;
+using Quant.Infra.Net.SourceData.Model;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -74,6 +78,13 @@ namespace Quant.Infra.Net.Tests
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
             var (slope, intercept) = _analysisService.PerformLinearRegression(seriesA, seriesB);
+            var diffSeries = new List<double>();
+            for (int i = 0; i < seriesA.Count(); i++)
+            {
+                var diff = seriesB[i] - slope * seriesA[i] - intercept;
+                diffSeries.Add(diff);
+            }
+            Console.WriteLine($"diff Series average: {diffSeries.Average()}");
 
             // Assert
             // diff = B - 2 * A - 0
@@ -81,6 +92,7 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(0.0, intercept);
             // Console equation
             Console.WriteLine($"diff = B - ({slope} * A) - ({intercept})");
+
         }
 
         [TestMethod]
@@ -93,6 +105,13 @@ namespace Quant.Infra.Net.Tests
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
             var (slope, intercept) = _analysisService.PerformLinearRegression(seriesA, seriesB);
+            var diffSeries = new List<double>();
+            for (int i = 0; i < seriesA.Count(); i++)
+            {
+                var diff = seriesB[i] - slope * seriesA[i] - intercept;
+                diffSeries.Add(diff);
+            }
+            Console.WriteLine($"diff Series average: {diffSeries.Average()}");
 
             // Assert
             // diff = B - 2.1237583090596757 * A - (-10.519829710956742)
@@ -100,6 +119,51 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(-10.519829710956742, intercept);
             // Console equation
             Console.WriteLine($"diff = B - ({slope} * A) - ({intercept})");
+        }
+
+        [TestMethod]
+        public void LinearRegression3_Should_Work()
+        {
+            // Arrange
+            //todo 读取ALGOUSDT.csv， 和DASHUSDT.csv作为SeriesA，SeriesB， 执行OLS Regression， 求Diff，计算平均值
+            var symbol1FullPathFileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "ALGOUSDT.csv");
+            var symbol2FullPathFileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "DASHUSDT.csv");
+            //todo 读取ALGOUSDT.csv， 和DASHUSDT.csv作为SeriesA，SeriesB
+            var seriesA = ReadCsv(symbol1FullPathFileName);
+            var seriesB = ReadCsv(symbol2FullPathFileName);
+
+            // Act
+            var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
+            var (slope, intercept) = _analysisService.PerformLinearRegression(seriesA.ToArray(), seriesB.ToArray());
+            var diffSeries = new List<double>();
+            for (int i = 0; i < seriesA.Count(); i++)
+            {
+                var diff = seriesB[i] - slope * seriesA[i] - intercept;
+                diffSeries.Add(diff);
+            }
+            Console.WriteLine($"diff Series average: {diffSeries.Average()}");
+
+            // Assert
+
+
+            // Console equation
+            Console.WriteLine($"diff = B - ({slope} * A) - ({intercept})");
+        }
+
+
+        static List<double> ReadCsv(string filePath)
+        {
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                HasHeaderRecord = true,
+            };
+
+            using (var reader = new StreamReader(filePath))
+            using (var csv = new CsvReader(reader, config))
+            {
+                var records = csv.GetRecords<BasicOhlcv>().ToList();
+                return records.Select(x => (double)x.Close).ToList();
+            }
         }
 
         [TestMethod]
@@ -113,6 +177,14 @@ namespace Quant.Infra.Net.Tests
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
             var (slope, intercept) = _analysisService.PerformLinearRegression(pricesA, pricesB);
+
+            var diffSeries = new List<double>();
+            for (int i = 0; i < pricesA.Count(); i++)
+            {
+                var diff = pricesB[i] - slope * pricesA[i] - intercept;
+                diffSeries.Add(diff);
+            }
+            Console.WriteLine($"diff Series average: {diffSeries.Average()}");
 
             // Assert
             Assert.AreEqual(0.31196395040950814, slope);

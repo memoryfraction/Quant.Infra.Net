@@ -2,7 +2,7 @@
 
 namespace Quant.Infra.Net.SourceData.Model
 {
-    public class Ohlcv
+    public class BasicOhlcv
     {
         public DateTime DateTime { get; set; }
 
@@ -15,7 +15,9 @@ namespace Quant.Infra.Net.SourceData.Model
         public decimal Close { get; set; }
 
         public decimal Volume { get; set; }
-
+    }
+    public class Ohlcv: BasicOhlcv
+    {
         public decimal AdjustedClose { get; set; }
     }
 }

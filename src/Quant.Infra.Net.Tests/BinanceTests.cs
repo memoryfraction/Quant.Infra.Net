@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Notification.Service;
 using System.Globalization;
 using Quant.Infra.Net.Shared.Service;
+using System.Security.Principal;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -55,7 +56,7 @@ namespace Quant.Infra.Net.Tests
         #region Account
 
         [TestMethod]
-        public async Task GetBinanceAccountSpotBalance_Should_Work()
+        public async Task GetBinanceSpotAccountSpotBalance_Should_Work()
         {
             Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
             {
@@ -82,6 +83,24 @@ namespace Quant.Infra.Net.Tests
                 Assert.IsTrue(totalUSDTBasedBalance >= 0);
             }
         }
+
+
+        public async Task GetMarginAccountEquity_Should_Work()
+        {
+            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
+            // 创建 Binance 客户端            
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                // 获取账户信息, 比如: USDT 计价的余额
+                var marginAccountResponse = client.SpotApi.Account.GetPortfolioMarginAccountInfoAsync().Result;
+                Console.WriteLine($"Total USDT Based Balance:{marginAccountResponse.Data.AccountEquity}");
+                Assert.IsTrue(marginAccountResponse.Data.AccountEquity >= 0);
+            }
+        }
+
 
         [TestMethod]
         public async Task GetBinanceAccountFuturesBalance_Should_Work()
@@ -190,6 +209,84 @@ namespace Quant.Infra.Net.Tests
             Assert.IsNotNull(openOrders);
         }
 
-        #endregion 
+        #endregion
+
+
+        #region UsdFuture
+        [TestMethod]
+        public async Task GetUsdFutureAccountBalance_Should_Work()
+        {
+            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
+            // 创建 Binance 客户端            
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var balance = account.Data.AvailableBalance;
+                System.Console.WriteLine($"UsdFuturesApi Available Balance: {balance}."); // 获取合约账户的Margin Balance
+                Assert.IsTrue(balance >= 0);
+            }
+        }
+
+
+        [TestMethod]
+        public async Task OpenAndExit_Should_Work()
+        {
+            BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
+
+            // 创建 Binance 客户端            
+            using (var client = new BinanceRestClient())
+            {
+                // 永续合约，开空仓
+                var enterShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
+                symbol: "ALGOUSDT",
+                   side: Binance.Net.Enums.OrderSide.Sell, // 开关仓此信号需要相反
+                   type: Binance.Net.Enums.FuturesOrderType.Market,
+                   quantity: 40, // 关仓数量需要与开仓数量一致， 总是正数; 最小交易数量5U
+                   positionSide: Binance.Net.Enums.PositionSide.Short // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
+                   );
+
+
+                // 获取当前持仓数量
+                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
+                var holdingPositions = position.Data.Where(x => x.Quantity != 0).Select(x => x);
+                var algoPosition = holdingPositions.Where(x => x.Symbol == "ALGOUSDT").FirstOrDefault();
+
+                // 关空仓
+                var exitShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
+                   symbol: "ALGOUSDT",
+                   side: Binance.Net.Enums.OrderSide.Buy, // 开关仓此信号需要相反
+                   type: Binance.Net.Enums.FuturesOrderType.Market,
+                   quantity: Math.Abs(algoPosition.Quantity), // 关仓数量需要与开仓数量一致， 总是正数
+                   positionSide: Binance.Net.Enums.PositionSide.Short // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
+                   );
+            }
+        }
+
+
+        [TestMethod]
+        public async Task Calculate_UnrealizedProfit_Should_Work()
+        {
+            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
+            // 创建 Binance 客户端            
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var balance = account.Data.AvailableBalance;
+                System.Console.WriteLine($"UsdFuturesApi Available Balance: {balance}."); // 获取合约账户的Margin Balance
+                Assert.IsTrue(balance >= 0);
+            }
+        }
+
+        #endregion
     }
 }

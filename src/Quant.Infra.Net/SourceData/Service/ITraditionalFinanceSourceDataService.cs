@@ -21,6 +21,15 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <returns></returns>
         Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Period Period = Period.Daily);
 
+        /// <summary>
+        /// download financial OHLCV data from Yahoo api
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="startDt"></param>
+        /// <param name="endDt"></param>
+        /// <param name="Period"></param>
+        /// <param name="dataSource"></param>
+        /// <returns></returns>
         Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Period Period = Period.Daily, DataSource dataSource = DataSource.YahooFinance);
 
         Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFilename);
@@ -28,7 +37,7 @@ namespace Quant.Infra.Net.SourceData.Service
         Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName);
 
         /// <summary>
-        /// 调用Wiki， 解码，并获得标普500的symbol
+        /// get sp500 symbols from wiki
         /// </summary>
         /// <returns></returns>
         Task<IEnumerable<string>> GetSp500SymbolsAsync(int number = 500);

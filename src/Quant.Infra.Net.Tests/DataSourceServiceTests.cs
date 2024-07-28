@@ -11,7 +11,6 @@ namespace Quant.Infra.Net.Tests
         public DataSourceServiceTests()
         {
             ServiceCollection _serviceCollection = new ServiceCollection ();
-            // todo Dependency Inject IMapper
             // Register the Automapper to container
             _serviceCollection.AddSingleton<IMapper>(sp =>
             {
@@ -26,7 +25,9 @@ namespace Quant.Infra.Net.Tests
         }
 
         
-
+        /// <summary>
+        /// Get ohlcvs from Yahoo API 
+        /// </summary>
         [TestMethod]
         public void DownloadOhlcvListAsync_Should_Work()
         {
@@ -38,6 +39,10 @@ namespace Quant.Infra.Net.Tests
         }
 
 
+        /// <summary>
+        /// Get symbols from sp500
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task GetSp500Symbols_Should_Work()
         {

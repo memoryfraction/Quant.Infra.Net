@@ -21,7 +21,7 @@ namespace Quant.Infra.Net.Tests
                 });
                 return new Mapper(autoMapperConfiguration);
             });
-            _serviceCollection.AddScoped<ISourceDataService, SourceDataService>();
+            _serviceCollection.AddScoped<ITraditionalFinanceSourceDataService, TraditionalFinanceSourceDataService>();
             _serviceProvider = _serviceCollection.BuildServiceProvider();
         }
 
@@ -31,7 +31,7 @@ namespace Quant.Infra.Net.Tests
         public void DownloadOhlcvListAsync_Should_Work()
         {
             var mapper = _serviceProvider.GetRequiredService<IMapper>();
-            var sourceDataService = _serviceProvider.GetRequiredService<ISourceDataService>();
+            var sourceDataService = _serviceProvider.GetRequiredService<ITraditionalFinanceSourceDataService>();
             var ohlcvs = sourceDataService.DownloadOhlcvListAsync("BTC-USD", DateTime.UtcNow.AddYears(-1), DateTime.UtcNow).Result;
             Assert.IsNotNull(ohlcvs);
             Assert.IsTrue(ohlcvs.OhlcvList.Any());

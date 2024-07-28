@@ -9,7 +9,7 @@ namespace Quant.Infra.Net.SourceData.Service
     /// <summary>
     /// 原始数据接口， 同步原始数据;
     /// </summary>
-    public interface ISourceDataService
+    public interface ITraditionalFinanceSourceDataService
     {
         /// <summary>
         /// 开始同步数据，在指定路径形成数据文件， 返回Ohlcvs
@@ -26,6 +26,12 @@ namespace Quant.Infra.Net.SourceData.Service
         Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFilename);
 
         Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName);
+
+        /// <summary>
+        /// 调用Wiki， 解码，并获得标普500的symbol
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<string>> GetSp500SymbolsAsync(int number = 500);
 
     }
 }

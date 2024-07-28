@@ -1,24 +1,25 @@
 ﻿using AutoMapper;
 using CsvHelper;
+using HtmlAgilityPack;
 using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.Shared.Service;
 using Quant.Infra.Net.SourceData.Model;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
-using Quant.Infra.Net.Shared.Service;
 using YahooFinanceApi;
-using Flurl.Util;
 
 namespace Quant.Infra.Net.SourceData.Service
 {
-    public class SourceDataService : ISourceDataService
+    public class TraditionalFinanceSourceDataService : ITraditionalFinanceSourceDataService
     {
         private readonly IMapper _mapper;
 
-        public SourceDataService(IMapper mapper)
+        public TraditionalFinanceSourceDataService(IMapper mapper)
         {
             _mapper = mapper;
         }
@@ -65,6 +66,26 @@ namespace Quant.Infra.Net.SourceData.Service
                 }
             }
             return ohlcvList;
+        }
+
+        public async Task<IEnumerable<string>> GetSp500SymbolsAsync(int number = 500)
+        {
+            var url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies";
+            var httpClient = new HttpClient();
+            var html = await httpClient.GetStringAsync(url);
+
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(html);
+
+            var tickers = new List<string>();
+            var nodes = htmlDoc.DocumentNode.SelectNodes("//table[contains(@class, 'wikitable')][1]//tr/td[1]/a");
+
+            foreach (var node in nodes)
+            {
+                tickers.Add(node.InnerText);
+            }
+
+            return tickers.Take(number).Order();
         }
 
         public async Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName)

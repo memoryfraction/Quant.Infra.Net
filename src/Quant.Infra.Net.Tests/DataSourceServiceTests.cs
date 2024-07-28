@@ -36,5 +36,16 @@ namespace Quant.Infra.Net.Tests
             Assert.IsNotNull(ohlcvs);
             Assert.IsTrue(ohlcvs.OhlcvList.Any());
         }
+
+
+        [TestMethod]
+        public async Task GetSp500Symbols_Should_Work()
+        {
+            var sourceDataService = _serviceProvider.GetRequiredService<ITraditionalFinanceSourceDataService>();
+            var symbols = await sourceDataService.GetSp500SymbolsAsync();
+            Assert.IsNotNull(symbols);
+            Assert.IsTrue(symbols.Count() == 500);
+        }
+
     }
 }

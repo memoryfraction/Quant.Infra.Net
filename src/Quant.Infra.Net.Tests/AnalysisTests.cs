@@ -18,7 +18,7 @@ namespace Quant.Infra.Net.Tests
         public AnalysisTests()
         {
             ServiceCollection _serviceCollection = new ServiceCollection();
-            _serviceCollection.AddScoped<ISourceDataService, SourceDataService>();
+            _serviceCollection.AddScoped<ITraditionalFinanceSourceDataService, TraditionalFinanceSourceDataService>();
             _serviceCollection.AddScoped<IAnalysisService, AnalysisService>();
             _serviceCollection.AddScoped<UtilityService>();
             _serviceProvider = _serviceCollection.BuildServiceProvider();

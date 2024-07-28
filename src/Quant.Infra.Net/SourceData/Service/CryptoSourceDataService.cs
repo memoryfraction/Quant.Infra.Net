@@ -12,7 +12,7 @@ namespace Quant.Infra.Net.SourceData.Service
 {
     public class CryptoSourceDataService
     {
-        public async Task DownloadBinanceSpotAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneDay)
+        public async Task DownloadBinanceSpotAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour)
         {
             var symbols = new List<string>();
             //1 GET BINANCE SPOT SYMBOLS

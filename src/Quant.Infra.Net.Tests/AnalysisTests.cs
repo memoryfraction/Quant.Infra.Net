@@ -274,7 +274,7 @@ namespace Quant.Infra.Net.Tests
 
             string fullPathFilename = Path.Combine(AppContext.BaseDirectory, "output", "diff_bar_chart.png");
             await UtilityService.IsPathExistAsync(fullPathFilename);
-            plt.SaveJpeg(fullPathFilename, 600, 00);
+            plt.SaveJpeg(fullPathFilename, 600, 400);
 
             // Open the generated image using the default program
             Process.Start(new ProcessStartInfo(fullPathFilename) { UseShellExecute = true });

@@ -114,12 +114,17 @@ namespace Quant.Infra.Net.Analysis.Service
             }
         }
 
-        public double[] CalculateZScores(IEnumerable<double> data)
+        public double CalculateZScores(IEnumerable<double> data, double value)
         {
             double mean = data.Average();
-            double stdDev = Math.Sqrt(data.Average(v => Math.Pow(v - mean, 2)));
-
-            return data.Select(x => (x - mean) / stdDev).ToArray();
+            double stdDev = Math.Sqrt(data.Average(x => Math.Pow(x - mean, 2)));
+            return (value - mean) / stdDev;
         }
+
+        public double CalculateZScores(double mean, double stdDev, double value)
+        {
+            return (value - mean) / stdDev;
+        }
+
     }
 }

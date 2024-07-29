@@ -309,19 +309,56 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(false, isNormal);
         }
 
+
         [TestMethod]
-        public void CalculateZScores_ShouldReturnCorrectZScores()
+        public void TestCalculateZScores_WithValueBelowMean_ReturnsNegativeZScore()
         {
             // Arrange
-            double[] data = { 1, 2, 3, 4, 5 };
-            double[] expectedZScores = { -1.414213562, -0.707106781, 0, 0.707106781, 1.414213562 };
+            var data = new List<double> { 2.0, 4.0, 6.0, 8.0, 10.0 };
+            double value = 2.0;
+            double mean = data.Average();
+            double stdDev = Math.Sqrt(data.Average(x => Math.Pow(x - mean, 2)));
+            double expectedZScore = (value - mean) / stdDev;
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            double[] actualZScores = _analysisService.CalculateZScores(data);
+            double actualZScore = _analysisService.CalculateZScores(data, value);
 
             // Assert
-            CollectionAssert.AreEqual(expectedZScores, actualZScores, new DoubleComparer());
+            Assert.AreEqual(expectedZScore, actualZScore, 1e-10);
+        }
+
+        [TestMethod]
+        public void TestCalculateZScores_WithValueAboveMean_ReturnsPositiveZScore()
+        {
+            // Arrange
+            var data = new List<double> { 2.0, 4.0, 6.0, 8.0, 10.0 };
+            double value = 10.0;
+            double mean = data.Average();
+            double stdDev = Math.Sqrt(data.Average(x => Math.Pow(x - mean, 2)));
+            double expectedZScore = (value - mean) / stdDev;
+
+            // Act
+            var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
+            double actualZScore = _analysisService.CalculateZScores(data, value);
+
+            // Assert
+            Assert.AreEqual(expectedZScore, actualZScore, 1e-10);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void TestCalculateZScores_WithEmptyData_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            var data = new List<double>();
+            double value = 10.0;
+
+            // Act
+            var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
+            _analysisService.CalculateZScores(data, value);
+
+            // Assert is handled by ExpectedException
         }
 
     }

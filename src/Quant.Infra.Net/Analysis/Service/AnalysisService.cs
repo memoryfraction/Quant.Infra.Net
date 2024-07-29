@@ -3,6 +3,7 @@ using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearRegression;
 using MathNet.Numerics.Statistics;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Quant.Infra.Net.Analysis.Service
@@ -15,7 +16,7 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <param name="seriesA">时间序列A</param>
         /// <param name="seriesB">时间序列B</param>
         /// <returns>相关性系数</returns>
-        public double CalculateCorrelation(double[] seriesA, double[] seriesB)
+        public double CalculateCorrelation(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
             return Correlation.Pearson(seriesA, seriesB);
         }
@@ -33,19 +34,19 @@ namespace Quant.Infra.Net.Analysis.Service
         /// 0.05 - 显著
         /// 0.1  - 较显著
         /// </remarks>
-        public bool AugmentedDickeyFullerTest(double[] timeSeries, double threshold = 0.05)
+        public bool AugmentedDickeyFullerTest(IEnumerable<double> timeSeries, double threshold = 0.05)
         {
             // Ensure the input time series is not null or empty
-            if (timeSeries == null || timeSeries.Length == 0)
+            if (timeSeries == null || timeSeries.Count() == 0)
             {
                 throw new ArgumentException("The time series data must not be null or empty.");
             }
 
             // Calculate the first difference of the time series
-            double[] diffSeries = new double[timeSeries.Length - 1];
-            for (int i = 1; i < timeSeries.Length; i++)
+            double[] diffSeries = new double[timeSeries.Count() - 1];
+            for (int i = 1; i < timeSeries.Count(); i++)
             {
-                diffSeries[i - 1] = timeSeries[i] - timeSeries[i - 1];
+                diffSeries[i - 1] = timeSeries.ElementAt(i) - timeSeries.ElementAt(i - 1);
             }
 
             // Build the regression matrix
@@ -53,7 +54,7 @@ namespace Quant.Infra.Net.Analysis.Service
             var vectorBuilder = Vector<double>.Build;
 
             var y = vectorBuilder.DenseOfArray(diffSeries);
-            var x = matrixBuilder.Dense(diffSeries.Length, 2, (i, j) => j == 0 ? timeSeries[i] : 1.0);
+            var x = matrixBuilder.Dense(diffSeries.Length, 2, (i, j) => j == 0 ? timeSeries.ElementAt(i) : 1.0);
 
             // Perform linear regression
             var regression = x.QR().Solve(y);
@@ -77,9 +78,9 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <param name="seriesA">时间序列A</param>
         /// <param name="seriesB">时间序列B</param>
         /// <returns>斜率和截距</returns>
-        public (double Slope, double Intercept) PerformLinearRegression(double[] seriesA, double[] seriesB)
+        public (double Slope, double Intercept) PerformLinearRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
-            var regression = SimpleRegression.Fit(seriesA, seriesB);
+            var regression = SimpleRegression.Fit(seriesA.ToArray(), seriesB.ToArray());
             return (regression.Item2, regression.Item1); // Slope, Intercept
         }
 
@@ -89,10 +90,10 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <param name="timeSeries"></param>
         /// <param name="threshold"></param>
         /// <returns></returns>
-        public bool PerformShapiroWilkTest(double[] timeSeries, double threshold = 0.05)
+        public bool PerformShapiroWilkTest(IEnumerable<double> timeSeries, double threshold = 0.05)
         {
             // 创建Shapiro-Wilk检验对象
-            var swTest = new ShapiroWilkTest(timeSeries);
+            var swTest = new ShapiroWilkTest(timeSeries.ToArray());
 
             // 获取统计值和p值
             double W = swTest.Statistic;
@@ -113,7 +114,7 @@ namespace Quant.Infra.Net.Analysis.Service
             }
         }
 
-        public double[] CalculateZScores(double[] data)
+        public double[] CalculateZScores(IEnumerable<double> data)
         {
             double mean = data.Average();
             double stdDev = Math.Sqrt(data.Average(v => Math.Pow(v - mean, 2)));

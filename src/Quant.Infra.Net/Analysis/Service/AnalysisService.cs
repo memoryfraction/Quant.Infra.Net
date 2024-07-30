@@ -114,6 +114,16 @@ namespace Quant.Infra.Net.Analysis.Service
             }
         }
 
+        public static decimal CalculateZScores(IEnumerable<decimal> data, decimal value)
+        {
+            var doubleData = data.Select(x => (double)x).ToList();
+            var doubleValue = (double)value;
+
+            var mean = doubleData.Average();
+            var stdDev = Math.Sqrt(doubleData.Average(x => Math.Pow(x - mean, 2)));
+            return Convert.ToDecimal((doubleValue - mean) / stdDev);
+        }
+
         public double CalculateZScores(IEnumerable<double> data, double value)
         {
             double mean = data.Average();

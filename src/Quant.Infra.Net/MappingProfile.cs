@@ -9,7 +9,7 @@ namespace Quant.Infra.Net
         public MappingProfile()
         {
             // 添加其他映射信息
-            CreateMap<Shared.Model.Period, YahooFinanceApi.Period>().ReverseMap();
+            CreateMap<Shared.Model.ResolutionLevel, YahooFinanceApi.Period>().ReverseMap();
             CreateMap<Candle, Ohlcv>().ReverseMap();
         }
     }

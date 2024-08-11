@@ -2,7 +2,7 @@
 
 namespace Quant.Infra.Net.Shared.Model
 {
-    public enum Period
+    public enum ResolutionLevel
     {
         [EnumMember(Value = "d")]
         Daily,

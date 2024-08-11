@@ -19,7 +19,7 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <param name="endDt"></param>
         /// <param name="Period"></param>
         /// <returns></returns>
-        Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Period Period = Period.Daily);
+        Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, ResolutionLevel Period = ResolutionLevel.Daily);
 
         /// <summary>
         /// download financial OHLCV data from Yahoo api
@@ -30,7 +30,7 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <param name="Period"></param>
         /// <param name="dataSource"></param>
         /// <returns></returns>
-        Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Period Period = Period.Daily, DataSource dataSource = DataSource.YahooFinance);
+        Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, ResolutionLevel Period = ResolutionLevel.Daily, DataSource dataSource = DataSource.YahooFinance);
 
         Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFilename);
 

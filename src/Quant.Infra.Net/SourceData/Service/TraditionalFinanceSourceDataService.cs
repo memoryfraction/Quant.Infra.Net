@@ -24,12 +24,12 @@ namespace Quant.Infra.Net.SourceData.Service
             _mapper = mapper;
         }
 
-        public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Shared.Model.Period Period = Shared.Model.Period.Daily)
+        public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Shared.Model.ResolutionLevel Period = Shared.Model.ResolutionLevel.Daily)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Shared.Model.Period period = Shared.Model.Period.Daily, DataSource dataSource = DataSource.YahooFinance)
+        public async Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Shared.Model.ResolutionLevel period = Shared.Model.ResolutionLevel.Daily, DataSource dataSource = DataSource.YahooFinance)
         {
             var ohlcvs = new Ohlcvs();
             var yahooFinancePeriod = _mapper.Map<YahooFinanceApi.Period>(period);

@@ -7,7 +7,7 @@ using System.Linq;
 namespace Quant.Infra.Net.Analysis
 {
     /// <summary>
-    /// PairTrading的参加计算器，定长窗体外推法
+    /// PairTrading的残差计算器，定长窗体外推法
     /// </summary>
     public class PairTradingDiffCalculator_FixLengthWindow
     {

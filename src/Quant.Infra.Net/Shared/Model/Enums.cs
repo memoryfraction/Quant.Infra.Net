@@ -4,20 +4,22 @@ namespace Quant.Infra.Net.Shared.Model
 {
     public enum ResolutionLevel
     {
+        [EnumMember(Value = "t")]
+        Tick,
+        [EnumMember(Value = "s")]
+        Second,
+        [EnumMember(Value = "min")]
+        Minute,
+        [EnumMember(Value = "h")]
+        Hourly,
         [EnumMember(Value = "d")]
         Daily,
         [EnumMember(Value = "wk")]
         Weekly,
         [EnumMember(Value = "mo")]
         Monthly,
-        [EnumMember(Value = "h")]
-        Hourly,
-        [EnumMember(Value = "min")]
-        Minute,
-        [EnumMember(Value = "s")]
-        Second,
-        [EnumMember(Value = "t")]
-        Tick
+        [EnumMember(Value = "other")]
+        Other
     }
 
     public enum DataSource

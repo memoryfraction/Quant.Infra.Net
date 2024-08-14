@@ -1,5 +1,4 @@
-﻿using Deedle.Internal;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Quant.Infra.Net.Shared.Model

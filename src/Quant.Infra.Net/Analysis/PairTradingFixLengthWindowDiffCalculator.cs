@@ -1,4 +1,5 @@
-﻿using Quant.Infra.Net.Shared.Model;
+﻿using Deedle;
+using Quant.Infra.Net.Shared.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,14 +17,18 @@ namespace Quant.Infra.Net.Analysis
         /// </summary>
         public static int FixedWindowLength { get; set; } = 183;
         public ResolutionLevel Resolution { get; set; } = ResolutionLevel.Daily;
+        public string Symbol1 { get; set; }
+        public string Symbol2 { get; set; } 
         public HashSet<TimeSeriesElement> TimeSeries1 { get; set; }
         public HashSet<TimeSeriesElement> TimeSeries2 { get; set; }
 
         private Queue _timeSeriesQueue1;
         private Queue _timeSeriesQueue2;
 
-        public PairTradingDiffCalculator_FixLengthWindow(ResolutionLevel resolutionLevel = ResolutionLevel.Daily)
+        public PairTradingDiffCalculator_FixLengthWindow(string symbol1 , string symbol2, ResolutionLevel resolutionLevel = ResolutionLevel.Daily)
         {
+            Symbol1 = symbol1;
+            Symbol2 = symbol2;
             Resolution = resolutionLevel;
             FixedWindowLength = CalcuWindowLength(Resolution);
             _timeSeriesQueue1 = new Queue(FixedWindowLength);
@@ -92,6 +97,9 @@ namespace Quant.Infra.Net.Analysis
         /// <param name="timeSeries2"></param>
         public void UpdateTimerSeriesElement(TimeSeriesElement timeSeriesElm1, TimeSeriesElement timeSeriesElm2)
         {
+            if (ValidateSourceData() == false)
+                throw new ArgumentException("data source are not valid, please execute UpdateTimerSeries() first.");
+
             // 如果 timeSeriesElm1 和 timeSeriesElm2 的 DateTime 不同，则报错
             if (timeSeriesElm1.DateTime != timeSeriesElm2.DateTime)
             {
@@ -121,9 +129,15 @@ namespace Quant.Infra.Net.Analysis
         /// <summary>
         /// 根据输入的endDateTime,向前FixedWindowLength，计算Diff
         /// </summary>
-        /// <returns></returns>
+        /// <param name="endDateTime"></param>
+        /// <returns>结束日期endDateTime，如果为null，说明：取数据源最新的日期</returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="InvalidOperationException"></exception>
         public double CalculateDiff(DateTime? endDateTime = null)
         {
+            if (ValidateSourceData() == false)
+                throw new ArgumentException("data source are not valid, please execute UpdateTimerSeries() first.");
+
             if (endDateTime == null)
                 endDateTime = TimeSeries1.OrderBy(x => x.DateTime).Select(x=>x.DateTime).LastOrDefault();
 
@@ -149,9 +163,9 @@ namespace Quant.Infra.Net.Analysis
             }
 
             // 执行线性回归，获取slope和interception
-            var (slope, intercept) = (new Analysis.Service.AnalysisService()).PerformLinearRegression(seriesA, seriesB);
+            var (slope, intercept) = (new Analysis.Service.AnalysisService()).PerformOLSRegression(seriesA, seriesB);
 
-            // 计算diff
+            // 计算diff,注意：此时SeriesA和SeriesB为DateTime倒序;
             double diff = 0;
             var lastElmInSeriesA = seriesA.FirstOrDefault();
             var lastElmInSeriesB = seriesB.FirstOrDefault();
@@ -160,6 +174,66 @@ namespace Quant.Infra.Net.Analysis
             return diff;
         }
 
+        /// <summary>
+        /// 生成并返回Equation公式
+        /// </summary>
+        /// <param name="endDateTime"></param>
+        /// <returns>结束日期endDateTime，如果为null，说明：取数据源最新的日期</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public string PrintEquation(DateTime? endDateTime = null)
+        {
+            if (ValidateSourceData() == false)
+                throw new ArgumentException("data source are not valid, please execute UpdateTimerSeries() first.");
+
+            if (endDateTime == null)
+                endDateTime = TimeSeries1.OrderBy(x => x.DateTime).Select(x => x.DateTime).LastOrDefault();
+
+            // 获取时间窗口内的元素
+            var seriesA = TimeSeries1
+                .Where(x => x.DateTime <= endDateTime)
+                .OrderByDescending(x => x.DateTime)
+                .Take(FixedWindowLength)
+                .Select(x => x.Value)
+                .ToList();
+
+            var seriesB = TimeSeries2
+                .Where(x => x.DateTime <= endDateTime)
+                .OrderByDescending(x => x.DateTime)
+                .Take(FixedWindowLength)
+                .Select(x => x.Value)
+                .ToList();
+
+            // 确保两个时间序列都有足够的数据点
+            if (seriesA.Count != FixedWindowLength || seriesB.Count != FixedWindowLength)
+            {
+                throw new InvalidOperationException("Not enough data points to perform the calculation.");
+            }
+
+            // 执行线性回归，获取slope和interception
+            var (slope, intercept) = (new Analysis.Service.AnalysisService()).PerformOLSRegression(seriesA, seriesB);
+            slope = Math.Round(slope, 4);
+            intercept = Math.Round(intercept, 4);
+            var equation = $"diff = {Symbol2} - {slope} * {Symbol1} - {intercept}";
+            return equation;
+        }
+
+        /// <summary>
+        /// 检验数据源是否合格？
+        /// </summary>
+        /// <returns></returns>
+        private bool ValidateSourceData()
+        {
+            if (TimeSeries1 == null || TimeSeries2 == null)
+                return false;
+
+            if (TimeSeries1 == default || TimeSeries2 == default)
+                return false;
+
+            if (TimeSeries1.Count != TimeSeries2.Count)
+                return false;
+
+            return true;
+        }
 
 
         /// <summary>

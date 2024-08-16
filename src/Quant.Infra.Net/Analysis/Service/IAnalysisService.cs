@@ -20,7 +20,7 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <param name="seriesA"></param>
         /// <param name="seriesB"></param>
         /// <returns>diff = B - Slope * A - Intercept</returns>
-        (double Slope, double Intercept) PerformLinearRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB);
+        (double Slope, double Intercept) PerformOLSRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB);
 
 
         bool PerformShapiroWilkTest(IEnumerable<double> timeSeries, double threshold = 0.05);

@@ -73,12 +73,12 @@ namespace Quant.Infra.Net.Analysis.Service
 
 
         /// <summary>
-        /// 进行线性回归分析并返回斜率和截距。
+        /// 进行最小二乘法(Ordinary Least Squares Regression)回归分析并返回斜率和截距。
         /// </summary>
         /// <param name="seriesA">时间序列A</param>
         /// <param name="seriesB">时间序列B</param>
         /// <returns>斜率和截距</returns>
-        public (double Slope, double Intercept) PerformLinearRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
+        public (double Slope, double Intercept) PerformOLSRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
             var regression = SimpleRegression.Fit(seriesA.ToArray(), seriesB.ToArray());
             return (regression.Item2, regression.Item1); // Slope, Intercept

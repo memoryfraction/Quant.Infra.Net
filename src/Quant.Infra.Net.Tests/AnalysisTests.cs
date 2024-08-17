@@ -79,7 +79,7 @@ namespace Quant.Infra.Net.Tests
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            var (slope, intercept) = _analysisService.PerformLinearRegression(seriesA, seriesB);
+            var (slope, intercept) = _analysisService.PerformOLSRegression(seriesA, seriesB);
             var diffSeries = new List<double>();
             for (int i = 0; i < seriesA.Count(); i++)
             {
@@ -106,7 +106,7 @@ namespace Quant.Infra.Net.Tests
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            var (slope, intercept) = _analysisService.PerformLinearRegression(seriesA, seriesB);
+            var (slope, intercept) = _analysisService.PerformOLSRegression(seriesA, seriesB);
             var diffSeries = new List<double>();
             for (int i = 0; i < seriesA.Count(); i++)
             {
@@ -138,7 +138,7 @@ namespace Quant.Infra.Net.Tests
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            var (slope, intercept) = _analysisService.PerformLinearRegression(seriesA.ToArray(), seriesB.ToArray());
+            var (slope, intercept) = _analysisService.PerformOLSRegression(seriesA.ToArray(), seriesB.ToArray());
             var diffSeries = new List<double>();
             for (int i = 0; i < seriesA.Count(); i++)
             {
@@ -244,7 +244,7 @@ namespace Quant.Infra.Net.Tests
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            var (slope, intercept) = _analysisService.PerformLinearRegression(pricesA, pricesB);
+            var (slope, intercept) = _analysisService.PerformOLSRegression(pricesA, pricesB);
 
             var diffSeries = new List<double>();
             for (int i = 0; i < pricesA.Count(); i++)
@@ -300,7 +300,7 @@ namespace Quant.Infra.Net.Tests
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            var (slope, intercept) = _analysisService.PerformLinearRegression(pricesA, pricesB);
+            var (slope, intercept) = _analysisService.PerformOLSRegression(pricesA, pricesB);
 
             // Assert
             Assert.AreEqual(0.31196395040950814, slope);

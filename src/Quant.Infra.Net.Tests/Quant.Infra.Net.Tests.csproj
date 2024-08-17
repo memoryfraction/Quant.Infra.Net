@@ -41,9 +41,16 @@
     <None Update="data\DASHUSDT.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Python\Functions.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Python\MySamplePython.py">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Python\data\" />
   </ItemGroup>
 
 </Project>

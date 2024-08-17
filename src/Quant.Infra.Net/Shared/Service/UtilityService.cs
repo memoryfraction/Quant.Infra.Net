@@ -1,10 +1,15 @@
 ﻿using Binance.Net.Clients;
 using CsvHelper;
 using CsvHelper.Configuration;
+using Python.Runtime;
+using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Shared.Service
@@ -105,6 +110,69 @@ namespace Quant.Infra.Net.Shared.Service
                 else
                 {
                     Console.WriteLine($"Error: {klinesResult.Error}");
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// 执行Python方法，并返回PyObject
+        /// </summary>
+        /// <param name="venvPath">虚拟环境的路径，比如：@"D:\ProgramData\PythonVirtualEnvs\pair_trading"</param>
+        /// <param name="pythonDll">比如:  "python39.dll"</param>
+        /// <param name="directories">Python文件所处的路径，比如："Python文件夹"</param>
+        /// <param name="pythonFileName">Without Extension</param>
+        /// <param name="pythonFunctionName"></param>
+        public static PyObject ExecutePython(
+            string pythonFileName, 
+            string pythonFunctionName,
+            IEnumerable<Object> pythonParameterObjs,
+            IEnumerable<string> pythonDirectories,
+            string venvPath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading",
+            string pythonDll = "python39.dll")
+        {
+            // 初始化变量
+            var condaVenvHomePath = venvPath; // @"D:\ProgramData\PythonVirtualEnvs\pair_trading"
+            var pythonDllFileName = pythonDll; // "python39.dll";
+            var pythonFullPathFileName = Path.Combine(condaVenvHomePath, pythonDllFileName);
+            PythonInfraModel infra = PythonNetInfra.GetPythonInfra(condaVenvHomePath, pythonDllFileName);
+            if (Runtime.PythonDLL == null || Runtime.PythonDLL != pythonFullPathFileName)
+            {
+                Runtime.PythonDLL = infra.PythonDLL;
+            }
+            PythonEngine.PythonHome = infra.PythonHome;
+            PythonEngine.PythonPath = infra.PythonPath;
+            PythonEngine.Initialize();
+
+            // 使用Python GIL
+            using (Py.GIL())
+            {
+                try
+                {
+                    var code = "import sys;";
+                    if (pythonDirectories != null)
+                    {
+                        var codeStringBuilder = new StringBuilder();
+                        codeStringBuilder.Append(code);
+                        foreach (var directory in pythonDirectories)
+                        {
+                            // e.g. directory is Path.Combine(pythonDirectory, "Backtest_Sp500");
+                            var str = $"sys.path.append(r'{directory}');";
+                            codeStringBuilder.Append(str);
+                        }
+                        code = codeStringBuilder.ToString();
+                    }
+                    PythonEngine.Exec(code);
+                    var pythonScript = Py.Import(pythonFileName);
+
+                    var pythonObjectArray = pythonParameterObjs.Select(x => x.ToPython()).ToArray();
+                    PyObject response = pythonScript.InvokeMethod(pythonFunctionName, pythonObjectArray);
+                    return response;
+                }
+                catch (PythonException ex)
+                {
+                    Console.WriteLine($"Error importing sys or adding path: {ex.Message}");
+                    throw;
                 }
             }
         }

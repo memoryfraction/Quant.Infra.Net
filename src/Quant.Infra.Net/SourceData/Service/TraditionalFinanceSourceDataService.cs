@@ -46,6 +46,8 @@ namespace Quant.Infra.Net.SourceData.Service
             return ohlcvs;
         }
 
+
+
         public async Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFileName)
         {
             if (!File.Exists(fullPathFileName))

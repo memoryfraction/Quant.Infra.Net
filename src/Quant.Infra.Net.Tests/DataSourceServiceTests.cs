@@ -33,10 +33,26 @@ namespace Quant.Infra.Net.Tests
         {
             var mapper = _serviceProvider.GetRequiredService<IMapper>();
             var sourceDataService = _serviceProvider.GetRequiredService<ITraditionalFinanceSourceDataService>();
-            var ohlcvs = sourceDataService.DownloadOhlcvListAsync("BTC-USD", DateTime.UtcNow.AddYears(-1), DateTime.UtcNow,Shared.Model.ResolutionLevel.Hourly).Result;
+            var ohlcvs = sourceDataService.DownloadOhlcvListAsync("AAPL", DateTime.UtcNow.AddYears(-1), DateTime.UtcNow,Shared.Model.ResolutionLevel.Hourly).Result;
             Assert.IsNotNull(ohlcvs);
             Assert.IsTrue(ohlcvs.OhlcvList.Any());
         }
+
+
+        /// <summary>
+        /// 批量获取数据 
+        /// </summary>
+        [TestMethod]
+        public void DownloadSymbolsListAsync_Should_Work()
+        {
+            var mapper = _serviceProvider.GetRequiredService<IMapper>();
+            var sourceDataService = _serviceProvider.GetRequiredService<ITraditionalFinanceSourceDataService>();
+            var ohlcvs = sourceDataService.DownloadOhlcvListAsync("BTC-USD", DateTime.UtcNow.AddYears(-1), DateTime.UtcNow, Shared.Model.ResolutionLevel.Hourly).Result;
+            Assert.IsNotNull(ohlcvs);
+            Assert.IsTrue(ohlcvs.OhlcvList.Any());
+        }
+
+
 
         /// <summary>
         /// 使用混编的方式，用Yfinance，下载数据，并存储在指定路径

@@ -176,5 +176,36 @@ namespace Quant.Infra.Net.Shared.Service
                 }
             }
         }
+
+
+        /// <summary>
+        /// Async 版本的ExecutePython()
+        /// </summary>
+        /// <param name="pythonFileName"></param>
+        /// <param name="pythonFunctionName"></param>
+        /// <param name="pythonParameterObjs"></param>
+        /// <param name="pythonDirectories"></param>
+        /// <param name="venvPath"></param>
+        /// <param name="pythonDll"></param>
+        /// <returns></returns>
+        public static async Task<PyObject> ExecutePythonAsync(string pythonFileName,
+            string pythonFunctionName,
+            IEnumerable<Object> pythonParameterObjs,
+            IEnumerable<string> pythonDirectories,
+            string venvPath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading",
+            string pythonDll = "python39.dll")
+        {
+            return await Task.Run(() =>
+            {
+                return ExecutePython(
+                    pythonFileName,
+                    pythonFunctionName,
+                    pythonParameterObjs,
+                    pythonDirectories,
+                    venvPath,
+                    pythonDll
+                );
+            });
+        }
     }
 }

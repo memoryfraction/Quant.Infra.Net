@@ -70,11 +70,20 @@ namespace Quant.Infra.Net.SourceData.Service
             var interval = klineInterval; // 时间间隔默认为1天
             foreach (var symbol in filteredSymbols)
             {
+                if (symbol == "BTCSTUSDT")
+                    continue;
                 Console.WriteLine($"Downloading: {symbol}.");
                 var fileName = $"{symbol}.csv";
                 var fullPathFileName = Path.Combine(path, fileName);
-
-                await SaveUsdFutureKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
+                try
+                {
+                    await SaveUsdFutureKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
+                }
+                catch(Exception ex)
+                {
+                    Serilog.Log.Information($"Current utc datetime: + {DateTime.UtcNow}, error: {ex.Message}");
+                    continue;
+                }
             }
             Console.WriteLine($"All done!");
         }

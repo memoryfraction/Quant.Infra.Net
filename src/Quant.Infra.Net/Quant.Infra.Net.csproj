@@ -6,8 +6,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Account\Model\**" />
+    <Compile Remove="Analysis\Model\**" />
     <EmbeddedResource Remove="Account\Model\**" />
+    <EmbeddedResource Remove="Analysis\Model\**" />
     <None Remove="Account\Model\**" />
+    <None Remove="Analysis\Model\**" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Accord.Statistics" Version="3.8.0" />
@@ -29,8 +32,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\InterReact\InterReact\InterReact.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Analysis\Model\" />
   </ItemGroup>
 </Project>

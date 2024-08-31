@@ -1,6 +1,7 @@
 ﻿using Binance.Net.Clients;
 using CsvHelper;
 using CsvHelper.Configuration;
+using Microsoft.Data.Analysis;
 using Python.Runtime;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
@@ -46,6 +47,7 @@ namespace Quant.Infra.Net.Shared.Service
                 }
             }
         }
+
 
         /// <summary>
         /// 调用Binance，根据Sumbol获取历史数据，存到指定路径的csv文件
@@ -206,6 +208,38 @@ namespace Quant.Infra.Net.Shared.Service
                     pythonDll
                 );
             });
+        }
+
+
+        /// <summary>
+        /// 读取CSV文件，返回DataFrame
+        /// Title Row: DateTime, Open, High, Low, Close, Volume
+        /// </summary>
+        /// <param name="fullPathFileName"></param>
+        /// <returns></returns>
+        public static DataFrame LoadCsvToDataFrame(string fullPathFileName)
+        {
+            var dateTimeColumn = new PrimitiveDataFrameColumn<DateTime>("DateTime");
+            var closeColumn = new DoubleDataFrameColumn("Close");
+
+            using (var reader = new StreamReader(fullPathFileName))
+            {
+                var csv = new CsvHelper.CsvReader(reader, CultureInfo.InvariantCulture);
+                var records = csv.GetRecords<dynamic>();
+
+                foreach (var record in records)
+                {
+                    var row = record as IDictionary<string, object>;
+                    dateTimeColumn.Append(DateTime.Parse(row["DateTime"].ToString()));
+                    closeColumn.Append(double.Parse(row["Close"].ToString()));
+                }
+            }
+
+            var dataFrame = new DataFrame();
+            dataFrame.Columns.Add(dateTimeColumn);
+            dataFrame.Columns.Add(closeColumn);
+
+            return dataFrame;
         }
     }
 }

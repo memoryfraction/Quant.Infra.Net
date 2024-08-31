@@ -4,6 +4,7 @@ using MathNet.Numerics.LinearRegression;
 using MathNet.Numerics.Statistics;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace Quant.Infra.Net.Analysis.Service
@@ -81,7 +82,7 @@ namespace Quant.Infra.Net.Analysis.Service
         public (double Slope, double Intercept) PerformOLSRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
             var regression = SimpleRegression.Fit(seriesA.ToArray(), seriesB.ToArray());
-            return (regression.Item2, regression.Item1); // Slope, Intercept
+            return (Math.Round(regression.Item2,6), Math.Round(regression.Item1,6)); // Slope, Intercept
         }
 
         /// <summary>

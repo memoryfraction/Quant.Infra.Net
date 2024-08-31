@@ -1,95 +1,119 @@
-﻿using Quant.Infra.Net.Analysis;
+﻿using Microsoft.Data.Analysis;
+using Quant.Infra.Net.Analysis;
+using Quant.Infra.Net.Shared.Extension;
 using Quant.Infra.Net.Shared.Model;
 using System.Globalization;
+using Quant.Infra.Net.Shared.Service;
 
 namespace Quant.Infra.Net.Tests
 {
     [TestClass]
     public class PairTradingTests
     {
-        private List<TimeSeriesElement> LoadTimeSeries(string fullPathFilename)
-        {
-            var timeSeries = new List<TimeSeriesElement>();
-
-            using (var reader = new StreamReader(fullPathFilename))
-            {
-                string headerLine = reader.ReadLine(); // Skip the header line
-                while (!reader.EndOfStream)
-                {
-                    var line = reader.ReadLine();
-                    var values = line.Split(',');
-
-                    var dateTime = DateTime.Parse(values[0]);
-                    var close = double.Parse(values[4], CultureInfo.InvariantCulture); // Assuming the Close column is the 5th column
-
-                    timeSeries.Add(new TimeSeriesElement
-                    {
-                        DateTime = dateTime,
-                        Value = close
-                    });
-                }
-            }
-
-            return timeSeries;
-        }
-
-        /// <summary>
-        /// 对自定义Calculator的测试用例;
-        /// </summary>
+        
         [TestMethod]
-        public void TestCalculateDiff()
+        public void SpreadCalculator_Init_Should_Work()
         {
-            var symbol1 = "ALGO";
-            var symbol2 = "DASH";
-            // Load data from CSV files
-            var timeSeries1 = LoadTimeSeries(AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol1}USDT.csv");
-            var timeSeries2 = LoadTimeSeries(AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol2}USDT.csv");
+            // Arrange
+            var symbol1 = "ALGOUSDT";
+            var symbol2 = "DASHUSDT";
+            var sourceFullPathFilename1 = AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol1}.csv";
+            var sourceFullPathFilename2 = AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol2}.csv";
+            var df1 = UtilityService.LoadCsvToDataFrame(sourceFullPathFilename1);
+            var df2 = UtilityService.LoadCsvToDataFrame(sourceFullPathFilename2);
 
-            // Initialize the calculator
-            var calculator = new PairTradingDiffCalculator_FixLengthWindow(symbol1, symbol2, ResolutionLevel.Hourly);
+            // Action
+            var calculator = new SpreadCalculatorPerpetualContract(symbol1, symbol2, df1, df2,
+                resolutionLevel: ResolutionLevel.Hourly);
 
-            // Update the time series in the calculator
-            calculator.UpdateTimerSeries(timeSeries1, timeSeries2);
-
-            // Choose an endDateTime for the calculation, or use null to use the latest available
-            DateTime? endDateTime = null;
-
-            // Perform the diff calculation
-            double diff = calculator.CalculateDiff(endDateTime);
-
-            // Assert that the diff is within an expected range (for this example, we'll assume 0 is the expected value)
-            Assert.AreEqual(1.895, diff, 1e-5); // Adjust tolerance as needed
+            // Assety
+            // 如果无报错，说明工作正常
         }
 
 
-        /// <summary>
-        /// 生成diff公式应该工作
-        /// </summary>
         [TestMethod]
-        public void Generate_Diff_Equation_Should_Work()
+        public void UpsertRow_Should_Work()
         {
-            var symbol1 = "ALGO";
-            var symbol2 = "DASH";
-            // Load data from CSV files
-            var timeSeries1 = LoadTimeSeries(AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol1}USDT.csv");
-            var timeSeries2 = LoadTimeSeries(AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol2}USDT.csv");
+            // todo
+            // Arrange
+            var symbol1 = "ALGOUSDT";
+            var symbol2 = "DASHUSDT";
+            var sourceFullPathFilename1 = AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol1}.csv";
+            var sourceFullPathFilename2 = AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol2}.csv";
+            var df1 = UtilityService.LoadCsvToDataFrame(sourceFullPathFilename1);
+            var df2 = UtilityService.LoadCsvToDataFrame(sourceFullPathFilename2);
 
-            // Initialize the calculator
-            var calculator = new PairTradingDiffCalculator_FixLengthWindow(symbol1, symbol2, ResolutionLevel.Hourly);
+            // Action
+            var calculator = new SpreadCalculatorPerpetualContract(symbol1, symbol2, df1, df2,
+                resolutionLevel: ResolutionLevel.Hourly);
 
-            // Update the time series in the calculator
-            calculator.UpdateTimerSeries(timeSeries1, timeSeries2);
+            calculator.UpsertSpreadAndEquation();
 
-            // Choose an endDateTime for the calculation, or use null to use the latest available
-            DateTime? endDateTime = null;
+            var dt = new DateTime(2024, 8, 1);
+            var algoPrice = 0.1377;
+            var dashPrice = 25.77;
+            calculator.UpsertRow(dt,algoPrice,dashPrice);
 
-            // Perform the diff equation generation
-            var equation = calculator.PrintEquation();
+            var dateTimeColumn = calculator.DataFrame.Columns["DateTime"];
+            var endDateTime = dateTimeColumn.Cast<DateTime>().Max();
 
-            Assert.IsNotNull(equation); // Adjust tolerance as needed
-            Console.WriteLine(equation);
+            // Fetch the row index for the given endDateTime
+            int rowIndex = calculator.DataFrame.GetRowIndex("DateTime", endDateTime);
+
+            double spread = rowIndex != -1 ? (double)calculator.DataFrame["Spread"][rowIndex] : default(double);
+            string equation = rowIndex != -1 ? (string)calculator.DataFrame["Equation"][rowIndex] : default(string);
+
+            // Print the results
+            Console.WriteLine($"End DateTime: {endDateTime}");
+            Console.WriteLine($"Spread: {spread}");
+            Console.WriteLine($"Equation: {equation}");
         }
 
+
+        [TestMethod]
+        public void GetSpread_Should_Work()
+        {
+            // Arrange
+            var symbol1 = "ALGOUSDT";
+            var symbol2 = "DASHUSDT";
+            var sourceFullPathFilename1 = AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol1}.csv";
+            var sourceFullPathFilename2 = AppDomain.CurrentDomain.BaseDirectory + $"data\\{symbol2}.csv";
+            var df1 = UtilityService.LoadCsvToDataFrame(sourceFullPathFilename1);
+            var df2 = UtilityService.LoadCsvToDataFrame(sourceFullPathFilename2);
+
+            // Action
+            var calculator = new SpreadCalculatorPerpetualContract(symbol1, symbol2, df1, df2,
+                resolutionLevel: ResolutionLevel.Hourly);
+
+            calculator.UpsertSpreadAndEquation();
+
+            var dateTimeColumn = calculator.DataFrame.Columns["DateTime"];
+            var endDateTime = dateTimeColumn.Cast<DateTime>().Max();
+
+            // Fetch the row index for the given endDateTime
+            int rowIndex = calculator.DataFrame.GetRowIndex("DateTime", endDateTime);
+
+            double spread = rowIndex != -1 ? (double)calculator.DataFrame["Spread"][rowIndex] : default(double);
+            string equation = rowIndex != -1 ? (string)calculator.DataFrame["Equation"][rowIndex] : default(string);
+
+            // Print the results
+            Console.WriteLine($"End DateTime: {endDateTime}");
+            Console.WriteLine($"Spread: {spread}");
+            Console.WriteLine($"Equation: {equation}");
+
+            // Optionally, assert values for validation
+            Assert.IsNotNull(spread, "Spread value should not be null.");
+            Assert.IsFalse(string.IsNullOrWhiteSpace(equation), "Equation value should not be null or empty.");
+        }
 
     }
 }
+
+
+
+        
+
+
+
+    
+

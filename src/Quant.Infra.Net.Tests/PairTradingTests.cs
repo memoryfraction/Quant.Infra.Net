@@ -1,8 +1,6 @@
-﻿using Microsoft.Data.Analysis;
-using Quant.Infra.Net.Analysis;
+﻿using Quant.Infra.Net.Analysis;
 using Quant.Infra.Net.Shared.Extension;
 using Quant.Infra.Net.Shared.Model;
-using System.Globalization;
 using Quant.Infra.Net.Shared.Service;
 
 namespace Quant.Infra.Net.Tests

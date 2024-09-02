@@ -114,7 +114,7 @@ namespace Quant.Infra.Net.SourceData.Service
             var ohlcvs = new HashSet<Ohlcv>();
             using (var client = new BinanceRestClient())
             {
-                var lastDtInOhlcvs = ohlcvs.Select(x => x.DateTime).LastOrDefault();
+                var lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 var paramStartDt = startDt;
                 while (lastDtInOhlcvs < endDt)
                 {
@@ -132,12 +132,12 @@ namespace Quant.Infra.Net.SourceData.Service
                             return;
                         ohlcvs = UpsertOhlcvs(klinesResult.Data, ohlcvs, startDt, endDt);
                     }
-                    lastDtInOhlcvs = ohlcvs.Select(x => x.DateTime).LastOrDefault();
+                    lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 }
 
                 // Save ohlcvs to file: {fullPathFileName} using csvHelper
-                lastDtInOhlcvs = ohlcvs.Select(x => x.DateTime).LastOrDefault();
-                var firstDtInOhlcvs = ohlcvs.Select(x => x.DateTime).FirstOrDefault();
+                lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
+                var firstDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).FirstOrDefault();
                 if (firstDtInOhlcvs.Date != startDt)
                 {
                     Console.WriteLine($"firstDtInOhlcvs:{firstDtInOhlcvs} does not match with startDt:{startDt}");
@@ -156,7 +156,7 @@ namespace Quant.Infra.Net.SourceData.Service
                     writer.WriteLine("DateTime,Open,High,Low,Close,Volume");
                     foreach (var ohlcv in ohlcvs)
                     {
-                        writer.WriteLine($"{ohlcv.DateTime},{ohlcv.Open},{ohlcv.High},{ohlcv.Low},{ohlcv.Close},{ohlcv.Volume}");
+                        writer.WriteLine($"{ohlcv.OpenDateTime},{ohlcv.Open},{ohlcv.High},{ohlcv.Low},{ohlcv.Close},{ohlcv.Volume}");
                     }
                 }
                 Console.WriteLine($"Klines data saved successfully for {symbol}.");
@@ -178,7 +178,7 @@ namespace Quant.Infra.Net.SourceData.Service
             var ohlcvs = new HashSet<Ohlcv>();
             using (var client = new BinanceRestClient())
             {
-                var lastDtInOhlcvs = ohlcvs.Select(x => x.DateTime).LastOrDefault();
+                var lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 var paramStartDt = startDt;
                 while (lastDtInOhlcvs < endDt)
                 {
@@ -196,12 +196,12 @@ namespace Quant.Infra.Net.SourceData.Service
                             return;
                         ohlcvs = UpsertOhlcvs(klinesResult.Data, ohlcvs, startDt, endDt);
                     }
-                    lastDtInOhlcvs = ohlcvs.Select(x => x.DateTime).LastOrDefault();
+                    lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 }
 
                 // Save ohlcvs to file: {fullPathFileName} using csvHelper
-                lastDtInOhlcvs = ohlcvs.Select(x => x.DateTime).LastOrDefault();
-                var firstDtInOhlcvs = ohlcvs.Select(x => x.DateTime).FirstOrDefault();
+                lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
+                var firstDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).FirstOrDefault();
                 if (firstDtInOhlcvs.Date != startDt)
                 {
                     Console.WriteLine($"firstDtInOhlcvs:{firstDtInOhlcvs} does not match with startDt:{startDt}");
@@ -220,7 +220,7 @@ namespace Quant.Infra.Net.SourceData.Service
                     writer.WriteLine("DateTime,Open,High,Low,Close,Volume");
                     foreach (var ohlcv in ohlcvs)
                     {
-                        writer.WriteLine($"{ohlcv.DateTime},{ohlcv.Open},{ohlcv.High},{ohlcv.Low},{ohlcv.Close},{ohlcv.Volume}");
+                        writer.WriteLine($"{ohlcv.OpenDateTime},{ohlcv.Open},{ohlcv.High},{ohlcv.Low},{ohlcv.Close},{ohlcv.Volume}");
                     }
                 }
                 Console.WriteLine($"Klines data saved successfully for {symbol}.");
@@ -237,7 +237,7 @@ namespace Quant.Infra.Net.SourceData.Service
 
                 var ohlcv = new Ohlcv()
                 {
-                    DateTime = kline.CloseTime,
+                    OpenDateTime = kline.CloseTime,
                     Open = kline.OpenPrice,
                     High = kline.HighPrice,
                     Low = kline.LowPrice,

@@ -7,10 +7,10 @@ namespace Quant.Infra.Net.SourceData.Model
     public class Ohlcvs
     {
         public string Symbol { get; set; }
-        public ResolutionLevel Period { get; set; }
+        public ResolutionLevel ResolutionLevel { get; set; }
         public DateTime StartDateTimeUtc { get; set; }
         public DateTime EndDateTimeUtc { get; set; }
 
-        public List<Ohlcv> OhlcvList { get; set; } = new List<Ohlcv>();
+        public HashSet<Ohlcv> OhlcvSet { get; set; } = new HashSet<Ohlcv>();
     }
 }

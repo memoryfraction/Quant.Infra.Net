@@ -37,12 +37,12 @@ namespace Quant.Infra.Net.SourceData.Service
             foreach (var candle in candles)
             {
                 var ohlcv = _mapper.Map<Ohlcv>(candle);
-                ohlcvs.OhlcvList.Add(ohlcv);
+                ohlcvs.OhlcvSet.Add(ohlcv);
             }
             ohlcvs.Symbol = symbol;
             ohlcvs.StartDateTimeUtc = startDt;
             ohlcvs.EndDateTimeUtc = endDt;
-            ohlcvs.Period = period;
+            ohlcvs.ResolutionLevel = period;
             return ohlcvs;
         }
 

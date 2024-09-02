@@ -2,6 +2,14 @@
 
 namespace Quant.Infra.Net.Shared.Model
 {
+    public enum AssetType
+    {
+        UsEquity = 1,
+        Option = 2,
+        CryptoSpot = 3,
+        CryptoPerpetualContract = 4
+    }
+
     public enum ResolutionLevel
     {
         [EnumMember(Value = "t")]

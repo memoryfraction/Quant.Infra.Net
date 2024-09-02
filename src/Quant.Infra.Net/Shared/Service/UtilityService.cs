@@ -97,7 +97,7 @@ namespace Quant.Infra.Net.Shared.Service
                         {
                             csv.WriteRecord(new Ohlcv
                             {
-                                DateTime = line.OpenTime,
+                                OpenDateTime = line.OpenTime,
                                 Open = line.OpenPrice,
                                 High = line.HighPrice,
                                 Low = line.LowPrice,

@@ -57,4 +57,13 @@ namespace Quant.Infra.Net.Shared.Model
     {
         USD
     }
+
+    
+
+    public enum BaseCurrency
+    {
+        USD,
+        USDT,
+        USDC
+    }
 }

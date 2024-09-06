@@ -7,9 +7,9 @@ namespace Quant.Infra.Net.Shared.Model
 {
     public interface IPortfolio
     {
-        string Name { get; }
-        decimal CashBalance { get; }
-        Currency BaseCurrency { get; }
+        string Name { get; set; }
+        decimal InitCash { get; set; }
+        Currency BaseCurrency { get; set; }
 
         void ExecuteTrade(Trade trade);
         decimal GetHoldings(AssetType assetType);
@@ -20,16 +20,16 @@ namespace Quant.Infra.Net.Shared.Model
     public class Portfolio : IPortfolio
     {
         public string Name { get; set; }
-        public decimal CashBalance { get; set; }
+        public decimal InitCash { get; set; }
         public Currency BaseCurrency { get; set; } = Currency.USD;
         private Dictionary<AssetType, decimal> Holdings { get; set; } // 记录各资产的持仓量
 
-        public Portfolio(string name,
+        public Portfolio(string name = "",
             decimal initialCashBalance = 10000m,
             Currency baseCurrency = Currency.USD)
         {
             Name = name;
-            CashBalance = initialCashBalance;
+            InitCash = initialCashBalance;
             BaseCurrency = baseCurrency;
             Holdings = new Dictionary<AssetType, decimal>();
         }
@@ -57,11 +57,11 @@ namespace Quant.Infra.Net.Shared.Model
         {
             decimal totalCost = trade.Quantity * trade.Price;
 
-            if (CashBalance < totalCost)
+            if (InitCash < totalCost)
                 throw new InvalidOperationException("Insufficient cash balance to execute buy trade.");
 
             // 扣除现金余额
-            CashBalance -= totalCost;
+            InitCash -= totalCost;
 
             // 更新持仓
             UpdateHoldings(trade.AssetType, trade.Quantity);
@@ -76,7 +76,7 @@ namespace Quant.Infra.Net.Shared.Model
             Holdings[trade.AssetType] -= trade.Quantity;
 
             // 增加现金余额
-            CashBalance += trade.Quantity * trade.Price;
+            InitCash += trade.Quantity * trade.Price;
         }
 
         private void UpdateHoldings(AssetType assetType, decimal quantity)
@@ -98,14 +98,14 @@ namespace Quant.Infra.Net.Shared.Model
 
         public decimal GetCashBalance()
         {
-            return CashBalance;
+            return InitCash;
         }
 
         public void PrintPortfolioSummary()
         {
             Console.WriteLine($"Portfolio: {Name}");
             Console.WriteLine($"Base Currency: {BaseCurrency}");
-            Console.WriteLine($"Cash Balance: {CashBalance}");
+            Console.WriteLine($"Cash Balance: {InitCash}");
 
             Console.WriteLine("Holdings:");
             foreach (var holding in Holdings)

@@ -35,7 +35,7 @@ namespace Quant.Infra.Net.Tests
             var sourceDataService = _serviceProvider.GetRequiredService<ITraditionalFinanceSourceDataService>();
             var ohlcvs = sourceDataService.DownloadOhlcvListAsync("AAPL", DateTime.UtcNow.AddYears(-1), DateTime.UtcNow,Shared.Model.ResolutionLevel.Hourly).Result;
             Assert.IsNotNull(ohlcvs);
-            Assert.IsTrue(ohlcvs.OhlcvList.Any());
+            Assert.IsTrue(ohlcvs.OhlcvSet.Any());
         }
 
 
@@ -49,7 +49,7 @@ namespace Quant.Infra.Net.Tests
             var sourceDataService = _serviceProvider.GetRequiredService<ITraditionalFinanceSourceDataService>();
             var ohlcvs = sourceDataService.DownloadOhlcvListAsync("BTC-USD", DateTime.UtcNow.AddYears(-1), DateTime.UtcNow, Shared.Model.ResolutionLevel.Hourly).Result;
             Assert.IsNotNull(ohlcvs);
-            Assert.IsTrue(ohlcvs.OhlcvList.Any());
+            Assert.IsTrue(ohlcvs.OhlcvSet.Any());
         }
 
 

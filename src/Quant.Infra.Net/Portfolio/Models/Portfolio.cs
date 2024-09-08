@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using AlphaEngine.BLL.Models;
+using Quant.Infra.Net.Shared.Model;
 
 
-namespace Quant.Infra.Net.Shared.Model
+namespace Quant.Infra.Net.Portfolio.Models
 {
     public interface IPortfolio
     {

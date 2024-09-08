@@ -4,14 +4,15 @@ namespace Quant.Infra.Net.Shared.Model
 {
     public enum AssetType
     {
-        UsEquity = 1,  // 美国股票
-        UsOption = 2,  // 美国期权
-        CryptoSpot = 3,  // 数字货币现货
-        CryptoPerpetualContract = 4,  // 数字货币永续合约
-        CnEquity = 5,  // 中国股票
-        HkEquity = 6,  // 香港股票
-        CryptoOption = 7  // 数字货币期权
+        UsEquity = 1,                  // US Equity
+        UsOption = 2,                  // US Option
+        CryptoSpot = 3,                // Cryptocurrency Spot
+        CryptoPerpetualContract = 4,   // Cryptocurrency Perpetual Contract
+        CnEquity = 5,                  // China Equity
+        HkEquity = 6,                  // Hong Kong Equity
+        CryptoOption = 7               // Cryptocurrency Option
     }
+
 
     public enum ResolutionLevel
     {
@@ -35,7 +36,8 @@ namespace Quant.Infra.Net.Shared.Model
 
     public enum DataSource
     {
-        YahooFinance
+        YahooFinance,
+        Binance
     }
 
 

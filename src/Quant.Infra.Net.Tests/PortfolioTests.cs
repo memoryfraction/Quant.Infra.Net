@@ -35,23 +35,80 @@ namespace Quant.Infra.Net.Tests
             _random = new Random();
         }
 
-        // 私有方法来生成假数据
-        private Dictionary<DateTime, decimal> GenerateFakeMarketValueDict()
+
+
+        [TestMethod]
+        public void UpsertSnapshot_Should_Work()
         {
-            return new Dictionary<DateTime, decimal>
+            // Arrange
+            var initialCash = 10000m; // Initial cash balance
+            var fakePrices = new Dictionary<string, decimal>
             {
-                { new DateTime(2023, 1, 1), 10000m },
-                { new DateTime(2023, 2, 1), 10500m },
-                { new DateTime(2023, 3, 1), 11000m },
-                { new DateTime(2023, 4, 1), 11500m },
-                { new DateTime(2023, 5, 1), 12000m },
-                { new DateTime(2023, 6, 1), 11000m },
-                { new DateTime(2023, 7, 1), 10000m },
-                { new DateTime(2023, 8, 1), 10500m },
-                { new DateTime(2023, 9, 1), 10200m },
-                { new DateTime(2023, 10, 1), 10800m }
+                { "AAPL", 150m },
+                { "GOOGL", 2800m }
             };
+
+            var currentDateTime = new DateTime(2023, 6, 15, 14, 30, 0, DateTimeKind.Utc); // Fixed historical date
+
+            // Create a sample filled order with a fixed historical date
+            var filledOrder = new OrderBase
+            {
+                Symbol = "AAPL",
+                Quantity = 50,
+                Price = 145m,
+                DateTimeUtc = currentDateTime // Use the fixed historical date
+            };
+
+            // Simulate the portfolio snapshot before updating
+            var initialPositions = new Positions
+            {
+                DateTime = new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc),
+                PositionList = new List<Position>
+                {
+                    new Position
+                    {
+                        Symbol = "AAPL",
+                        Quantity = 50,
+                        CostPrice = 140m,
+                        DateTime = new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc)
+                    }
+                }
+            };
+
+            // Simulate adding the initial snapshot to the portfolio
+            _portfolio.PortfolioSnapshots.Add(new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc), new PortfolioSnapshot
+            {
+                DateTime = new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc),
+                Positions = initialPositions,
+                Balance = new Balance
+                {
+                    DateTime = new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc),
+                    Cash = initialCash,
+                    MarketValue = 0,
+                    UnrealizedPnL = 0,
+                    NetLiquidationValue = initialCash
+                }
+            });
+
+            // Act
+            // Calculate new positions and balance
+            var updatedPositions = PortfolioCalculationService.CalculatePositions(_portfolio, filledOrder);
+            var updatedBalance = PortfolioCalculationService.CalculateBalance(_portfolio, initialCash, fakePrices, currentDateTime);
+
+            // Upsert the new snapshot with the fixed historical date
+            _portfolio.UpsertSnapshot(currentDateTime, updatedBalance, updatedPositions);
+
+            // Assert
+            var lastSnapshot = _portfolio.PortfolioSnapshots.Values.LastOrDefault();
+            Assert.IsNotNull(lastSnapshot, "Snapshot should be upserted.");
+            Assert.AreEqual(updatedBalance.Cash, lastSnapshot.Balance.Cash, "Cash should match.");
+            Assert.AreEqual(updatedBalance.NetLiquidationValue, lastSnapshot.Balance.NetLiquidationValue, "Net Liquidation Value should match.");
+            Assert.AreEqual(updatedPositions.PositionList.Count, lastSnapshot.Positions.PositionList.Count, "Positions count should match.");
+            Assert.AreEqual(updatedPositions.PositionList.First().Symbol, lastSnapshot.Positions.PositionList.First().Symbol, "Position symbol should match.");
+            Assert.AreEqual(updatedPositions.PositionList.First().Quantity, lastSnapshot.Positions.PositionList.First().Quantity, "Position quantity should match.");
         }
+
+
 
 
         [TestMethod]
@@ -190,6 +247,25 @@ namespace Quant.Infra.Net.Tests
             // Assert
             Assert.AreEqual(maxDrawdown, actualMaxDrawdown, "Maximum Drawdown calculation is incorrect.");
             Assert.AreEqual(maxDrawdownDuration, actualMaxDrawdownDuration, "Maximum Drawdown Duration calculation is incorrect.");
+        }
+
+
+        // 私有方法来生成假数据
+        private Dictionary<DateTime, decimal> GenerateFakeMarketValueDict()
+        {
+            return new Dictionary<DateTime, decimal>
+            {
+                { new DateTime(2023, 1, 1), 10000m },
+                { new DateTime(2023, 2, 1), 10500m },
+                { new DateTime(2023, 3, 1), 11000m },
+                { new DateTime(2023, 4, 1), 11500m },
+                { new DateTime(2023, 5, 1), 12000m },
+                { new DateTime(2023, 6, 1), 11000m },
+                { new DateTime(2023, 7, 1), 10000m },
+                { new DateTime(2023, 8, 1), 10500m },
+                { new DateTime(2023, 9, 1), 10200m },
+                { new DateTime(2023, 10, 1), 10800m }
+            };
         }
     }
 }

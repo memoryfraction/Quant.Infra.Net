@@ -25,7 +25,7 @@ namespace Quant.Infra.Net.Exchange.Service
         /// <param name="securityType"></param>
         /// <param name="currency"></param>
         /// <returns></returns>
-        Task<int> PlaceOrderAsync(OrderAbstract order, string exchange = "SMART", ContractSecurityType securityType = ContractSecurityType.Stock, Currency currency = Currency.USD);
+        Task<int> PlaceOrderAsync(OrderBase order, string exchange = "SMART", ContractSecurityType securityType = ContractSecurityType.Stock, Currency currency = Currency.USD);
 
         // Task<Order> GetOrderAsync(int orderId);
 

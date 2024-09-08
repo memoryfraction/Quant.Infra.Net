@@ -2,6 +2,63 @@
 
 namespace Quant.Infra.Net.Shared.Model
 {
+
+    /// <summary>
+    /// 表示订单的不同状态。
+    /// </summary>
+    public enum OrderStatus
+    {
+        /// <summary>
+        /// 新订单，已创建但尚未处理。
+        /// </summary>
+        New,
+
+        /// <summary>
+        /// 部分成交，订单的一部分数量已经成交。
+        /// </summary>
+        PartiallyFilled,
+
+        /// <summary>
+        /// 全部成交，订单的所有数量已经成交。
+        /// </summary>
+        Filled,
+
+        /// <summary>
+        /// 待处理，订单已提交但尚未被券商确认或接受。
+        /// </summary>
+        PendingNew,
+
+        /// <summary>
+        /// 已拒绝，订单因某些原因被券商拒绝，未能进入市场或成交。
+        /// </summary>
+        Rejected,
+
+        /// <summary>
+        /// 已取消，订单在未成交的情况下被用户或系统取消。
+        /// </summary>
+        Cancelled,
+
+        /// <summary>
+        /// 取消中，取消请求已提交，但尚未确认取消。
+        /// </summary>
+        PendingCancel,
+
+        /// <summary>
+        /// 已过期，订单因超过有效期未能成交而失效。
+        /// </summary>
+        Expired,
+
+        /// <summary>
+        /// 已暂停，订单被暂停执行。
+        /// </summary>
+        Suspended,
+
+        /// <summary>
+        /// 修改中，修改请求已提交，但尚未确认修改。
+        /// </summary>
+        PendingReplace
+    }
+
     public enum AssetType
     {
         UsEquity = 1,                  // US Equity
@@ -40,17 +97,48 @@ namespace Quant.Infra.Net.Shared.Model
         Binance
     }
 
-
     public enum TradeDirection
     {
-        Buy,  // 做多
-        Sell  // 做空
+        Long,  // 做多
+        Short  // 做空
     }
 
-    public enum OrderType
+    public enum OrderActionType
     {
+        Buy,  
+        Sell  
+    }
+
+    public enum OrderExecutionType
+    {
+        /// <summary>
+        /// Limit orders will be placed at a specific price. If the price isn't available in the order book for that asset the order will be added in the order book for someone to fill.
+        /// </summary>
+        Limit,
+        /// <summary>
+        /// Market order will be placed without a price. The order will be executed at the best price available at that time in the order book.
+        /// </summary>
         Market,
-        Limit
+        /// <summary>
+        /// Stop loss order. Will execute a market order when the price drops below a price to sell and therefor limit the loss
+        /// </summary>
+        StopLoss,
+        /// <summary>
+        /// Stop loss order. Will execute a limit order when the price drops below a price to sell and therefor limit the loss
+        /// </summary>
+        StopLossLimit,
+        /// <summary>
+        /// Take profit order. Will execute a market order when the price rises above a price to sell and therefor take a profit
+        /// </summary>
+        TakeProfit,
+        /// <summary>
+        /// Take profit limit order. Will execute a limit order when the price rises above a price to sell and therefor take a profit
+        /// </summary>
+        TakeProfitLimit,
+        /// <summary>
+        /// Same as a limit order, however it will fail if the order would immediately match, therefor preventing taker orders
+        /// </summary>
+        LimitMaker
     }
 
     public enum ContractSecurityType

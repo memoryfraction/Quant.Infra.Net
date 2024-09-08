@@ -8,9 +8,9 @@ namespace Quant.Infra.Net.Exchange.Model.InteractiveBroker
     public class TodoModel
     {
         public TodoModel() {
-            Orders = new List<OrderAbstract>();
+            Orders = new List<OrderBase>();
         }
-        public List<OrderAbstract> Orders { get; set; }
+        public List<OrderBase> Orders { get; set; }
 
         public string Notification { get; set; }
     }

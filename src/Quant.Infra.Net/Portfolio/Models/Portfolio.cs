@@ -1,117 +1,75 @@
-﻿using System;
+﻿using Quant.Infra.Net.Shared.Model;
+using System;
 using System.Collections.Generic;
-using Quant.Infra.Net.Shared.Model;
 
 
 namespace Quant.Infra.Net.Portfolio.Models
 {
-    public interface IPortfolio
+    public abstract class PortfolioBase
     {
-        string Name { get; set; }
-        decimal InitCash { get; set; }
-        Currency BaseCurrency { get; set; }
+        public decimal InitCapital { get; set; } = 10000m;
+        public abstract Currency BaseCurrency { get; set; }
+        public List<OrderBase> Orders { get; set; } = new List<OrderBase>();
+        public Dictionary<DateTime, PortfolioSnapshot> PortfolioSnapshots = new Dictionary<DateTime, PortfolioSnapshot>();
 
-        void ExecuteTrade(Trade trade);
-        decimal GetHoldings(AssetType assetType);
-        decimal GetCashBalance();
-        void PrintPortfolioSummary();
-    }
+        // 用于存储每个时间点的市场价值
+        public Dictionary<DateTime, decimal> MarketValueDic = new Dictionary<DateTime, decimal>();
 
-    public class Portfolio : IPortfolio
-    {
-        public string Name { get; set; }
-        public decimal InitCash { get; set; }
-        public Currency BaseCurrency { get; set; } = Currency.USD;
-        private Dictionary<AssetType, decimal> Holdings { get; set; } // 记录各资产的持仓量
-
-        public Portfolio(string name = "",
-            decimal initialCashBalance = 10000m,
-            Currency baseCurrency = Currency.USD)
+        protected PortfolioBase()
         {
-            Name = name;
-            InitCash = initialCashBalance;
-            BaseCurrency = baseCurrency;
-            Holdings = new Dictionary<AssetType, decimal>();
+            Orders = new List<OrderBase>();
+            PortfolioSnapshots = new Dictionary<DateTime, PortfolioSnapshot>();
+            MarketValueDic = new Dictionary<DateTime, decimal>();
         }
 
-        public void ExecuteTrade(Trade trade)
+        public void UpsertSnapshot(DateTime dateTime, Balance balance, Positions positions)
         {
-            if (trade == null)
-                throw new ArgumentNullException(nameof(trade));
-
-            // 根据交易方向更新投资组合
-            switch (trade.Direction)
+            if (PortfolioSnapshots.ContainsKey(dateTime))
             {
-                case TradeDirection.Buy:
-                    HandleBuyTrade(trade);
-                    break;
-                case TradeDirection.Sell:
-                    HandleSellTrade(trade);
-                    break;
-                default:
-                    throw new ArgumentException("Invalid trade direction.");
-            }
-        }
-
-        private void HandleBuyTrade(Trade trade)
-        {
-            decimal totalCost = trade.Quantity * trade.Price;
-
-            if (InitCash < totalCost)
-                throw new InvalidOperationException("Insufficient cash balance to execute buy trade.");
-
-            // 扣除现金余额
-            InitCash -= totalCost;
-
-            // 更新持仓
-            UpdateHoldings(trade.AssetType, trade.Quantity);
-        }
-
-        private void HandleSellTrade(Trade trade)
-        {
-            if (!Holdings.ContainsKey(trade.AssetType) || Holdings[trade.AssetType] < trade.Quantity)
-                throw new InvalidOperationException("Insufficient holdings to execute sell trade.");
-
-            // 更新持仓
-            Holdings[trade.AssetType] -= trade.Quantity;
-
-            // 增加现金余额
-            InitCash += trade.Quantity * trade.Price;
-        }
-
-        private void UpdateHoldings(AssetType assetType, decimal quantity)
-        {
-            if (Holdings.ContainsKey(assetType))
-            {
-                Holdings[assetType] += quantity;
+                PortfolioSnapshots[dateTime].Balance = balance;
+                PortfolioSnapshots[dateTime].Positions = positions;
             }
             else
             {
-                Holdings[assetType] = quantity;
+                PortfolioSnapshots.Add(dateTime, new PortfolioSnapshot
+                {
+                    DateTime = dateTime,
+                    Balance = balance,
+                    Positions = positions
+                });
             }
+
+            // 计算 MarketValue 并更新 marketValueDic
+            decimal marketValue = balance.MarketValue;
+            MarketValueDic[dateTime] = marketValue;
         }
 
-        public decimal GetHoldings(AssetType assetType)
-        {
-            return Holdings.ContainsKey(assetType) ? Holdings[assetType] : 0;
-        }
 
-        public decimal GetCashBalance()
-        {
-            return InitCash;
-        }
 
-        public void PrintPortfolioSummary()
-        {
-            Console.WriteLine($"Portfolio: {Name}");
-            Console.WriteLine($"Base Currency: {BaseCurrency}");
-            Console.WriteLine($"Cash Balance: {InitCash}");
+    }
 
-            Console.WriteLine("Holdings:");
-            foreach (var holding in Holdings)
-            {
-                Console.WriteLine($"{holding.Key}: {holding.Value}");
-            }
-        }
+    // 股票投资组合
+    public class StockPortfolio : PortfolioBase
+    {
+        public override Currency BaseCurrency { get; set; } = Currency.USD;
+
+
+    }
+
+
+
+    // 加密货币现货投资组合
+    public class CryptoSpotPortfolio : PortfolioBase
+    {
+        public override Currency BaseCurrency { get; set; } = Currency.USDT;
+
+
+    }
+
+    // 永续合约投资组合
+    public class PerpetualContractPortfolio : PortfolioBase
+    {
+        public override Currency BaseCurrency { get; set; } = Currency.USDT;
+
     }
 }

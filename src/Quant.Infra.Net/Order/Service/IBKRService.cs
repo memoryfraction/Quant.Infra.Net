@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using InterReact;
 using Quant.Infra.Net.Exchange.Model.InteractiveBroker;
+using Quant.Infra.Net.Shared.Model;
 using System;
 using System.Threading.Tasks;
 
@@ -35,7 +36,7 @@ namespace Quant.Infra.Net.Exchange.Service
         }
 
         public async Task<int> PlaceOrderAsync(
-            OrderAbstract order, 
+            OrderBase order, 
             string exchange = "SMART", 
             Quant.Infra.Net.Shared.Model.ContractSecurityType securityType = Quant.Infra.Net.Shared.Model.ContractSecurityType.Stock, 
             Quant.Infra.Net.Shared.Model.Currency currency = Quant.Infra.Net.Shared.Model.Currency.USD
@@ -54,22 +55,22 @@ namespace Quant.Infra.Net.Exchange.Service
 
             int orderId = _client.Request.GetNextId();
             InterReact.Order interReactOrder = new InterReact.Order();
-            if (order.OrderType == Quant.Infra.Net.OrderType.Limit)
+            if (order.ExecutionType == OrderExecutionType.Limit)
             {
                 interReactOrder = new()
                 {
-                    Action = order.OrderSide.ToString(),
+                    Action = order.ActionType.ToString(),
                     TotalQuantity = order.Quantity == null ? 0 : order.Quantity.Value,
                     OrderType = OrderTypes.Limit,
                     LimitPrice = order.Price == null ? 0.0: (double)order.Price.Value,
                     OutsideRegularTradingHours = true // 允许盘前盘后成交
                 };
             }
-            else if (order.OrderType == Quant.Infra.Net.OrderType.Market)
+            else if (order.ExecutionType == OrderExecutionType.Market)
             {
                 interReactOrder = new InterReact.Order()
                 {
-                    Action = order.OrderSide.ToString(),
+                    Action = order.ActionType.ToString(),
                     TotalQuantity = order.Quantity == null ? 0.0m : order.Quantity.Value, // 需要测试结果;
                     OrderType = OrderTypes.Market,
                     OutsideRegularTradingHours = true // 允许盘前盘后成交

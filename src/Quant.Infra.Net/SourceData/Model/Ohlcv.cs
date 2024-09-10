@@ -28,8 +28,10 @@ namespace Quant.Infra.Net.SourceData.Model
              Volume != default(decimal);
         }
     }
+
     public class Ohlcv: BasicOhlcv
     {
         public decimal AdjustedClose { get; set; }
     }
+
 }

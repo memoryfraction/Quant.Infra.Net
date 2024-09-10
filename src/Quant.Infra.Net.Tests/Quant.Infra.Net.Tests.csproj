@@ -22,7 +22,7 @@
     <PackageReference Include="MSTest.TestFramework" Version="3.4.3" />
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
     <PackageReference Include="pythonnet" Version="3.0.3" />
-    <PackageReference Include="ScottPlot" Version="5.0.36" />
+    <PackageReference Include="ScottPlot" Version="5.0.39" />
     <PackageReference Include="YahooFinanceApi" Version="2.3.3" />
   </ItemGroup>
 

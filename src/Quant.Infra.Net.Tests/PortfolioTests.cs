@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Portfolio.Models;
 using Quant.Infra.Net.Portfolio.Services;
+using Quant.Infra.Net.SourceData.Model;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -107,8 +108,6 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(updatedPositions.PositionList.First().Symbol, lastSnapshot.Positions.PositionList.First().Symbol, "Position symbol should match.");
             Assert.AreEqual(updatedPositions.PositionList.First().Quantity, lastSnapshot.Positions.PositionList.First().Quantity, "Position quantity should match.");
         }
-
-
 
 
         [TestMethod]
@@ -248,6 +247,102 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(maxDrawdown, actualMaxDrawdown, "Maximum Drawdown calculation is incorrect.");
             Assert.AreEqual(maxDrawdownDuration, actualMaxDrawdownDuration, "Maximum Drawdown Duration calculation is incorrect.");
         }
+
+
+        [TestMethod]
+        public async Task DrawMarketValuesChart_Should_Work()
+        {
+            // Arrange
+            var initialCash = 10000m; // Initial cash balance
+            var fakePrices = new Dictionary<string, List<Ohlcv>>
+    {
+        { "AAPL", new List<Ohlcv>
+            {
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc), Close = 150m },
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 15, 14, 30, 0, DateTimeKind.Utc), Close = 155m },
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 16, 14, 30, 0, DateTimeKind.Utc), Close = 160m },
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 17, 14, 30, 0, DateTimeKind.Utc), Close = 165m },
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 18, 14, 30, 0, DateTimeKind.Utc), Close = 170m }
+            }
+        },
+        { "GOOGL", new List<Ohlcv>
+            {
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc), Close = 2800m },
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 15, 14, 30, 0, DateTimeKind.Utc), Close = 2900m },
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 16, 14, 30, 0, DateTimeKind.Utc), Close = 3000m },
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 17, 14, 30, 0, DateTimeKind.Utc), Close = 3100m },
+                new Ohlcv { OpenDateTime = new DateTime(2023, 6, 18, 14, 30, 0, DateTimeKind.Utc), Close = 3200m }
+            }
+        }
+    };
+
+            // Define multiple time points
+            var timePoints = new List<DateTime>
+            {
+                new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc),
+                new DateTime(2023, 6, 15, 14, 30, 0, DateTimeKind.Utc),
+                new DateTime(2023, 6, 16, 14, 30, 0, DateTimeKind.Utc),
+                new DateTime(2023, 6, 17, 14, 30, 0, DateTimeKind.Utc),
+                new DateTime(2023, 6, 18, 14, 30, 0, DateTimeKind.Utc)
+            };
+
+            // Initial positions
+            var initialPositions = new Positions
+            {
+                PositionList = new List<Position>
+                {
+                    new Position
+                    {
+                        Symbol = "AAPL",
+                        Quantity = 50,
+                        CostPrice = 140m,
+                        DateTime = timePoints[0]
+                    }
+                }
+            };
+
+            // Create a portfolio
+            var _portfolio = new StockPortfolio();
+
+            // Add initial snapshot
+            _portfolio.UpsertSnapshot(timePoints[0], new Balance
+            {
+                DateTime = timePoints[0],
+                Cash = initialCash,
+                MarketValue = 50 * 150m, // Market value of AAPL
+                UnrealizedPnL = 50 * (150m - 140m), // Unrealized PnL
+                NetLiquidationValue = initialCash + 50 * 150m // Net liquidation value
+            }, initialPositions);
+
+            // Simulate market data for the following days
+            for (int i = 1; i < timePoints.Count; i++)
+            {
+                // Update portfolio market values based on the new prices
+                _portfolio.UpdateMarketValues(fakePrices);
+
+                // Calculate updated balance
+                var updatedBalance = new Balance
+                {
+                    DateTime = timePoints[i],
+                    Cash = initialCash,
+                    MarketValue = 50 * fakePrices["AAPL"].FirstOrDefault(o => o.OpenDateTime.Date == timePoints[i].Date)?.Close ?? 0m, // Updated market value
+                    UnrealizedPnL = 50 * (fakePrices["AAPL"].FirstOrDefault(o => o.OpenDateTime.Date == timePoints[i].Date)?.Close - 140m) ?? 0m, // Updated unrealized PnL
+                    NetLiquidationValue = initialCash + 50 * fakePrices["AAPL"].FirstOrDefault(o => o.OpenDateTime.Date == timePoints[i].Date)?.Close ?? 0m // Updated net liquidation value
+                };
+
+                // Update snapshot
+                _portfolio.UpsertSnapshot(timePoints[i], updatedBalance, initialPositions);
+            }
+
+            // Act
+            await _portfolio.DrawChart(true); // Draw chart
+
+            // Optionally verify the MarketValueDic has been updated
+            Assert.IsTrue(_portfolio.MarketValueDic.Values.Distinct().Count() > 1, "Market values should not be all the same.");
+        }
+
+
+
 
 
         // 私有方法来生成假数据

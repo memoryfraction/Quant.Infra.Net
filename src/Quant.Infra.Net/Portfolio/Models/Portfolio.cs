@@ -1,6 +1,13 @@
 ﻿using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.Shared.Service;
+using Quant.Infra.Net.SourceData.Model;
+using ScottPlot;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 
 namespace Quant.Infra.Net.Portfolio.Models
@@ -45,8 +52,141 @@ namespace Quant.Infra.Net.Portfolio.Models
         }
 
 
+        /// <summary>
+        /// 更新持仓标的物的价格序列，并更新 MarketValueDic。
+        /// </summary>
+        /// <param name="symbolDictionary"></param>
+        public void UpdateMarketValues(Dictionary<string, List<Ohlcv>> symbolOhlcvDic, ResolutionLevel resolutionLevel = ResolutionLevel.Daily)
+        {
+            if (symbolOhlcvDic == null || !symbolOhlcvDic.Any())
+                return;
 
+            // Determine the earliest and latest date in the portfolio snapshots and symbol data
+            var earliestSnapshotDate = PortfolioSnapshots.Keys.Min();
+            var latestSymbolDate = symbolOhlcvDic.Values.SelectMany(ohlcvs => ohlcvs.Select(x => x.OpenDateTime)).Max();
+
+            // Define the start and end dates based on the available data
+            var startDt = earliestSnapshotDate;
+            var endDt = latestSymbolDate;
+
+            // 根据resolutionLevel调整遍历Interval, 更新MarketValues
+            // Get the interval based on the resolution level
+            TimeSpan interval = GetInterval(resolutionLevel);
+
+            // Create a list of date/time points to update
+            var datePoints = new List<DateTime>();
+            for (var dt = startDt; dt <= endDt; dt += interval)
+            {
+                datePoints.Add(dt);
+            }
+
+            // Update MarketValueDic for each date point
+            foreach (var datePoint in datePoints)
+            {
+                if (PortfolioSnapshots.TryGetValue(datePoint, out var snapshot))
+                {
+                    decimal marketValue = 0;
+
+                    // Calculate the market value based on current positions and available symbol data
+                    foreach (var position in snapshot.Positions.PositionList)
+                    {
+                        if (symbolOhlcvDic.TryGetValue(position.Symbol, out var ohlcvList))
+                        {
+                            var ohlcv = FindNearestOhlcv(ohlcvList, datePoint.Date);
+                            if (ohlcv != null)
+                            {
+                                marketValue += position.Quantity * ohlcv.Close;
+                            }
+                        }
+                    }
+
+                    // Update MarketValueDic
+                    MarketValueDic[datePoint] = marketValue;
+                }
+            }
+
+        }
+
+        private Ohlcv FindNearestOhlcv(List<Ohlcv> ohlcvList, DateTime datePoint)
+        {
+            Ohlcv nearestOhlcv = null;
+            TimeSpan smallestTimeDifference = TimeSpan.MaxValue;
+
+            foreach (var ohlcv in ohlcvList)
+            {
+                var timeDifference = Math.Abs((ohlcv.OpenDateTime.Date - datePoint.Date).Ticks);
+
+                if (timeDifference < smallestTimeDifference.Ticks)
+                {
+                    smallestTimeDifference = TimeSpan.FromTicks(timeDifference);
+                    nearestOhlcv = ohlcv;
+                }
+            }
+
+            return nearestOhlcv;
+        }
+
+        private TimeSpan GetInterval(ResolutionLevel resolutionLevel = ResolutionLevel.Daily)
+        {
+            switch (resolutionLevel)
+            {
+                case ResolutionLevel.Tick:
+                    return TimeSpan.FromSeconds(1); // Assuming tick level updates every second
+                case ResolutionLevel.Second:
+                    return TimeSpan.FromSeconds(1);
+                case ResolutionLevel.Minute:
+                    return TimeSpan.FromMinutes(1);
+                case ResolutionLevel.Hourly:
+                    return TimeSpan.FromHours(1);
+                case ResolutionLevel.Daily:
+                    return TimeSpan.FromDays(1);
+                case ResolutionLevel.Weekly:
+                    return TimeSpan.FromDays(7);
+                case ResolutionLevel.Other:
+                default:
+                    return TimeSpan.FromDays(1); // Default to daily if not specified
+            }
+        }
+
+
+        /// <summary>
+        /// 根据MarketValueDic绘制Chart，横轴是日期，纵轴是decimal类型的Market Value。 并显示
+        /// </summary>
+        public async Task DrawChart(bool showChart = false)
+        {
+            // Convert MarketValueDic to lists of dates and market values
+            var dateList = MarketValueDic.Keys.ToList();
+            var marketValueList = MarketValueDic.Values.Select(x => (double)x).ToList();
+
+            // Create a new Plot object
+            var plt = new Plot();
+
+            // Plot market values against dates
+            plt.Add.Scatter(dateList, marketValueList);
+
+            // Format the X-axis as date
+            plt.Axes.DateTimeTicksBottom();
+
+            // Set the chart title and axis labels
+            plt.Title("Portfolio Market Value Over Time");
+            plt.XLabel("Date");
+            plt.YLabel("Market Value");
+
+            // Optionally save the plot as an image
+            string fullPathFilename = Path.Combine(AppContext.BaseDirectory, "output", "PortfolioMarketValue.png");
+            await UtilityService.IsPathExistAsync(fullPathFilename);
+            plt.SaveJpeg(fullPathFilename, 600, 400);
+
+            // Optionally display the chart if showChart is true
+            if (showChart)
+            {
+                // Open the generated image using the default program
+                Process.Start(new ProcessStartInfo(fullPathFilename) { UseShellExecute = true });
+            }
+        }
     }
+
+
 
     // 股票投资组合
     public class StockPortfolio : PortfolioBase
@@ -57,7 +197,6 @@ namespace Quant.Infra.Net.Portfolio.Models
     }
 
 
-
     // 加密货币现货投资组合
     public class CryptoSpotPortfolio : PortfolioBase
     {
@@ -66,10 +205,19 @@ namespace Quant.Infra.Net.Portfolio.Models
 
     }
 
+
     // 永续合约投资组合
     public class PerpetualContractPortfolio : PortfolioBase
     {
         public override Currency BaseCurrency { get; set; } = Currency.USDT;
 
+    }
+
+
+    public class PortfolioSnapshot
+    {
+        public DateTime DateTime { get; set; }
+        public Balance Balance { get; set; } = new Balance();
+        public Positions Positions { get; set; } = new Positions();
     }
 }

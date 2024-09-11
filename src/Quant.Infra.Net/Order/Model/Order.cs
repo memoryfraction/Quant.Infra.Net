@@ -1,5 +1,5 @@
-﻿using Quant.Infra.Net.Shared.Model;
-using System;
+﻿using System;
+using Quant.Infra.Net.Shared.Model;
 
 namespace Quant.Infra.Net
 {

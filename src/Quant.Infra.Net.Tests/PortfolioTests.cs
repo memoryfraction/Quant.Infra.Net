@@ -19,7 +19,7 @@ namespace Quant.Infra.Net.Tests
         {
             // 依赖注入
             _services = new ServiceCollection();
-            _services.AddScoped<PortfolioBase, PerpetualContractPortfolio>();
+            _services.AddScoped<PortfolioBase, CryptoPerpetualContractPortfolio>();
 
             // 读取配置文件
             _configuration = new ConfigurationBuilder()

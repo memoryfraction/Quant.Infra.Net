@@ -207,7 +207,7 @@ namespace Quant.Infra.Net.Portfolio.Models
 
 
     // 永续合约投资组合
-    public class PerpetualContractPortfolio : PortfolioBase
+    public class CryptoPerpetualContractPortfolio : PortfolioBase
     {
         public override Currency BaseCurrency { get; set; } = Currency.USDT;
 

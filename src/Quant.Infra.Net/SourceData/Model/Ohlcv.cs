@@ -4,6 +4,7 @@ namespace Quant.Infra.Net.SourceData.Model
 {
     public class BasicOhlcv
     {
+        public string Symbol { get; set; }
         public DateTime OpenDateTime { get; set; }
         public DateTime CloseDateTime { get; set; }
 

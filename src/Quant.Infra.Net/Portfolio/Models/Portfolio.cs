@@ -71,7 +71,7 @@ namespace Quant.Infra.Net.Portfolio.Models
 
             // 根据resolutionLevel调整遍历Interval, 更新MarketValues
             // Get the interval based on the resolution level
-            TimeSpan interval = GetInterval(resolutionLevel);
+            TimeSpan interval = UtilityService.GetInterval(resolutionLevel);
 
             // Create a list of date/time points to update
             var datePoints = new List<DateTime>();
@@ -124,28 +124,6 @@ namespace Quant.Infra.Net.Portfolio.Models
             }
 
             return nearestOhlcv;
-        }
-
-        private TimeSpan GetInterval(ResolutionLevel resolutionLevel = ResolutionLevel.Daily)
-        {
-            switch (resolutionLevel)
-            {
-                case ResolutionLevel.Tick:
-                    return TimeSpan.FromSeconds(1); // Assuming tick level updates every second
-                case ResolutionLevel.Second:
-                    return TimeSpan.FromSeconds(1);
-                case ResolutionLevel.Minute:
-                    return TimeSpan.FromMinutes(1);
-                case ResolutionLevel.Hourly:
-                    return TimeSpan.FromHours(1);
-                case ResolutionLevel.Daily:
-                    return TimeSpan.FromDays(1);
-                case ResolutionLevel.Weekly:
-                    return TimeSpan.FromDays(7);
-                case ResolutionLevel.Other:
-                default:
-                    return TimeSpan.FromDays(1); // Default to daily if not specified
-            }
         }
 
 

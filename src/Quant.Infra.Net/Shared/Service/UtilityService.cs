@@ -13,10 +13,32 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace Quant.Infra.Net.Shared.Service
 {
     public class UtilityService 
     {
+        public static TimeSpan GetInterval(ResolutionLevel resolutionLevel = ResolutionLevel.Daily)
+        {
+            switch (resolutionLevel)
+            {
+                case ResolutionLevel.Tick:
+                    return TimeSpan.FromSeconds(1); // Assuming tick level updates every second
+                case ResolutionLevel.Second:
+                    return TimeSpan.FromSeconds(1);
+                case ResolutionLevel.Minute:
+                    return TimeSpan.FromMinutes(1);
+                case ResolutionLevel.Hourly:
+                    return TimeSpan.FromHours(1);
+                case ResolutionLevel.Daily:
+                    return TimeSpan.FromDays(1);
+                case ResolutionLevel.Weekly:
+                    return TimeSpan.FromDays(7);
+                case ResolutionLevel.Other:
+                default:
+                    return TimeSpan.FromDays(1); // Default to daily if not specified
+            }
+        }
         public static async Task IsPathExistAsync(string fullPathFilename)
         {
             // 检查入参有效性

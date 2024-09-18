@@ -2,12 +2,17 @@
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using System;
+using System.Linq;
 
 namespace Quant.Infra.Net.Tests
 {
     [TestClass]
     public class RollingWindowTests
     {
+        /// <summary>
+        /// Tests that items are successfully added to the rolling window.
+        /// 测试项是否成功添加到滚动窗口中。
+        /// </summary>
         [TestMethod]
         public void Test_RollingWindow_Add_SuccessfullyAddsItems()
         {
@@ -61,6 +66,10 @@ namespace Quant.Infra.Net.Tests
             Assert.IsTrue(rollingWindow.IsReady); // Window should be ready after 3 elements
         }
 
+        /// <summary>
+        /// Tests that the oldest item is removed when the rolling window is full and a new item is added.
+        /// 测试在滚动窗口满时，添加新项会移除最旧的项。
+        /// </summary>
         [TestMethod]
         public void Test_RollingWindow_Add_RemovesOldestWhenFull()
         {
@@ -124,7 +133,10 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(item3, items.Last());  // item3 should be the last (most recent)
         }
 
-
+        /// <summary>
+        /// Tests that the Latest method returns the most recent item in the rolling window.
+        /// 测试 Latest 方法返回滚动窗口中最新的项。
+        /// </summary>
         [TestMethod]
         public void Test_RollingWindow_Latest_ReturnsMostRecent()
         {
@@ -179,6 +191,10 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(item3, latestItem); // item3 is the most recent
         }
 
+        /// <summary>
+        /// Tests that the Latest method throws an exception when the rolling window is empty.
+        /// 测试当滚动窗口为空时，Latest 方法抛出异常。
+        /// </summary>
         [TestMethod]
         [ExpectedException(typeof(InvalidOperationException))]
         public void Test_RollingWindow_Latest_ThrowsExceptionWhenEmpty()
@@ -192,6 +208,10 @@ namespace Quant.Infra.Net.Tests
             // Assert - Expects an InvalidOperationException
         }
 
+        /// <summary>
+        /// Tests that adding an invalid item to the rolling window throws an exception.
+        /// 测试将无效项添加到滚动窗口中会抛出异常。
+        /// </summary>
         [TestMethod]
         [ExpectedException(typeof(InvalidOperationException))]
         public void Test_RollingWindow_Add_ThrowsExceptionForInvalidItem()

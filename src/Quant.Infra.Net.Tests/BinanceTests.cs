@@ -23,7 +23,7 @@ namespace Quant.Infra.Net.Tests
             // 依赖注入
             _services = new ServiceCollection();
             _services.AddScoped<IDingtalkService, DingtalkService>();
-            _services.AddScoped<IBinanceService, BinanceService>();
+            _services.AddScoped<IBinanceOrderService, BinanceOrderService>();
 
             // Read Secret
             _configuration = new ConfigurationBuilder()
@@ -192,7 +192,7 @@ namespace Quant.Infra.Net.Tests
             // arrange
 
             // act
-            var binanceOrderService = _serviceProvider.GetRequiredService<IBinanceService>();
+            var binanceOrderService = _serviceProvider.GetRequiredService<IBinanceOrderService>();
             binanceOrderService.SetBinanceCredential(_apiKey, _apiSecret);
             var openOrders = await binanceOrderService.GetAllSpotOpenOrdersAsync();
 
@@ -214,8 +214,8 @@ namespace Quant.Infra.Net.Tests
             // 创建 Binance 客户端            
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
-                var balance = account.Data.AvailableBalance;
+                var accountInfoV3 = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
+                var balance = accountInfoV3.Data.AvailableBalance;
                 System.Console.WriteLine($"UsdFuturesApi Available Balance: {balance}."); // 获取合约账户的Margin Balance
                 Assert.IsTrue(balance >= 0);
             }
@@ -244,7 +244,7 @@ namespace Quant.Infra.Net.Tests
 
 
                 // 获取当前持仓数量
-                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var accountInfo = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
                 var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
                 var holdingPositions = position.Data.Where(x => x.Quantity != 0).Select(x => x);
                 var algoPosition = holdingPositions.Where(x => x.Symbol == "ALGOUSDT").FirstOrDefault();
@@ -271,7 +271,7 @@ namespace Quant.Infra.Net.Tests
             // 创建 Binance 客户端            
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
                 var balance = account.Data.AvailableBalance;
                 System.Console.WriteLine($"UsdFuturesApi Available Balance: {balance}."); // 获取合约账户的Margin Balance
                 Assert.IsTrue(balance >= 0);

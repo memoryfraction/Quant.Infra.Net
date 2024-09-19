@@ -21,7 +21,7 @@ namespace Quant.Infra.Net.Console
             var serviceCollection = new ServiceCollection();
 
             #region Scoped
-            serviceCollection.AddScoped<IBinanceService, BinanceService>(); // Injection ITestService to the container
+            serviceCollection.AddScoped<IBinanceOrderService, BinanceOrderService>(); // Injection ITestService to the container
             #endregion
 
             #region Singleton
@@ -53,7 +53,7 @@ namespace Quant.Infra.Net.Console
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 // Margin Account Balance
-                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
                 System.Console.WriteLine($"UsdFuturesApi Available Balance: {account.Data.AvailableBalance}."); // 获取合约账户的Margin Balance
 
 
@@ -69,7 +69,7 @@ namespace Quant.Infra.Net.Console
 
 
                 // 获取当前持仓数量
-                account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
                 var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
                 var holdingPositions = position.Data.Where(x => x.Quantity != 0).Select(x => x);
                 var algoPosition = holdingPositions.Where(x => x.Symbol == "ALGOUSDT").FirstOrDefault();

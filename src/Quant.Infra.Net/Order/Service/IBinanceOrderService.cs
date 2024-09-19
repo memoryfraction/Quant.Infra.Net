@@ -13,7 +13,7 @@ namespace Quant.Infra.Net
     /// 传入参数，负责与订单相关的操作。 比如: 增加订单，获取所有订单，取消订单等
     /// Pass in parameters and be responsible for order-related operations. For example: add orders, get all orders, cancel orders, etc.
     /// </summary>
-    public interface IBinanceService
+    public interface IBinanceOrderService
     {
         Task<IEnumerable<string>> GetAllSymbolsAsync();
         Task<BinancePlacedOrder> PlaceSpotOrderAsync(string symbol, OrderSide orderSide, OrderActionType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3);
@@ -44,7 +44,7 @@ namespace Quant.Infra.Net
 
         #region Binance Future
 
-        Task<BinanceFuturesAccountInfo> GetBinanceFuturesAccountInfoAsync();
+        Task<BinanceFuturesAccountInfoV3> GetBinanceFuturesAccountInfoAsync();
 
         Task<IEnumerable<BinancePositionDetailsUsdt>> GetHoldingPositionAsync();
 

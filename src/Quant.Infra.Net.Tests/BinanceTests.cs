@@ -1,15 +1,10 @@
 using AutoMapper;
 using Binance.Net.Clients;
 using CryptoExchange.Net.Authentication;
-using CryptoExchange.Net.CommonObjects;
-using CsvHelper.Configuration;
-using CsvHelper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Notification.Service;
-using System.Globalization;
 using Quant.Infra.Net.Shared.Service;
-using System.Security.Principal;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -187,10 +182,6 @@ namespace Quant.Infra.Net.Tests
             var startDt = endDt.AddYears(-5);
             await UtilityService.SaveOhlcvsToCsv(symbol, interval, startDt,endDt,fullPathFileName);
         }
-
-
-        
-
         #endregion
 
 

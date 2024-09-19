@@ -22,7 +22,7 @@ namespace Quant.Infra.Net.Console
             // 创建 Binance 客户端            
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
                 var holdingPositions = client.UsdFuturesApi.Account.GetPositionInformationAsync().Result.Data.Where(x => x.Quantity != 0).Select(x => x);
                 var position = holdingPositions.Where(x => x.Symbol == symbol).FirstOrDefault();
                 if (position == null)

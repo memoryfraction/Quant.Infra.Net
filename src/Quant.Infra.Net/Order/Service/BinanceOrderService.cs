@@ -17,11 +17,11 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net
 {
-    public class BinanceService : IBinanceService
+    public class BinanceOrderService : IBinanceOrderService
     {
         private string _apiKey, _apiSecret;
         private readonly IMapper _mapper;
-        public BinanceService(IMapper mapper)
+        public BinanceOrderService(IMapper mapper)
         {
             _mapper = mapper;
         }
@@ -151,7 +151,7 @@ namespace Quant.Infra.Net
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
                 var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
                 var holdingPositions = position.Data.Where(x => x.Quantity != 0).Select(x => x);
                 return holdingPositions;
@@ -181,7 +181,7 @@ namespace Quant.Infra.Net
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var account = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
                 var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
                 var holdingPositions = position.Data.Where(x => x.Quantity != 0).Select(x => x);
                 var holdingSymbolPosition = holdingPositions.Where(x => x.Symbol.ToLower() == symbol.ToLower());
@@ -189,12 +189,12 @@ namespace Quant.Infra.Net
             }
         }
 
-        public async Task<BinanceFuturesAccountInfo> GetBinanceFuturesAccountInfoAsync()
+        public async Task<BinanceFuturesAccountInfoV3> GetBinanceFuturesAccountInfoAsync()
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 // Margin Account Balance
-                var accountInfo = await client.UsdFuturesApi.Account.GetAccountInfoAsync();
+                var accountInfo = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
                 if (accountInfo.Success)
                     return accountInfo.Data;
                 else

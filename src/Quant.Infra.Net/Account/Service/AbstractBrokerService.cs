@@ -1,4 +1,5 @@
-﻿using Quant.Infra.Net.Shared.Model;
+﻿using System;
+using Quant.Infra.Net.Shared.Model;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -8,7 +9,25 @@ namespace Quant.Infra.Net.Account.Service
     {
         public virtual Currency BaseCurrency { get; set; } = Currency.USD;
 
-        public abstract Task<List<string>> GetSymbolListAsync();
+        public virtual Task<IEnumerable<string>> GetSymbolListAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual Task<IEnumerable<string>> GetSpotSymbolListAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual Task<IEnumerable<string>> GetUsdFuturesSymbolListAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual Task<IEnumerable<string>> GetCoinFuturesSymbolListAsync()
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// 异步设置持仓比例

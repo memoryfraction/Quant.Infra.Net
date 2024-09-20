@@ -17,7 +17,7 @@ namespace Quant.Infra.Net.Account.Service
         /// Asynchronously get the list of all trading pairs
         /// </summary>
         /// <returns>返回交易对的列表</returns>
-        public override async Task<List<string>> GetSymbolListAsync()
+        public override async Task<IEnumerable<string>> GetSymbolListAsync()
         {
             throw new NotImplementedException();
         }

@@ -2,6 +2,23 @@
 
 namespace Quant.Infra.Net.Shared.Model
 {
+    public enum Broker
+    {
+        Binance,              // Binance
+        OKEX,                 // OKEX
+        InteractiveBrokers,   // Interactive Brokers
+        Coinbase,             // Coinbase
+        Kraken,               // Kraken
+        Bitfinex,             // Bitfinex
+        Bitstamp,             // Bitstamp
+        FTX,                  // FTX (assuming still supported)
+        Deribit,              // Deribit
+        Huobi,                // Huobi
+        Kucoin,               // Kucoin
+        Gemini                // Gemini
+    }
+
+
 
     /// <summary>
     /// 表示订单的不同状态。

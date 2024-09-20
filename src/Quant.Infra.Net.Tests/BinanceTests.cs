@@ -3,6 +3,7 @@ using Binance.Net.Clients;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Quant.Infra.Net.Account.Service;
 using Quant.Infra.Net.Notification.Service;
 using Quant.Infra.Net.Shared.Service;
 
@@ -24,6 +25,7 @@ namespace Quant.Infra.Net.Tests
             _services = new ServiceCollection();
             _services.AddScoped<IDingtalkService, DingtalkService>();
             _services.AddScoped<IBinanceOrderService, BinanceOrderService>();
+            _services.AddScoped<AbstractBrokerService, BinanceService>();
 
             // Read Secret
             _configuration = new ConfigurationBuilder()
@@ -158,17 +160,20 @@ namespace Quant.Infra.Net.Tests
             }
         }
 
+
         [TestMethod]
-        public async Task GetSymbolList_Should_Work()
+        public async Task GetSpotSymbolListAsync_Should_Work()
         {
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
-            {
-                var symbolList = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
-                Assert.IsNotNull(symbolList);
-                Assert.IsTrue(symbolList.Success);
-                Assert.IsTrue(symbolList.Data.Symbols.Count() > 0);
-            }
+            // Arrange
+            var binanceOrderService = _serviceProvider.GetRequiredService<AbstractBrokerService>();
+
+            // act
+            var spotSymbolList = await binanceOrderService.GetSpotSymbolListAsync();
+
+            // assert
+            Assert.IsNotNull(spotSymbolList);
         }
+
 
         [TestMethod]
         public async Task SaveKlinesToCsv()

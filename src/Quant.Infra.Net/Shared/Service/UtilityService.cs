@@ -18,6 +18,26 @@ namespace Quant.Infra.Net.Shared.Service
 {
     public class UtilityService 
     {
+
+        /// <summary>
+        /// 调整时间到下一个工作日，如果为周六或周日，则顺延到下周一
+        /// Adjusts the time to the next weekday; if it's Saturday or Sunday, moves to the following Monday.
+        /// </summary>
+        /// <param name="dateTime">要调整的日期时间</param>
+        /// <returns>调整后的日期时间</returns>
+        public static DateTime AdjustToNextWeekday(DateTime dateTime)
+        {
+            if (dateTime.DayOfWeek == DayOfWeek.Saturday)
+            {
+                return dateTime.AddDays(2); // 跳过周六到周一
+            }
+            else if (dateTime.DayOfWeek == DayOfWeek.Sunday)
+            {
+                return dateTime.AddDays(1); // 跳过周日到周一
+            }
+            return dateTime;
+        }
+
         public static TimeSpan GetInterval(ResolutionLevel resolutionLevel = ResolutionLevel.Daily)
         {
             switch (resolutionLevel)

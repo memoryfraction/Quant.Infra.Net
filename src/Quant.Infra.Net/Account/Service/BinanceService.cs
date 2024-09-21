@@ -6,6 +6,8 @@ using Binance.Net.Clients;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Quant.Infra.Net.SourceData.Model;
+using Polly;
+using Serilog;
 
 namespace Quant.Infra.Net.Account.Service
 {
@@ -154,68 +156,89 @@ namespace Quant.Infra.Net.Account.Service
         /// <returns>返回指定交易对的最新 OHLCV 数据。<para>Returns the latest OHLCV data for the specified trading pair.</para></returns>
         /// <exception cref="NotSupportedException">当资产类型不被支持时抛出此异常。<para>Throws this exception when the asset type is not supported.</para></exception>
         /// <exception cref="Exception">当无法成功获取 OHLCV 数据时抛出此异常。<para>Throws this exception when unable to successfully fetch OHLCV data.</para></exception>
-        public async Task<Ohlcv> GetOhlcvAsync(string symbol, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly, 
-            AssetType assetType = AssetType.CryptoSpot, 
-            DateTime? startDt = null, 
-            DateTime? endDt = null, 
+        public async Task<Ohlcv> GetOhlcvAsync(string symbol, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly,
+            AssetType assetType = AssetType.CryptoSpot,
+            DateTime? startDt = null,
+            DateTime? endDt = null,
             int limit = 1)
         {
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
-            {
-                // 根据resolutionLevel映射到KlineInterval
-                var interval = GetKlineInterval(resolutionLevel);
-
-                switch (assetType)
+            // 定义重试策略
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .RetryAsync(3, (exception, retryCount) =>
                 {
-                    case AssetType.CryptoSpot:
-                        // 获取加密货币现货的K线数据
-                        var spotKlinesResponse = await client.SpotApi.ExchangeData.GetKlinesAsync(symbol, interval, startTime:startDt, endTime:endDt, limit: limit);
-                        if (spotKlinesResponse.Success && spotKlinesResponse.Data.Any())
+                    var message = $"Retry {retryCount} due to: {exception.Message}";
+                    Console.WriteLine(message); // 控制台输出
+                    Log.Warning(message); // 日志记录
+                });
+
+            try
+            {
+                using (var client = new Binance.Net.Clients.BinanceRestClient())
+                {
+                    // 根据 resolutionLevel 映射到 KlineInterval
+                    var interval = GetKlineInterval(resolutionLevel);
+
+                    return await retryPolicy.ExecuteAsync(async () =>
+                    {
+                        switch (assetType)
                         {
-                            var latestOhlcv = spotKlinesResponse.Data.First();
-                            return new Ohlcv
-                            {
-                                Open = latestOhlcv.OpenPrice,
-                                High = latestOhlcv.HighPrice,
-                                Low = latestOhlcv.LowPrice,
-                                Close = latestOhlcv.ClosePrice,
-                                Volume = latestOhlcv.Volume,
-                                //OpenTime = latestOhlcv.OpenTime,
-                                CloseDateTime = latestOhlcv.CloseTime
-                            };
+                            case AssetType.CryptoSpot:
+                                // 获取加密货币现货的K线数据
+                                var spotKlinesResponse = await client.SpotApi.ExchangeData.GetKlinesAsync(symbol, interval, startTime: startDt, endTime: endDt, limit: limit);
+                                if (spotKlinesResponse.Success && spotKlinesResponse.Data.Any())
+                                {
+                                    var latestOhlcv = spotKlinesResponse.Data.First();
+                                    return new Ohlcv
+                                    {
+                                        Open = latestOhlcv.OpenPrice,
+                                        High = latestOhlcv.HighPrice,
+                                        Low = latestOhlcv.LowPrice,
+                                        Close = latestOhlcv.ClosePrice,
+                                        Volume = latestOhlcv.Volume,
+                                        CloseDateTime = latestOhlcv.CloseTime
+                                    };
+                                }
+                                throw new Exception($"Failed to get spot OHLCV for {symbol}: {spotKlinesResponse.Error?.Message}");
+
+                            case AssetType.CryptoPerpetualContract:
+                                // 获取加密货币永续合约的K线数据
+                                var perpetualKlinesResponse = await client.UsdFuturesApi.ExchangeData.GetKlinesAsync(symbol, interval, startTime: startDt, endTime: endDt, limit: limit);
+                                if (perpetualKlinesResponse.Success && perpetualKlinesResponse.Data.Any())
+                                {
+                                    var latestOhlcv = perpetualKlinesResponse.Data.First();
+                                    return new Ohlcv
+                                    {
+                                        Open = latestOhlcv.OpenPrice,
+                                        High = latestOhlcv.HighPrice,
+                                        Low = latestOhlcv.LowPrice,
+                                        Close = latestOhlcv.ClosePrice,
+                                        Volume = latestOhlcv.Volume,
+                                        CloseDateTime = latestOhlcv.CloseTime
+                                    };
+                                }
+                                throw new Exception($"Failed to get perpetual contract OHLCV for {symbol}: {perpetualKlinesResponse.Error?.Message}");
+
+                            case AssetType.CryptoOption:
+                                // 获取加密货币期权的OHLCV数据 (假设Binance支持期权交易,具体接口需要查找Binance期权API)
+                                throw new NotImplementedException("Crypto options are not yet implemented.");
+
+                            default:
+                                // 其他资产类型不支持
+                                throw new NotSupportedException($"Asset type {assetType} is not supported.");
                         }
-                        throw new Exception($"Failed to get spot OHLCV for {symbol}: {spotKlinesResponse.Error?.Message}");
-
-                    case AssetType.CryptoPerpetualContract:
-                        // 获取加密货币永续合约的K线数据
-                        var perpetualKlinesResponse = await client.UsdFuturesApi.ExchangeData.GetKlinesAsync(symbol, interval, startTime: startDt, endTime: endDt, limit: limit);
-                        if (perpetualKlinesResponse.Success && perpetualKlinesResponse.Data.Any())
-                        {
-                            var latestOhlcv = perpetualKlinesResponse.Data.First();
-                            return new Ohlcv
-                            {
-                                Open = latestOhlcv.OpenPrice,
-                                High = latestOhlcv.HighPrice,
-                                Low = latestOhlcv.LowPrice,
-                                Close = latestOhlcv.ClosePrice,
-                                Volume = latestOhlcv.Volume,
-                                //OpenTime = latestOhlcv.OpenTime,
-                                CloseDateTime = latestOhlcv.CloseTime
-                            };
-                        }
-                        throw new Exception($"Failed to get perpetual contract OHLCV for {symbol}: {perpetualKlinesResponse.Error?.Message}");
-
-                    case AssetType.CryptoOption:
-                        // 获取加密货币期权的OHLCV数据 (假设Binance支持期权交易,具体接口需要查找Binance期权API)
-                        throw new NotImplementedException("Crypto options are not yet implemented.");
-
-                    default:
-                        // 其他资产类型不支持
-                        throw new NotSupportedException($"Asset type {assetType} is not supported.");
+                    });
                 }
             }
+            catch (Exception ex)
+            {
+                // 记录最终异常
+                var errorMessage = $"Error fetching OHLCV data for {symbol}: {ex.Message}";
+                Console.WriteLine(errorMessage); // 控制台输出
+                Log.Error(ex, errorMessage); // 日志记录
+                throw; // 重新抛出异常以便上层处理
+            }
         }
-
 
         private Binance.Net.Enums.KlineInterval GetKlineInterval(ResolutionLevel resolutionLevel)
         {

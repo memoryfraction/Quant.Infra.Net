@@ -2,6 +2,63 @@
 
 namespace Quant.Infra.Net.Shared.Model
 {
+
+    /// <summary>
+    /// 代表不同市场类型
+    /// Represents different market types
+    /// </summary>
+    public enum MarketType
+    {
+        /// <summary>
+        /// 加密货币市场，24小时交易
+        /// Cryptocurrency market, open 24 hours
+        /// </summary>
+        Crypto,
+
+        /// <summary>
+        /// 美股市场，早9:30到16:00交易
+        /// US equity market, open from 9:30 AM to 4:00 PM
+        /// </summary>
+        UsEquityMarket,
+
+        /// <summary>
+        /// 香港股市
+        /// Hong Kong equity market
+        /// </summary>
+        HkEquityMarket,
+
+        /// <summary>
+        /// 中国股市
+        /// China equity market
+        /// </summary>
+        ChinaEquityMarket,
+
+        /// <summary>
+        /// 外汇市场
+        /// Forex market
+        /// </summary>
+        Forex,
+
+        /// <summary>
+        /// 大宗商品市场
+        /// Commodities market
+        /// </summary>
+        Commodities,
+
+        /// <summary>
+        /// 欧洲股市
+        /// European equity market
+        /// </summary>
+        EuropeEquityMarket,
+
+        /// <summary>
+        /// 印度股市
+        /// Indian equity market
+        /// </summary>
+        IndiaEquityMarket
+    }
+
+
     public enum Broker
     {
         Binance,              // Binance

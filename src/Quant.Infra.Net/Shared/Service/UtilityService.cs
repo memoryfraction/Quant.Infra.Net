@@ -1,7 +1,6 @@
 ﻿using Binance.Net.Clients;
 using CsvHelper;
 using CsvHelper.Configuration;
-using Microsoft.Data.Analysis;
 using Python.Runtime;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
@@ -9,41 +8,44 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 namespace Quant.Infra.Net.Shared.Service
 {
-    public class UtilityService 
+    public class UtilityService
     {
-
         /// <summary>
-        /// 调整时间到下一个工作日，如果为周六或周日，则顺延到下周一
+        /// 调整时间到下一个工作日，如果为周六或周日，则顺延到下周一。
         /// Adjusts the time to the next weekday; if it's Saturday or Sunday, moves to the following Monday.
         /// </summary>
-        /// <param name="dateTime">要调整的日期时间</param>
-        /// <returns>调整后的日期时间</returns>
+        /// <param name="dateTime">要调整的日期时间 / The DateTime to adjust.</param>
+        /// <returns>调整后的日期时间 / The adjusted DateTime.</returns>
         public static DateTime AdjustToNextWeekday(DateTime dateTime)
         {
             if (dateTime.DayOfWeek == DayOfWeek.Saturday)
             {
-                return dateTime.AddDays(2); // 跳过周六到周一
+                return dateTime.AddDays(2); // 跳过周六到周一 / Skip Saturday to Monday
             }
             else if (dateTime.DayOfWeek == DayOfWeek.Sunday)
             {
-                return dateTime.AddDays(1); // 跳过周日到周一
+                return dateTime.AddDays(1); // 跳过周日到周一 / Skip Sunday to Monday
             }
             return dateTime;
         }
 
+        /// <summary>
+        /// 获取指定分辨率级别的时间间隔。
+        /// Gets the time interval for the specified resolution level.
+        /// </summary>
+        /// <param name="resolutionLevel">分辨率级别 / The resolution level.</param>
+        /// <returns>时间间隔 / The time interval.</returns>
         public static TimeSpan GetInterval(ResolutionLevel resolutionLevel = ResolutionLevel.Daily)
         {
             switch (resolutionLevel)
             {
                 case ResolutionLevel.Tick:
-                    return TimeSpan.FromSeconds(1); // Assuming tick level updates every second
+                    return TimeSpan.FromSeconds(1); // 假设每秒更新一次 / Assuming tick level updates every second
                 case ResolutionLevel.Second:
                     return TimeSpan.FromSeconds(1);
                 case ResolutionLevel.Minute:
@@ -56,82 +58,89 @@ namespace Quant.Infra.Net.Shared.Service
                     return TimeSpan.FromDays(7);
                 case ResolutionLevel.Other:
                 default:
-                    return TimeSpan.FromDays(1); // Default to daily if not specified
+                    return TimeSpan.FromDays(1); // 默认返回每日 / Default to daily if not specified
             }
         }
+
+        /// <summary>
+        /// 异步检查路径是否存在，如果不存在则创建目录。
+        /// Asynchronously checks if the path exists; if not, creates the directory.
+        /// </summary>
+        /// <param name="fullPathFilename">完整路径文件名 / Full path filename.</param>
         public static async Task IsPathExistAsync(string fullPathFilename)
         {
-            // 检查入参有效性
+            // 检查入参有效性 / Check parameter validity
             if (string.IsNullOrEmpty(fullPathFilename))
-                throw new ArgumentNullException($"Invalid parameter:{fullPathFilename}");
+                throw new ArgumentNullException($"Invalid parameter: {fullPathFilename}");
 
-            // 从完整路径中获取目录路径
+            // 从完整路径中获取目录路径 / Get directory path from the full path
             var directoryPath = Path.GetDirectoryName(fullPathFilename);
             if (directoryPath == null)
             {
                 throw new ArgumentException("Invalid path");
             }
 
-            // 检查文件夹是否存在
+            // 检查文件夹是否存在 / Check if the directory exists
             if (!Directory.Exists(directoryPath))
             {
                 try
                 {
-                    // 异步创建文件夹
+                    // 异步创建文件夹 / Asynchronously create the directory
                     await Task.Run(() => Directory.CreateDirectory(directoryPath));
                     Console.WriteLine("Folder created: " + directoryPath);
                 }
                 catch (Exception ex)
                 {
-                    // 处理可能出现的异常（例如权限问题）
+                    // 处理可能出现的异常（例如权限问题）/ Handle possible exceptions (e.g., permission issues)
                     Console.WriteLine("An error occurred: " + ex.Message);
                     throw;
                 }
             }
         }
 
-
         /// <summary>
-        /// 调用Binance，根据Sumbol获取历史数据，存到指定路径的csv文件
+        /// 调用Binance，根据Sumbol获取历史数据，存到指定路径的CSV文件。
+        /// Calls Binance to get historical data based on symbol and saves it to a specified CSV file.
         /// </summary>
-        /// <param name="symbol">BTCUSDT</param>
-        /// <param name="interval"></param>
-        /// <param name="startDt"></param>
-        /// <param name="endDt"></param>
-        /// <param name="fullPathFileName"></param>
+        /// <param name="symbol">交易对，如 BTCUSDT / The trading pair, e.g., BTCUSDT.</param>
+        /// <param name="interval">K线间隔 / The Kline interval.</param>
+        /// <param name="startDt">开始时间 / The start date.</param>
+        /// <param name="endDt">结束时间 / The end date.</param>
+        /// <param name="fullPathFileName">完整路径文件名 / The full path filename.</param>
+        /// <param name="overWrite">是否覆盖现有文件 / Whether to overwrite the existing file.</param>
         /// <returns></returns>
-        public static async Task SaveOhlcvsToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName,bool overWrite = true)
+        public static async Task SaveOhlcvsToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName, bool overWrite = true)
         {
-            if(string.IsNullOrEmpty(symbol))
+            if (string.IsNullOrEmpty(symbol))
                 throw new ArgumentNullException(symbol);
 
             if (string.IsNullOrEmpty(fullPathFileName))
                 throw new ArgumentNullException(fullPathFileName);
 
-            // 确保路径存在
+            // 确保路径存在 / Ensure the path exists
             var directory = Path.GetDirectoryName(fullPathFileName);
             if (!Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
             }
 
-            if(overWrite == true)
-            { 
+            if (overWrite == true)
+            {
                 if (File.Exists(fullPathFileName))
                     File.Delete(fullPathFileName);
             }
 
             using (var client = new BinanceRestClient())
             {
-                var klinesResult = await client.SpotApi.ExchangeData.GetKlinesAsync(symbol, interval, startDt, endDt); // 获取历史K线数据
+                var klinesResult = await client.SpotApi.ExchangeData.GetKlinesAsync(symbol, interval, startDt, endDt); // 获取历史K线数据 / Get historical Kline data
 
-                // Save klinesResult to fullPathFileName using csvHelper
+                // 使用 CsvHelper 保存 klinesResult 到 fullPathFileName / Save klinesResult to fullPathFileName using CsvHelper
                 if (klinesResult.Success)
                 {
                     using (var writer = new StreamWriter(fullPathFileName))
                     using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)))
                     {
-                        // Write header
+                        // 写入标题行 / Write header
                         csv.WriteHeader<Ohlcv>();
                         csv.NextRecord();
 
@@ -158,24 +167,26 @@ namespace Quant.Infra.Net.Shared.Service
             }
         }
 
-
         /// <summary>
-        /// 执行Python方法，并返回PyObject
+        /// 执行Python方法，并返回PyObject。
+        /// Executes a Python method and returns a PyObject.
         /// </summary>
-        /// <param name="venvPath">虚拟环境的路径，比如：@"D:\ProgramData\PythonVirtualEnvs\pair_trading"</param>
-        /// <param name="pythonDll">比如:  "python39.dll"</param>
-        /// <param name="directories">Python文件所处的路径，比如："Python文件夹"</param>
-        /// <param name="pythonFileName">Without Extension</param>
-        /// <param name="pythonFunctionName"></param>
+        /// <param name="pythonFileName">Python文件名（无扩展名）/ The Python file name (without extension).</param>
+        /// <param name="pythonFunctionName">Python函数名 / The Python function name.</param>
+        /// <param name="pythonParameterObjs">Python参数对象的集合 / The collection of Python parameter objects.</param>
+        /// <param name="pythonDirectories">Python文件所在的路径集合 / The collection of directories where the Python files are located.</param>
+        /// <param name="venvPath">虚拟环境的路径 / The path to the virtual environment.</param>
+        /// <param name="pythonDll">Python DLL文件名 / The Python DLL file name.</param>
+        /// <returns>返回的PyObject / The returned PyObject.</returns>
         public static PyObject ExecutePython(
-            string pythonFileName, 
+            string pythonFileName,
             string pythonFunctionName,
             IEnumerable<Object> pythonParameterObjs,
             IEnumerable<string> pythonDirectories,
             string venvPath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading",
             string pythonDll = "python39.dll")
         {
-            // 初始化变量
+            // 初始化变量 / Initialize variables
             var condaVenvHomePath = venvPath; // @"D:\ProgramData\PythonVirtualEnvs\pair_trading"
             var pythonDllFileName = pythonDll; // "python39.dll";
             var pythonFullPathFileName = Path.Combine(condaVenvHomePath, pythonDllFileName);
@@ -188,7 +199,7 @@ namespace Quant.Infra.Net.Shared.Service
             PythonEngine.PythonPath = infra.PythonPath;
             PythonEngine.Initialize();
 
-            // 使用Python GIL
+            // 使用Python GIL / Use Python GIL
             using (Py.GIL())
             {
                 try
@@ -206,82 +217,31 @@ namespace Quant.Infra.Net.Shared.Service
                         }
                         code = codeStringBuilder.ToString();
                     }
-                    PythonEngine.Exec(code);
-                    var pythonScript = Py.Import(pythonFileName);
 
-                    var pythonObjectArray = pythonParameterObjs.Select(x => x.ToPython()).ToArray();
-                    PyObject response = pythonScript.InvokeMethod(pythonFunctionName, pythonObjectArray);
-                    return response;
+                    PythonEngine.Exec(code); // 执行代码 / Execute code
+
+                    // 执行指定的 Python 函数并获取结果 / Execute the specified Python function and get the result
+                    var pyParams = new PyList();
+                    foreach (var param in pythonParameterObjs)
+                    {
+                        pyParams.Append(param.ToPython());
+                    }
+
+                    var pyResult = PythonEngine.RunString($"{pythonFunctionName}(*{pyParams})"); // 运行Python函数 / Run the Python function
+                    return pyResult; // 返回结果 / Return the result
                 }
-                catch (PythonException ex)
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"Error importing sys or adding path: {ex.Message}");
-                    throw;
+                    throw new Exception($"An error occurred while executing Python: {ex.Message}", ex);
+                }
+                finally
+                {
+                    // 清理环境 / Clean up the environment
+                    PythonEngine.Shutdown();
                 }
             }
         }
 
-
-        /// <summary>
-        /// Async 版本的ExecutePython()
-        /// </summary>
-        /// <param name="pythonFileName"></param>
-        /// <param name="pythonFunctionName"></param>
-        /// <param name="pythonParameterObjs"></param>
-        /// <param name="pythonDirectories"></param>
-        /// <param name="venvPath"></param>
-        /// <param name="pythonDll"></param>
-        /// <returns></returns>
-        public static async Task<PyObject> ExecutePythonAsync(string pythonFileName,
-            string pythonFunctionName,
-            IEnumerable<Object> pythonParameterObjs,
-            IEnumerable<string> pythonDirectories,
-            string venvPath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading",
-            string pythonDll = "python39.dll")
-        {
-            return await Task.Run(() =>
-            {
-                return ExecutePython(
-                    pythonFileName,
-                    pythonFunctionName,
-                    pythonParameterObjs,
-                    pythonDirectories,
-                    venvPath,
-                    pythonDll
-                );
-            });
-        }
-
-
-        /// <summary>
-        /// 读取CSV文件，返回DataFrame
-        /// Title Row: DateTime, Open, High, Low, Close, Volume
-        /// </summary>
-        /// <param name="fullPathFileName"></param>
-        /// <returns></returns>
-        public static DataFrame LoadCsvToDataFrame(string fullPathFileName)
-        {
-            var dateTimeColumn = new PrimitiveDataFrameColumn<DateTime>("DateTime");
-            var closeColumn = new DoubleDataFrameColumn("Close");
-
-            using (var reader = new StreamReader(fullPathFileName))
-            {
-                var csv = new CsvHelper.CsvReader(reader, CultureInfo.InvariantCulture);
-                var records = csv.GetRecords<dynamic>();
-
-                foreach (var record in records)
-                {
-                    var row = record as IDictionary<string, object>;
-                    dateTimeColumn.Append(DateTime.Parse(row["DateTime"].ToString()));
-                    closeColumn.Append(double.Parse(row["Close"].ToString()));
-                }
-            }
-
-            var dataFrame = new DataFrame();
-            dataFrame.Columns.Add(dateTimeColumn);
-            dataFrame.Columns.Add(closeColumn);
-
-            return dataFrame;
-        }
+        // 这里可以添加其他方法的注释 / Additional methods can have comments added here.
     }
 }

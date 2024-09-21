@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Binance.Net.Clients;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
+using Quant.Infra.Net.SourceData.Model;
 
 namespace Quant.Infra.Net.Account.Service
 {
@@ -128,6 +129,7 @@ namespace Quant.Infra.Net.Account.Service
             throw new NotImplementedException();
         }
 
+
         /// <summary>
         /// 异步计算未实现盈亏
         /// Asynchronously calculate unrealized profit and loss
@@ -137,5 +139,98 @@ namespace Quant.Infra.Net.Account.Service
         {
             throw new NotImplementedException();
         }
+
+
+        /// <summary>
+        /// 获取给定交易对的最新 OHLCV 数据。
+        /// <para>Fetch the latest OHLCV data for the specified trading pair.</para>
+        /// </summary>
+        /// <param name="symbol">交易对符号，例如 "BTCUSDT"。<para>Trading pair symbol, e.g., "BTCUSDT".</para></param>
+        /// <param name="resolutionLevel">K线的时间分辨率，默认为每小时。<para>The time resolution of the Klines, default is hourly.</para></param>
+        /// <param name="assetType">资产类型，默认为加密货币现货。<para>Asset type, default is cryptocurrency spot.</para></param>
+        /// <param name="startDt">开始时间，可选。<para>Start time, optional.</para></param>
+        /// <param name="endDt">结束时间，可选。<para>End time, optional.</para></param>
+        /// <param name="limit">获取的 K线数量，默认为 1。<para>Number of Klines to fetch, default is 1.</para></param>
+        /// <returns>返回指定交易对的最新 OHLCV 数据。<para>Returns the latest OHLCV data for the specified trading pair.</para></returns>
+        /// <exception cref="NotSupportedException">当资产类型不被支持时抛出此异常。<para>Throws this exception when the asset type is not supported.</para></exception>
+        /// <exception cref="Exception">当无法成功获取 OHLCV 数据时抛出此异常。<para>Throws this exception when unable to successfully fetch OHLCV data.</para></exception>
+        public async Task<Ohlcv> GetOhlcvAsync(string symbol, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly, 
+            AssetType assetType = AssetType.CryptoSpot, 
+            DateTime? startDt = null, 
+            DateTime? endDt = null, 
+            int limit = 1)
+        {
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                // 根据resolutionLevel映射到KlineInterval
+                var interval = GetKlineInterval(resolutionLevel);
+
+                switch (assetType)
+                {
+                    case AssetType.CryptoSpot:
+                        // 获取加密货币现货的K线数据
+                        var spotKlinesResponse = await client.SpotApi.ExchangeData.GetKlinesAsync(symbol, interval, startTime:startDt, endTime:endDt, limit: limit);
+                        if (spotKlinesResponse.Success && spotKlinesResponse.Data.Any())
+                        {
+                            var latestOhlcv = spotKlinesResponse.Data.First();
+                            return new Ohlcv
+                            {
+                                Open = latestOhlcv.OpenPrice,
+                                High = latestOhlcv.HighPrice,
+                                Low = latestOhlcv.LowPrice,
+                                Close = latestOhlcv.ClosePrice,
+                                Volume = latestOhlcv.Volume,
+                                //OpenTime = latestOhlcv.OpenTime,
+                                CloseDateTime = latestOhlcv.CloseTime
+                            };
+                        }
+                        throw new Exception($"Failed to get spot OHLCV for {symbol}: {spotKlinesResponse.Error?.Message}");
+
+                    case AssetType.CryptoPerpetualContract:
+                        // 获取加密货币永续合约的K线数据
+                        var perpetualKlinesResponse = await client.UsdFuturesApi.ExchangeData.GetKlinesAsync(symbol, interval, startTime: startDt, endTime: endDt, limit: limit);
+                        if (perpetualKlinesResponse.Success && perpetualKlinesResponse.Data.Any())
+                        {
+                            var latestOhlcv = perpetualKlinesResponse.Data.First();
+                            return new Ohlcv
+                            {
+                                Open = latestOhlcv.OpenPrice,
+                                High = latestOhlcv.HighPrice,
+                                Low = latestOhlcv.LowPrice,
+                                Close = latestOhlcv.ClosePrice,
+                                Volume = latestOhlcv.Volume,
+                                //OpenTime = latestOhlcv.OpenTime,
+                                CloseDateTime = latestOhlcv.CloseTime
+                            };
+                        }
+                        throw new Exception($"Failed to get perpetual contract OHLCV for {symbol}: {perpetualKlinesResponse.Error?.Message}");
+
+                    case AssetType.CryptoOption:
+                        // 获取加密货币期权的OHLCV数据 (假设Binance支持期权交易,具体接口需要查找Binance期权API)
+                        throw new NotImplementedException("Crypto options are not yet implemented.");
+
+                    default:
+                        // 其他资产类型不支持
+                        throw new NotSupportedException($"Asset type {assetType} is not supported.");
+                }
+            }
+        }
+
+
+        private Binance.Net.Enums.KlineInterval GetKlineInterval(ResolutionLevel resolutionLevel)
+        {
+            return resolutionLevel switch
+            {
+                ResolutionLevel.Tick => Binance.Net.Enums.KlineInterval.OneMinute, // 假设Tick映射为1分钟
+                ResolutionLevel.Second => Binance.Net.Enums.KlineInterval.OneMinute,
+                ResolutionLevel.Minute => Binance.Net.Enums.KlineInterval.OneMinute,
+                ResolutionLevel.Hourly => Binance.Net.Enums.KlineInterval.OneHour,
+                ResolutionLevel.Daily => Binance.Net.Enums.KlineInterval.OneDay,
+                ResolutionLevel.Weekly => Binance.Net.Enums.KlineInterval.OneWeek,
+                ResolutionLevel.Monthly => Binance.Net.Enums.KlineInterval.OneMonth,
+                _ => throw new NotSupportedException($"Resolution level {resolutionLevel} is not supported."),
+            };
+        }
+
     }
 }

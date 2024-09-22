@@ -5,7 +5,6 @@ namespace Quant.Infra.Net.Notification.Service
 {
     public class WeChatService : IWeChatService
     {
-
         /// <summary>
         /// 通过企业微信群机器人发送信息
         /// </summary>

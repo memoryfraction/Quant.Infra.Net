@@ -5,7 +5,6 @@ namespace Quant.Infra.Net.Shared.Extension
 {
     public static class DataFrameExtensions
     {
-
         /// <summary>
         /// 从 DataFrame 中删除指定索引的行，并返回一个新的 DataFrame。
         /// </summary>
@@ -32,8 +31,6 @@ namespace Quant.Infra.Net.Shared.Extension
             return newDataFrame;
         }
 
-
-
         /// <summary>
         /// 输入列名，输入值，返回行index。如果找不到，返回-1
         /// </summary>
@@ -52,6 +49,5 @@ namespace Quant.Infra.Net.Shared.Extension
             }
             return -1;
         }
-
     }
 }

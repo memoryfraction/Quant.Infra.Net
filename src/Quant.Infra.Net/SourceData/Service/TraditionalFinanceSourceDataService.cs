@@ -46,8 +46,6 @@ namespace Quant.Infra.Net.SourceData.Service
             return ohlcvs;
         }
 
-
-
         public async Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFileName)
         {
             if (!File.Exists(fullPathFileName))
@@ -105,6 +103,5 @@ namespace Quant.Infra.Net.SourceData.Service
             using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
             await csv.WriteRecordsAsync(ohlcvList);
         }
-
     }
 }

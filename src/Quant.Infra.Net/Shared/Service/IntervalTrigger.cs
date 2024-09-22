@@ -134,10 +134,7 @@ namespace Quant.Infra.Net.Shared.Service
 
             var StartLocalDateTime = UtilityService.AdjustToNextWeekday(marketClose - AdvanceTime); // 应用提前时间，调整到下一个工作日
             StartUtcDateTime = TimeZoneInfo.ConvertTimeToUtc(StartLocalDateTime, estTimeZone); // 并转化为Utc时间
-            
         }
-
-        
     }
 
     /// <summary>
@@ -172,6 +169,5 @@ namespace Quant.Infra.Net.Shared.Service
             var StartLocalDateTime = UtilityService.AdjustToNextWeekday(marketOpen - AdvanceTime);             // 调整到下一个工作日
             StartUtcDateTime = TimeZoneInfo.ConvertTimeToUtc(StartLocalDateTime, estTimeZone); // 应用提前时间
         }
-
     }
 }

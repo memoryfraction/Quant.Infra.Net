@@ -1,16 +1,17 @@
 ﻿namespace Quant.Infra.Net.Exchange.Model.InteractiveBroker
 {
-    public class AccountSummaryIBKR: AccountSummaryAbstract
+    public class AccountSummaryIBKR : AccountSummaryAbstract
     {
         // 如果获取不到数值，则返回默认值 -1;
         private double grossPositionValue = -1;
+
         public int AssignedTimes { get; set; }
         public double Cushion { get; set; }
         public double DayTradesRemaining { get; set; }
         public double LookAheadNextChange { get; set; }
         public double AccruedCash { get; set; }
         public double AvailableFunds { get; set; }
-        public double BuyingPower { get; set; } 
+        public double BuyingPower { get; set; }
         public double EquityWithLoadValue { get; set; }
         public double ExcessLiquidity { get; set; }
         public double FullAvailableFunds { get; set; }

@@ -41,6 +41,5 @@ namespace Quant.Infra.Net.SourceData.Service
         /// </summary>
         /// <returns></returns>
         Task<IEnumerable<string>> GetSp500SymbolsAsync(int number = 500);
-
     }
 }

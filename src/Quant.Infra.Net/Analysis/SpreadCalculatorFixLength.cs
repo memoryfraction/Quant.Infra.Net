@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-
 namespace Quant.Infra.Net.Analysis
 {
     /// <summary>
@@ -23,10 +22,12 @@ namespace Quant.Infra.Net.Analysis
         public int FixedWindowLength { get; set; }
         public ResolutionLevel ResolutionLevel { get; set; } = ResolutionLevel.Daily;
         public string Symbol1 { get; set; }
-        public string Symbol2 { get; set; } 
+        public string Symbol2 { get; set; }
 
         protected DataFrame _dataFrame;
-        public DataFrame DataFrame {
+
+        public DataFrame DataFrame
+        {
             get
             {
                 return _dataFrame;
@@ -36,7 +37,6 @@ namespace Quant.Infra.Net.Analysis
                 _dataFrame = value;
             }
         }
-
 
         protected SpreadCalculatorFixLength(
             string symbol1,
@@ -55,7 +55,6 @@ namespace Quant.Infra.Net.Analysis
                 throw new ArgumentException($"DataFrame for {symbol2} must contain 'DateTime' and 'Close' columns.");
             }
 
-            
             Symbol1 = symbol1;
             Symbol2 = symbol2;
 
@@ -65,7 +64,6 @@ namespace Quant.Infra.Net.Analysis
             // Merge DataFrames on DateTime
             _dataFrame = MergeDataFrames(symbol1, symbol2, df1, df2);
         }
-
 
         /// <summary>
         /// 根据DateTime合并两个df，合并后保留三列：DateTime, $"{symbol1}Close",$"{symbol2}Close"
@@ -83,10 +81,10 @@ namespace Quant.Infra.Net.Analysis
 
             // Merge DataFrames on DateTime using inner join and keep only the necessary columns
             var mergedDf = df1.Merge(
-                df2, 
+                df2,
                 new string[] { "DateTime" },
-                new string[] { "DateTime" }, 
-                joinAlgorithm:JoinAlgorithm.Inner);
+                new string[] { "DateTime" },
+                joinAlgorithm: JoinAlgorithm.Inner);
 
             // 改名DateTime_left为DateTime， 删除列：DateTime_right;
             mergedDf.Columns["DateTime_left"].SetName("DateTime");
@@ -96,7 +94,6 @@ namespace Quant.Infra.Net.Analysis
 
             return mergedDf;
         }
-
 
         /// <summary>
         /// _dataFrame有三列：DateTime, $"{symbol1}Close",$"{symbol2}Close"；
@@ -122,7 +119,7 @@ namespace Quant.Infra.Net.Analysis
                 throw new ArgumentException($"DataFrame must contain 'DateTime', '{Symbol1}Close', and '{Symbol2}Close' columns.");
             }
 
-            var rowIndex = this._dataFrame.GetRowIndex<DateTime>("DateTime",dateTime);
+            var rowIndex = this._dataFrame.GetRowIndex<DateTime>("DateTime", dateTime);
 
             if (rowIndex >= 0)
             {
@@ -141,14 +138,12 @@ namespace Quant.Infra.Net.Analysis
                 };
                 _dataFrame = _dataFrame.Append(newRow);
             }
-            
+
             //  如果_dataFrame中：DateTime, $"{symbol1}Close",$"{symbol2}Close"，任何一行一列的值为Null或者默认值， 则删除改行
             _dataFrame = DropRowsWithNullsOrDefaults();
 
             UpsertSpreadAndEquation();
         }
-
-
 
         /// <summary>
         /// 根据输入的endDateTime,向前FixedWindowLength，得到[startDateTime, endDateTime],计算spread
@@ -171,11 +166,10 @@ namespace Quant.Infra.Net.Analysis
             var (seriesA, seriesB) = GetSeries(endDateTime.Value);
 
             // 计算spread,注意：此时SeriesA和SeriesB为DateTime倒序;
-            var (spread, equation) = CalculateSpreadAndEquation(Symbol1,Symbol2, seriesA, seriesB);
+            var (spread, equation) = CalculateSpreadAndEquation(Symbol1, Symbol2, seriesA, seriesB);
 
             return spread;
         }
-
 
         /// <summary>
         /// 根据_dataFrame有三列：DateTime, $"{symbol1}Close", $"{symbol2}Close"和现有记录，添加和更新Spread和Equation列。
@@ -222,9 +216,7 @@ namespace Quant.Infra.Net.Analysis
                 _dataFrame.Columns["Spread"][i] = spread;
                 _dataFrame.Columns["Equation"][i] = equation;
             }
-
         }
-
 
         /// <summary>
         /// 根据endDateTime获取SeriesA, SeriesB
@@ -267,8 +259,6 @@ namespace Quant.Infra.Net.Analysis
             return (seriesA, seriesB);
         }
 
-
-
         /// <summary>
         /// 计算spread和equation
         /// </summary>
@@ -287,8 +277,6 @@ namespace Quant.Infra.Net.Analysis
             var equation = $"{symbol2} -  {slope}*{symbol1} - {intercept}";
             return (spread, equation);
         }
-
-
 
         /// <summary>
         /// 生成并返回Equation公式
@@ -334,8 +322,6 @@ namespace Quant.Infra.Net.Analysis
             return equation;
         }
 
-
-
         /// <summary>
         /// 检验数据源是否合格？
         /// </summary>
@@ -366,15 +352,12 @@ namespace Quant.Infra.Net.Analysis
             }
         }
 
-
-
         /// <summary>
         /// 根据resolutionLevel计算window的长度;
         /// </summary>
         /// <param name="resolutionLevel"></param>
         /// <returns></returns>
         protected abstract int CalcuWindowLength(ResolutionLevel resolutionLevel = ResolutionLevel.Daily);
-
 
         /// <summary>
         /// 删除空置行，类似与Python中的Dropna()
@@ -421,7 +404,6 @@ namespace Quant.Infra.Net.Analysis
             return _dataFrame;
         }
 
-       
         /// <summary>
         /// 判断value是否为默认值
         /// </summary>
@@ -460,8 +442,5 @@ namespace Quant.Infra.Net.Analysis
             var defaultValue = Activator.CreateInstance(type);
             return value.Equals(defaultValue);
         }
-
-
-
     }
 }

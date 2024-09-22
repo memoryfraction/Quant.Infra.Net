@@ -22,12 +22,10 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <returns>diff = B - Slope * A - Intercept</returns>
         (double Slope, double Intercept) PerformOLSRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB);
 
-
         bool PerformShapiroWilkTest(IEnumerable<double> timeSeries, double threshold = 0.05);
 
         double CalculateZScores(IEnumerable<double> data, double value);
 
         double CalculateZScores(double mean, double stdDev, double value);
-
     }
 }

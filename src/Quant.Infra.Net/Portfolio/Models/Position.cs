@@ -18,8 +18,8 @@ namespace Quant.Infra.Net.Portfolio.Models
             return GetMarketValue(latestPrice) - Quantity * CostPrice;
         }
 
-        public decimal GetMarketValue(decimal latestPrice) 
-        { 
+        public decimal GetMarketValue(decimal latestPrice)
+        {
             return Quantity * latestPrice;
         }
     }

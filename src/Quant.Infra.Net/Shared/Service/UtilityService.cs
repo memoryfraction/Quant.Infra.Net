@@ -49,14 +49,19 @@ namespace Quant.Infra.Net.Shared.Service
                     return TimeSpan.FromSeconds(1); // 假设每秒更新一次 / Assuming tick level updates every second
                 case ResolutionLevel.Second:
                     return TimeSpan.FromSeconds(1);
+
                 case ResolutionLevel.Minute:
                     return TimeSpan.FromMinutes(1);
+
                 case ResolutionLevel.Hourly:
                     return TimeSpan.FromHours(1);
+
                 case ResolutionLevel.Daily:
                     return TimeSpan.FromDays(1);
+
                 case ResolutionLevel.Weekly:
                     return TimeSpan.FromDays(7);
+
                 case ResolutionLevel.Other:
                 default:
                     return TimeSpan.FromDays(1); // 默认返回每日 / Default to daily if not specified
@@ -243,7 +248,6 @@ namespace Quant.Infra.Net.Shared.Service
             }
         }
 
-
         /// <summary>
         /// 读取CSV文件，返回DataFrame
         /// Title Row: DateTime, Open, High, Low, Close, Volume
@@ -274,6 +278,7 @@ namespace Quant.Infra.Net.Shared.Service
 
             return dataFrame;
         }
+
         // 这里可以添加其他方法的注释 / Additional methods can have comments added here.
     }
 }

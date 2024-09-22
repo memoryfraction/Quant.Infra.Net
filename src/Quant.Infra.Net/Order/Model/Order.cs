@@ -1,5 +1,5 @@
-﻿using System;
-using Quant.Infra.Net.Shared.Model;
+﻿using Quant.Infra.Net.Shared.Model;
+using System;
 
 namespace Quant.Infra.Net
 {
@@ -58,21 +58,20 @@ namespace Quant.Infra.Net
         public OrderStatus Status { get; set; } = OrderStatus.New;
     }
 
-
-    public class OrderBinanceSpot: OrderBase
+    public class OrderBinanceSpot : OrderBase
     {
         /*
             对于Binance Exchange;
-            Market Order使用quantity指定用户想要以市场价格购买或出售的base asset的数量。 
+            Market Order使用quantity指定用户想要以市场价格购买或出售的base asset的数量。
                 例如，发送 BTCUSDT 的Market Order将指定用户购买或出售多少BTC。
             使用 quoteOrderQty 的 MARKET Order指定用户想要花费（购买时）或接收（出售时）报价资产的金额； 正确的数量将根据市场流动性和报价订单数量确定。
                 以BTCUSDT为例：
                     在买入方面，订单将购买与 quoteOrderQty USDT 一样多的 BTC。
                     在卖出方面，订单将卖出接收 quoteOrderQty USDT 所需的 BTC。
 
-           Mandantory field: 
-           symbol	STRING	YES	
-           side	ENUM	YES	
+           Mandantory field:
+           symbol	STRING	YES
+           side	ENUM	YES
            type	ENUM	YES
 
            Type 	              Additional mandatory parameters
@@ -84,7 +83,6 @@ namespace Quant.Infra.Net
            TAKE_PROFIT_LIMIT	  timeInForce, quantity, price, stopPrice or trailingDelta
            LIMIT_MAKER	quantity, price
          */
-
 
         /// <summary>
         /// QuoteOrderQty属性则用于市场订单（MARKET orders），表示您想要花费或收到的报价资产的具体金额。
@@ -110,16 +108,16 @@ namespace Quant.Infra.Net
     {
         /*
             对于Binance永续合约;
-            Market Order使用quantity指定用户想要以市场价格购买或出售的base asset的数量。 
+            Market Order使用quantity指定用户想要以市场价格购买或出售的base asset的数量。
                 例如，发送 BTCUSDT 的Market Order将指定用户购买或出售多少BTC。
             使用 quoteOrderQty 的 MARKET Order指定用户想要花费（购买时）或接收（出售时）报价资产的金额； 正确的数量将根据市场流动性和报价订单数量确定。
                 以BTCUSDT为例：
                     在买入方面，订单将购买与 quoteOrderQty USDT 一样多的 BTC。
                     在卖出方面，订单将卖出接收 quoteOrderQty USDT 所需的 BTC。
 
-            Mandantory field: 
-            symbol	STRING	YES	
-            side	ENUM	YES	
+            Mandantory field:
+            symbol	STRING	YES
+            side	ENUM	YES
             type	ENUM	YES
 
             Type 	              Additional mandatory parameters
@@ -147,7 +145,7 @@ namespace Quant.Infra.Net
         /// <summary>
         /// Leveraged属性用于指定是否使用杠杆。
         /// </summary>
-        public bool? Leveraged { get; set; } 
+        public bool? Leveraged { get; set; }
 
         public override string ToString()
         {
@@ -166,12 +164,11 @@ namespace Quant.Infra.Net
         }
     }
 
-
-    public class OrderIBKR: OrderBase
+    public class OrderIBKR : OrderBase
     {
         public override string ToString()
         {
-            var str = 
+            var str =
                       $"Symbol:{Symbol}; " +
                       $"OrderActionType:{ActionType};" +
                       $"TimeInForce:{TimeInForce}; " +
@@ -182,7 +179,6 @@ namespace Quant.Infra.Net
         }
     }
 
-
     public static class OrderFactory
     {
         public static OrderBase CreateOrder(string exchange)
@@ -191,12 +187,13 @@ namespace Quant.Infra.Net
             {
                 case "BINANCE":
                     return new OrderBinanceSpot();
+
                 case "INTERACTIVEBROKER":
                     return new OrderIBKR();
+
                 default:
                     throw new ArgumentException("Unsupported exchange type.");
             }
         }
     }
-
 }

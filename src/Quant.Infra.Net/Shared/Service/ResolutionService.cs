@@ -1,11 +1,10 @@
-﻿using System;
+﻿using Quant.Infra.Net.Shared.Extension;
+using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.SourceData.Model;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Quant.Infra.Net.Shared.Extension;
-using Quant.Infra.Net.Shared.Model;
-using Quant.Infra.Net.SourceData.Model;
-
 
 namespace Quant.Infra.Net.Shared.Service
 {
@@ -54,7 +53,6 @@ namespace Quant.Infra.Net.Shared.Service
 
             return ResolutionLevel.Other;
         }
-
 
         /// <summary>
         /// 转化records的精度，可以从分钟级转化为小时级。 如果转化失败，返回null;
@@ -134,7 +132,6 @@ namespace Quant.Infra.Net.Shared.Service
             }
         }
 
-
         private HashSet<Ohlcv> ConvertRecords(IEnumerable<Ohlcv> records, ResolutionLevel requiredResolution)
         {
             var convertedRecords = new HashSet<Ohlcv>();
@@ -145,6 +142,7 @@ namespace Quant.Infra.Net.Shared.Service
                     // Tick级别不需要转换，直接返回原始记录
                     convertedRecords = new HashSet<Ohlcv>(records);
                     break;
+
                 case ResolutionLevel.Second:
                     // 按秒聚合
                     var groupedBySecond = records.GroupBy(r => new DateTime(r.OpenDateTime.Year, r.OpenDateTime.Month, r.OpenDateTime.Day, r.OpenDateTime.Hour, r.OpenDateTime.Minute, r.OpenDateTime.Second));
@@ -162,6 +160,7 @@ namespace Quant.Infra.Net.Shared.Service
                         convertedRecords.Add(ohlcv);
                     }
                     break;
+
                 case ResolutionLevel.Minute:
                     // 按分钟聚合
                     var groupedByMinute = records.GroupBy(r => new DateTime(r.OpenDateTime.Year, r.OpenDateTime.Month, r.OpenDateTime.Day, r.OpenDateTime.Hour, r.OpenDateTime.Minute, 0));
@@ -179,6 +178,7 @@ namespace Quant.Infra.Net.Shared.Service
                         convertedRecords.Add(ohlcv);
                     }
                     break;
+
                 case ResolutionLevel.Hourly:
                     // 按小时聚合
                     var groupedByHour = records.GroupBy(r => new DateTime(r.OpenDateTime.Year, r.OpenDateTime.Month, r.OpenDateTime.Day, r.OpenDateTime.Hour, 0, 0));
@@ -195,7 +195,8 @@ namespace Quant.Infra.Net.Shared.Service
                         };
                         convertedRecords.Add(ohlcv);
                     }
-                    break;             
+                    break;
+
                 case ResolutionLevel.Daily:
                     // 按天聚合
                     var groupedByDay = records.GroupBy(r => new DateTime(r.OpenDateTime.Year, r.OpenDateTime.Month, r.OpenDateTime.Day));
@@ -213,6 +214,7 @@ namespace Quant.Infra.Net.Shared.Service
                         convertedRecords.Add(ohlcv);
                     }
                     break;
+
                 case ResolutionLevel.Weekly:
                     // 按周聚合
                     var groupedByWeek = records.GroupBy(r => CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(r.OpenDateTime, CalendarWeekRule.FirstDay, DayOfWeek.Monday));
@@ -230,6 +232,7 @@ namespace Quant.Infra.Net.Shared.Service
                         convertedRecords.Add(ohlcv);
                     }
                     break;
+
                 case ResolutionLevel.Monthly:
                     // 按月聚合
                     var groupedByMonth = records.GroupBy(r => new DateTime(r.OpenDateTime.Year, r.OpenDateTime.Month, 1));
@@ -251,8 +254,5 @@ namespace Quant.Infra.Net.Shared.Service
 
             return convertedRecords;
         }
-
-
-        
     }
 }

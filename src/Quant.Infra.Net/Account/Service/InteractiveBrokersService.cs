@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Account.Service
 {
-    public class InteractiveBrokersService: AbstractBrokerService
+    public class InteractiveBrokersService : BrokerServiceBase
     {
         private readonly BinanceRestClient _binanceRestClient;
 
@@ -29,7 +29,7 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="symbol">资产的代码</param>
         /// <param name="assetType">资产类型</param>
         /// <param name="ratio">持仓比例</param>
-        public override async Task SetHoldingsAsync(string symbol, AssetType assetType, decimal ratio)
+        public override async Task SetHoldingsAsync(Underlying underlying, decimal ratio)
         {
             throw new NotImplementedException();
         }
@@ -41,7 +41,7 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="symbol">资产的代码</param>
         /// <param name="assetType">资产类型</param>
         /// <returns>返回持有该资产的份额</returns>
-        public override async Task<decimal> GetHoldingAsync(string symbol, AssetType assetType)
+        public override async Task<decimal> GetHoldingAsync(Underlying underlying)
         {
             throw new NotImplementedException();
         }
@@ -53,7 +53,7 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="symbol">资产的代码</param>
         /// <param name="assetType">资产类型</param>
         /// <returns>返回该资产的市场价值</returns>
-        public override async Task<decimal> GetMarketValueAsync(string symbol, AssetType assetType)
+        public override async Task<decimal> GetMarketValueAsync(Underlying underlying)
         {
             throw new NotImplementedException();
         }

@@ -6,14 +6,15 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Account.Service
 {
-    public class InMemoryBrokerService: BrokerServiceBase
+    public class InMemoryBinanceBrokerService: BrokerServiceBase
     {
-        public PortfolioBase Portfolio { get; set; }
+        public CryptoPortfolio Portfolio { get; set; }
 
         // 构造函数初始化 CryptoPerpetualContractPortfolio
-        public InMemoryBrokerService(decimal initCapital)
+        public InMemoryBinanceBrokerService(decimal initCapital)
         {
-            Portfolio = new CryptoPerpetualContractPortfolio();
+            
+            Portfolio = new CryptoPortfolio();
             Portfolio.InitCapital = initCapital;
         }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Quant.Infra.Net.Shared.Model;
+using System;
 using System.Collections.Generic;
 
 namespace Quant.Infra.Net.Portfolio.Models
@@ -12,6 +13,7 @@ namespace Quant.Infra.Net.Portfolio.Models
         public string Symbol { get; set; }
         public decimal Quantity { get; set; }
         public decimal CostPrice { get; set; }
+        public AssetType AssetType { get; set; }
 
         public decimal GetUnrealizedPnL(decimal latestPrice)
         {

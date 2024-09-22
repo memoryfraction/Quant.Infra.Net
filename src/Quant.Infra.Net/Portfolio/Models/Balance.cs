@@ -9,9 +9,9 @@ namespace Quant.Infra.Net.Portfolio.Models
         public decimal MarketValue { get; set; }
         public decimal Cash { get; set; }
         public decimal UnrealizedPnL { get; set; }
+
         public Balance()
         {
-
         }
 
         public Balance(DateTime dateTime, decimal netLiquidationValue, decimal marketValue, decimal cash, decimal unrealizedPnL)

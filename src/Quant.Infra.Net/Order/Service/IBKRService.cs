@@ -5,7 +5,6 @@ using Quant.Infra.Net.Shared.Model;
 using System;
 using System.Threading.Tasks;
 
-
 namespace Quant.Infra.Net.Exchange.Service
 {
     public class IBKRService : IIBKRService
@@ -17,17 +16,15 @@ namespace Quant.Infra.Net.Exchange.Service
         public IBKRService(IMapper mapper)
         {
             _mapper = mapper;
-            if(_client == null)
+            if (_client == null)
                 _client = InterReactClient.ConnectAsync().Result;
         }
-
 
         public Task<AccountSummaryIBKR> GetAccountSummaryAsync()
         {
             // Todo GetAccountSummaryAsync
             throw new NotImplementedException();
         }
-
 
         public Task<PositionIBKR> GetPositionAsync()
         {
@@ -36,9 +33,9 @@ namespace Quant.Infra.Net.Exchange.Service
         }
 
         public async Task<int> PlaceOrderAsync(
-            OrderBase order, 
-            string exchange = "SMART", 
-            Quant.Infra.Net.Shared.Model.ContractSecurityType securityType = Quant.Infra.Net.Shared.Model.ContractSecurityType.Stock, 
+            OrderBase order,
+            string exchange = "SMART",
+            Quant.Infra.Net.Shared.Model.ContractSecurityType securityType = Quant.Infra.Net.Shared.Model.ContractSecurityType.Stock,
             Quant.Infra.Net.Shared.Model.Currency currency = Quant.Infra.Net.Shared.Model.Currency.USD
             )
         {
@@ -62,7 +59,7 @@ namespace Quant.Infra.Net.Exchange.Service
                     Action = order.ActionType.ToString(),
                     TotalQuantity = order.Quantity == null ? 0 : order.Quantity.Value,
                     OrderType = OrderTypes.Limit,
-                    LimitPrice = order.Price == null ? 0.0: (double)order.Price.Value,
+                    LimitPrice = order.Price == null ? 0.0 : (double)order.Price.Value,
                     OutsideRegularTradingHours = true // 允许盘前盘后成交
                 };
             }
@@ -84,8 +81,5 @@ namespace Quant.Infra.Net.Exchange.Service
             await _client.DisposeAsync();
             return orderId;
         }
-        
-
-
     }
 }

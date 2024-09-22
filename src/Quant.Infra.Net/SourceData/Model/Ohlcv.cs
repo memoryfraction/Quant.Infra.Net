@@ -30,9 +30,8 @@ namespace Quant.Infra.Net.SourceData.Model
         }
     }
 
-    public class Ohlcv: BasicOhlcv
+    public class Ohlcv : BasicOhlcv
     {
         public decimal AdjustedClose { get; set; }
     }
-
 }

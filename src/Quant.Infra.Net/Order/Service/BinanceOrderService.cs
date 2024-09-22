@@ -12,19 +12,18 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-
 namespace Quant.Infra.Net
 {
     public class BinanceOrderService : IBinanceOrderService
     {
         private string _apiKey, _apiSecret;
         private readonly IMapper _mapper;
+
         public BinanceOrderService(IMapper mapper)
         {
             _mapper = mapper;
         }
 
-      
         public async Task<BinanceOrderBase> CancelSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3)
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
@@ -41,11 +40,10 @@ namespace Quant.Infra.Net
             var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(spotOrderType);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, binanceOrderSide, binanceOrderType, quantity: quantity, price: price, quoteQuantity:quoteQuantity), retryCount);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, binanceOrderSide, binanceOrderType, quantity: quantity, price: price, quoteQuantity: quoteQuantity), retryCount);
                 return result.Data;
             }
         }
-
 
         public async Task<BinancePlacedOrder> PlaceMarginOrderAsync(string symbol, OrderSide orderSide, OrderActionType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3)
         {
@@ -58,12 +56,11 @@ namespace Quant.Infra.Net
             }
         }
 
-
-        public async Task<IEnumerable<BinanceOrder>> GetAllSpotOpenOrdersAsync(string symbol=null, int retryAttempts = 3)
+        public async Task<IEnumerable<BinanceOrder>> GetAllSpotOpenOrdersAsync(string symbol = null, int retryAttempts = 3)
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.GetOpenOrdersAsync(symbol),retryAttempts);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.GetOpenOrdersAsync(symbol), retryAttempts);
                 return result.Data;
             }
         }
@@ -72,7 +69,7 @@ namespace Quant.Infra.Net
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.GetOrderAsync(symbol,orderId), retryAttempts);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.GetOrderAsync(symbol, orderId), retryAttempts);
                 return result.Data;
             }
         }
@@ -84,7 +81,7 @@ namespace Quant.Infra.Net
             var binanceCancelReplaceMode = _mapper.Map<Binance.Net.Enums.CancelReplaceMode>(cancelReplaceMode);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.ReplaceOrderAsync(symbol:symbol, side: binanceOrderSide, type: binanceOrderType, cancelOrderId: cancelOrderId, cancelReplaceMode: binanceCancelReplaceMode), retryAttempts);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.ReplaceOrderAsync(symbol: symbol, side: binanceOrderSide, type: binanceOrderType, cancelOrderId: cancelOrderId, cancelReplaceMode: binanceCancelReplaceMode), retryAttempts);
                 return result.Data;
             }
         }

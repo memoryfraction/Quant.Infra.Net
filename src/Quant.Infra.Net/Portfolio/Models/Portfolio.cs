@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-
 namespace Quant.Infra.Net.Portfolio.Models
 {
     public abstract class PortfolioBase
@@ -50,7 +49,6 @@ namespace Quant.Infra.Net.Portfolio.Models
             decimal marketValue = balance.MarketValue;
             MarketValueDic[dateTime] = marketValue;
         }
-
 
         /// <summary>
         /// 更新持仓标的物的价格序列，并更新 MarketValueDic。
@@ -104,7 +102,6 @@ namespace Quant.Infra.Net.Portfolio.Models
                     MarketValueDic[datePoint] = marketValue;
                 }
             }
-
         }
 
         private Ohlcv FindNearestOhlcv(List<Ohlcv> ohlcvList, DateTime datePoint)
@@ -125,7 +122,6 @@ namespace Quant.Infra.Net.Portfolio.Models
 
             return nearestOhlcv;
         }
-
 
         /// <summary>
         /// 根据MarketValueDic绘制Chart，横轴是日期，纵轴是decimal类型的Market Value。 并显示
@@ -164,33 +160,23 @@ namespace Quant.Infra.Net.Portfolio.Models
         }
     }
 
-
-
     // 股票投资组合
     public class StockPortfolio : PortfolioBase
     {
         public override Currency BaseCurrency { get; set; } = Currency.USD;
-
-
     }
-
 
     // 加密货币现货投资组合
     public class CryptoSpotPortfolio : PortfolioBase
     {
         public override Currency BaseCurrency { get; set; } = Currency.USDT;
-
-
     }
-
 
     // 永续合约投资组合
     public class CryptoPerpetualContractPortfolio : PortfolioBase
     {
         public override Currency BaseCurrency { get; set; } = Currency.USDT;
-
     }
-
 
     public class PortfolioSnapshot
     {

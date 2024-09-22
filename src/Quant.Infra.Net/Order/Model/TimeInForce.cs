@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Quant.Infra.Net
+﻿namespace Quant.Infra.Net
 {
     public enum TimeInForce
     {
@@ -12,22 +6,27 @@ namespace Quant.Infra.Net
         /// GoodTillCanceled orders will stay active until they are filled or canceled
         /// </summary>
         GoodTillCanceled,
+
         /// <summary>
         /// ImmediateOrCancel orders have to be at least partially filled upon placing or will be automatically canceled
         /// </summary>
         ImmediateOrCancel,
+
         /// <summary>
         /// FillOrKill orders have to be entirely filled upon placing or will be automatically canceled
         /// </summary>
         FillOrKill,
+
         /// <summary>
         /// GoodTillCrossing orders will post only
         /// </summary>
         GoodTillCrossing,
+
         /// <summary>
         /// Good til the order expires or is canceled
         /// </summary>
         GoodTillExpiredOrCanceled,
+
         /// <summary>
         /// Good til date
         /// </summary>

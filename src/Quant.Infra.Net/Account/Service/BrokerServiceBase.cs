@@ -1,11 +1,11 @@
-﻿using System;
-using Quant.Infra.Net.Shared.Model;
+﻿using Quant.Infra.Net.Shared.Model;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Account.Service
 {
-    public abstract class AbstractBrokerService
+    public abstract class BrokerServiceBase
     {
         public virtual Currency BaseCurrency { get; set; } = Currency.USD;
 
@@ -35,8 +35,7 @@ namespace Quant.Infra.Net.Account.Service
         /// </summary>
         /// <param name="symbol">股票或资产的代码</param>
         /// <param name="ratio">持仓比例</param>
-        public abstract Task SetHoldingsAsync(string symbol, AssetType asssetType, decimal ratio);
-
+        public abstract Task SetHoldingsAsync(Underlying underlying, decimal ratio);
 
         /// <summary>
         /// 异步获取持仓比例
@@ -44,8 +43,7 @@ namespace Quant.Infra.Net.Account.Service
         /// </summary>
         /// <param name="symbol">股票或资产的代码</param>
         /// <returns>返回持有该股票或资产的份额</returns>
-        public abstract Task<decimal> GetHoldingAsync(string symbol, AssetType asssetType);
-
+        public abstract Task<decimal> GetHoldingAsync(Underlying underlying);
 
         /// <summary>
         /// 异步获取指定股票或资产的市场价值
@@ -53,8 +51,7 @@ namespace Quant.Infra.Net.Account.Service
         /// </summary>
         /// <param name="symbol">股票或资产的代码</param>
         /// <returns>返回该股票或资产的市场价值</returns>
-        public abstract Task<decimal> GetMarketValueAsync(string symbol, AssetType asssetType);
-
+        public abstract Task<decimal> GetMarketValueAsync(Underlying underlying);
 
         /// <summary>
         /// 异步获取总的市场价值
@@ -62,6 +59,5 @@ namespace Quant.Infra.Net.Account.Service
         /// </summary>
         /// <returns>返回市场的总价值</returns>
         public abstract Task<decimal> GetTotalMarketValueAsync();
-
     }
 }

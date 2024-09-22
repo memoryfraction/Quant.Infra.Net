@@ -1,13 +1,13 @@
-﻿using System;
-using Quant.Infra.Net.Shared.Model;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Binance.Net.Clients;
-using System.Linq;
+﻿using Binance.Net.Clients;
 using Microsoft.Extensions.Configuration;
-using Quant.Infra.Net.SourceData.Model;
 using Polly;
+using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.SourceData.Model;
 using Serilog;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Account.Service
 {
@@ -15,7 +15,7 @@ namespace Quant.Infra.Net.Account.Service
     /// Binance服务类，实现了与Binance相关的操作
     /// Binance Service class, implements operations related to Binance
     /// </summary>
-    public class BinanceService : AbstractBrokerService
+    public class BinanceService : BrokerServiceBase
     {
         private readonly BinanceRestClient _binanceRestClient;
 
@@ -24,6 +24,7 @@ namespace Quant.Infra.Net.Account.Service
         /// Base currency, default is USD
         /// </summary>
         public override Currency BaseCurrency { get; set; } = Currency.USD;
+
         private string _apiKey, _apiSecret;
         private IConfiguration _configuration;
 
@@ -32,7 +33,6 @@ namespace Quant.Infra.Net.Account.Service
             _apiKey = _configuration["Exchange:apiKey"];
             _apiSecret = _configuration["Exchange:apiSecret"];
         }
-
 
         /// <summary>
         /// 异步获取所有现货交易对的列表
@@ -92,7 +92,7 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="symbol">资产的代码 / The asset symbol</param>
         /// <param name="assetType">资产类型 / The type of asset</param>
         /// <param name="ratio">持仓比例 / The holdings ratio</param>
-        public override async Task SetHoldingsAsync(string symbol, AssetType assetType, decimal ratio)
+        public override async Task SetHoldingsAsync(Underlying underlying, decimal ratio)
         {
             throw new NotImplementedException();
         }
@@ -104,7 +104,7 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="symbol">资产的代码 / The asset symbol</param>
         /// <param name="assetType">资产类型 / The type of asset</param>
         /// <returns>返回持有该资产的份额 / Returns the holdings shares of the asset</returns>
-        public override async Task<decimal> GetHoldingAsync(string symbol, AssetType assetType)
+        public override async Task<decimal> GetHoldingAsync(Underlying underlying)
         {
             throw new NotImplementedException();
         }
@@ -116,7 +116,7 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="symbol">资产的代码 / The asset symbol</param>
         /// <param name="assetType">资产类型 / The type of asset</param>
         /// <returns>返回该资产的市场价值 / Returns the market value of the asset</returns>
-        public override async Task<decimal> GetMarketValueAsync(string symbol, AssetType assetType)
+        public override async Task<decimal> GetMarketValueAsync(Underlying underlying)
         {
             throw new NotImplementedException();
         }
@@ -131,7 +131,6 @@ namespace Quant.Infra.Net.Account.Service
             throw new NotImplementedException();
         }
 
-
         /// <summary>
         /// 异步计算未实现盈亏
         /// Asynchronously calculate unrealized profit and loss
@@ -141,7 +140,6 @@ namespace Quant.Infra.Net.Account.Service
         {
             throw new NotImplementedException();
         }
-
 
         /// <summary>
         /// 获取给定交易对的最新 OHLCV 数据。
@@ -254,6 +252,5 @@ namespace Quant.Infra.Net.Account.Service
                 _ => throw new NotSupportedException($"Resolution level {resolutionLevel} is not supported."),
             };
         }
-
     }
 }

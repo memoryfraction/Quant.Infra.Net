@@ -28,7 +28,7 @@ namespace Quant.Infra.Net.SourceData.Service
             var filteredSymbols = new List<string>();
             filteredSymbols.AddRange(symbols.Where(x => x.ToLower().EndsWith("usdt")).Select(x => x).ToList());
 
-            //3 下载 
+            //3 下载
             if (string.IsNullOrEmpty(path))
                 path = AppDomain.CurrentDomain.BaseDirectory + "\\data\\spot\\";
             if (!Directory.Exists(path))
@@ -61,7 +61,7 @@ namespace Quant.Infra.Net.SourceData.Service
             var filteredSymbols = new List<string>();
             filteredSymbols.AddRange(symbols.Where(x => x.ToLower().EndsWith("usdt")).Select(x => x).ToList());
 
-            //3 下载 
+            //3 下载
             if (string.IsNullOrEmpty(path))
                 path = AppDomain.CurrentDomain.BaseDirectory + "\\data\\UsdFuture\\";
             if (!Directory.Exists(path))
@@ -79,7 +79,7 @@ namespace Quant.Infra.Net.SourceData.Service
                 {
                     await SaveUsdFutureKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Serilog.Log.Information($"Current utc datetime: + {DateTime.UtcNow}, error: {ex.Message}");
                     continue;
@@ -99,7 +99,7 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <param name="endDt"></param>
         /// <param name="fullPathFileName"></param>
         /// <returns></returns>
-        async Task SaveSpotKlinesToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName)
+        private async Task SaveSpotKlinesToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName)
         {
             if (endDt > DateTime.Now)
                 throw new ArgumentOutOfRangeException();
@@ -124,7 +124,7 @@ namespace Quant.Infra.Net.SourceData.Service
                         paramStartDt = lastDtInOhlcvs;
                     }
 
-                    // 获取历史K线数据 
+                    // 获取历史K线数据
                     var klinesResult = await client.SpotApi.ExchangeData.GetKlinesAsync(symbol, interval, paramStartDt, endDt);
                     if (klinesResult.Success)
                     {
@@ -163,7 +163,7 @@ namespace Quant.Infra.Net.SourceData.Service
             }
         }
 
-        async Task SaveUsdFutureKlinesToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName)
+        private async Task SaveUsdFutureKlinesToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName)
         {
             if (endDt > DateTime.Now)
                 throw new ArgumentOutOfRangeException();
@@ -188,7 +188,7 @@ namespace Quant.Infra.Net.SourceData.Service
                         paramStartDt = lastDtInOhlcvs;
                     }
 
-                    // 获取历史K线数据 
+                    // 获取历史K线数据
                     var klinesResult = await client.UsdFuturesApi.ExchangeData.GetKlinesAsync(symbol, interval, paramStartDt, endDt);
                     if (klinesResult.Success)
                     {
@@ -227,8 +227,7 @@ namespace Quant.Infra.Net.SourceData.Service
             }
         }
 
-
-        HashSet<Ohlcv> UpsertOhlcvs(IEnumerable<IBinanceKline> klines, HashSet<Ohlcv> ohlcvs, DateTime startDt, DateTime endDt)
+        private HashSet<Ohlcv> UpsertOhlcvs(IEnumerable<IBinanceKline> klines, HashSet<Ohlcv> ohlcvs, DateTime startDt, DateTime endDt)
         {
             foreach (var kline in klines)
             {
@@ -252,14 +251,13 @@ namespace Quant.Infra.Net.SourceData.Service
             return ohlcvs;
         }
 
-
-        bool IntervalIsMatch(IEnumerable<IBinanceKline> klines, Binance.Net.Enums.KlineInterval interval)
+        private bool IntervalIsMatch(IEnumerable<IBinanceKline> klines, Binance.Net.Enums.KlineInterval interval)
         {
             var klinesInterval = CalculateInterval(klines);
             return klinesInterval == interval;
         }
 
-        Binance.Net.Enums.KlineInterval CalculateInterval(IEnumerable<IBinanceKline> klines)
+        private Binance.Net.Enums.KlineInterval CalculateInterval(IEnumerable<IBinanceKline> klines)
         {
             var klineList = klines.ToList();
             if (klineList.Count < 2)
@@ -294,6 +292,7 @@ namespace Quant.Infra.Net.SourceData.Service
                 _ => throw new ArgumentException("Unsupported interval.")
             };
         }
-        #endregion
+
+        #endregion private functions
     }
 }

@@ -9,7 +9,6 @@ namespace Quant.Infra.Net.Shared.Model
         public string PythonPath { get; set; }
     }
 
-
     public class PythonNetInfra
     {
         /// <summary>
@@ -33,6 +32,5 @@ namespace Quant.Infra.Net.Shared.Model
             pythonInfra.PythonPath = pySearchPath;
             return pythonInfra;
         }
-
     }
 }

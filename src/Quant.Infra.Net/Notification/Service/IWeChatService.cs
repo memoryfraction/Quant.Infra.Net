@@ -5,7 +5,6 @@ namespace Quant.Infra.Net.Notification.Service
 {
     public interface IWeChatService
     {
-        Task<RestResponse> SendTextNotificationAsync(string content,string webHook);
-
+        Task<RestResponse> SendTextNotificationAsync(string content, string webHook);
     }
 }

@@ -5,7 +5,8 @@ namespace Quant.Infra.Net.Shared.Model
 {
     public class TimeSeriesElement
     {
-        public TimeSeriesElement() { }
+        public TimeSeriesElement()
+        { }
 
         public DateTime DateTime { get; set; }
         public double Value { get; set; }
@@ -41,10 +42,11 @@ namespace Quant.Infra.Net.Shared.Model
         }
     }
 
-
     public class TimeSeries
     {
-        public TimeSeries() { }
+        public TimeSeries()
+        { }
+
         public List<TimeSeriesElement> Series { get; set; } = new List<TimeSeriesElement>();
 
         // Override ToString() method
@@ -93,5 +95,4 @@ namespace Quant.Infra.Net.Shared.Model
             return true;
         }
     }
-
 }

@@ -4,12 +4,11 @@ using MathNet.Numerics.LinearRegression;
 using MathNet.Numerics.Statistics;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace Quant.Infra.Net.Analysis.Service
 {
-    public class AnalysisService: IAnalysisService
+    public class AnalysisService : IAnalysisService
     {
         /// <summary>
         /// 计算两个时间序列的相关性。
@@ -21,7 +20,6 @@ namespace Quant.Infra.Net.Analysis.Service
         {
             return Correlation.Pearson(seriesA, seriesB);
         }
-
 
         /// <summary>
         /// 进行ADF检验来测试时间序列的平稳性。
@@ -72,7 +70,6 @@ namespace Quant.Infra.Net.Analysis.Service
             return adfStatistic < threshold;
         }
 
-
         /// <summary>
         /// 进行最小二乘法(Ordinary Least Squares Regression)回归分析并返回斜率和截距。
         /// </summary>
@@ -82,7 +79,7 @@ namespace Quant.Infra.Net.Analysis.Service
         public (double Slope, double Intercept) PerformOLSRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
             var regression = SimpleRegression.Fit(seriesA.ToArray(), seriesB.ToArray());
-            return (Math.Round(regression.Item2,6), Math.Round(regression.Item1,6)); // Slope, Intercept
+            return (Math.Round(regression.Item2, 6), Math.Round(regression.Item1, 6)); // Slope, Intercept
         }
 
         /// <summary>
@@ -136,6 +133,5 @@ namespace Quant.Infra.Net.Analysis.Service
         {
             return (value - mean) / stdDev;
         }
-
     }
 }

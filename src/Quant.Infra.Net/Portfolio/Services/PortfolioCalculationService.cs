@@ -1,6 +1,6 @@
 ﻿using Quant.Infra.Net.Portfolio.Models;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Quant.Infra.Net.Portfolio.Services
@@ -11,7 +11,6 @@ namespace Quant.Infra.Net.Portfolio.Services
     /// </summary>
     public class PortfolioCalculationService
     {
-
         /// <summary>
         /// 计算 Balance，包括 NetLiquidationValue, MarketValue, Cash 和 UnrealizedPnL
         /// </summary>
@@ -47,8 +46,6 @@ namespace Quant.Infra.Net.Portfolio.Services
                 UnrealizedPnL = unrealizedPnL
             };
         }
-
-
 
         /// <summary>
         /// 计算 Positions，通过已成交订单和当前持仓更新持仓状态
@@ -102,4 +99,3 @@ namespace Quant.Infra.Net.Portfolio.Services
         }
     }
 }
-

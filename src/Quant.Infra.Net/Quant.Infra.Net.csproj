@@ -7,11 +7,11 @@
 	<FileVersion>1.0.1.0</FileVersion>  <!-- 文件版本 -->
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Account\Model\**" />
+    <Compile Remove="Broker\Model\**" />
     <Compile Remove="Analysis\Model\**" />
-    <EmbeddedResource Remove="Account\Model\**" />
+    <EmbeddedResource Remove="Broker\Model\**" />
     <EmbeddedResource Remove="Analysis\Model\**" />
-    <None Remove="Account\Model\**" />
+    <None Remove="Broker\Model\**" />
     <None Remove="Analysis\Model\**" />
   </ItemGroup>
   <ItemGroup>

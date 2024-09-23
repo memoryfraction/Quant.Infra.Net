@@ -10,12 +10,19 @@ namespace Quant.Infra.Net.Account.Service
     {
         public CryptoPortfolio Portfolio { get; set; }
 
-        // 构造函数初始化 CryptoPerpetualContractPortfolio
-        public InMemoryBinanceBrokerService(decimal initCapital)
+        /// <summary>
+        /// 构造函数初始化 CryptoPerpetualContractPortfolio
+        /// </summary>
+        /// <param name="portfolioBase"></param>
+        public InMemoryBinanceBrokerService(PortfolioBase portfolioBase)
         {
-            
-            Portfolio = new CryptoPortfolio();
-            Portfolio.InitCapital = initCapital;
+            Portfolio = portfolioBase as CryptoPortfolio;
+            // Portfolio.InitCapital = initCapital;
+        }
+
+        public override Task<decimal> GetLatestPriceAsync(Underlying underlying)
+        {
+            throw new NotImplementedException();
         }
 
         public override Task SetHoldingsAsync(Underlying underlying, decimal ratio)

@@ -22,6 +22,11 @@ namespace Quant.Infra.Net.Account.Service
             throw new NotImplementedException();
         }
 
+        public override Task<decimal> GetLatestPriceAsync(Underlying underlying)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// 异步设置指定资产的持仓比例
         /// Asynchronously set holdings ratio for a specific asset

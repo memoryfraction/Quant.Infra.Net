@@ -85,6 +85,11 @@ namespace Quant.Infra.Net.Account.Service
             }
         }
 
+        public override async Task<decimal> GetLatestPriceAsync(Underlying underlying)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// 异步设置指定资产的持仓比例
         /// Asynchronously set holdings ratio for a specific asset

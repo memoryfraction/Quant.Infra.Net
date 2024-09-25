@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Quant.Infra.Net.Account.Service;
+using Quant.Infra.Net.Broker.Service;
 
 namespace Quant.Infra.Net.Portfolio.Models
 {
@@ -193,9 +194,9 @@ namespace Quant.Infra.Net.Portfolio.Models
     /// </summary>
     public class StockPortfolio : PortfolioBase
     {
-        private readonly BrokerServiceBase _brokerService;
+        private readonly IBrokerService _brokerService;
 
-        public StockPortfolio(BrokerServiceBase brokerService)
+        public StockPortfolio(IBrokerService brokerService)
         {
             _brokerService = brokerService;
         }
@@ -227,9 +228,9 @@ namespace Quant.Infra.Net.Portfolio.Models
     /// </summary>
     public class CryptoPortfolio : PortfolioBase
     {
-        private readonly BrokerServiceBase _brokerService;
+        private readonly IBrokerService _brokerService;
 
-        public CryptoPortfolio(BrokerServiceBase brokerService)
+        public CryptoPortfolio(IBrokerService brokerService)
         {
             _brokerService = brokerService;
         }

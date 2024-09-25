@@ -1,6 +1,7 @@
 ﻿using Binance.Net.Clients;
 using Microsoft.Extensions.Configuration;
 using Polly;
+using Quant.Infra.Net.Broker.Service;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using Serilog;
@@ -15,7 +16,7 @@ namespace Quant.Infra.Net.Account.Service
     /// Binance服务类，实现了与Binance相关的操作
     /// Binance Service class, implements operations related to Binance
     /// </summary>
-    public class BinanceService : BrokerServiceBase
+    public class BinanceService : BrokerServiceBase, IBrokerService
     {
         private readonly BinanceRestClient _binanceRestClient;
 
@@ -30,8 +31,9 @@ namespace Quant.Infra.Net.Account.Service
 
         public BinanceService(IConfiguration configuration)
         {
-            _apiKey = _configuration["Exchange:apiKey"];
-            _apiSecret = _configuration["Exchange:apiSecret"];
+            _configuration = configuration;
+            _apiKey = _configuration["LiveTradingSettings:ApiKey"];
+            _apiSecret = _configuration["LiveTradingSettings:ApiSecret"];
         }
 
         /// <summary>

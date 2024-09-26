@@ -293,6 +293,6 @@ namespace Quant.Infra.Net.SourceData.Service
             };
         }
 
-        #endregion private functions
+        #endregion
     }
 }

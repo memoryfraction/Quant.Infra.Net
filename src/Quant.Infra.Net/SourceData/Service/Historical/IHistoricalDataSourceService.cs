@@ -5,18 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Quant.Infra.Net.Broker.Service
+namespace Quant.Infra.Net.SourceData.Service.Historical
 {
-    public interface IBrokerPriceService
+    public interface IHistoricalDataSourceService
     {
-        /// <summary>
-        /// 获取指定标的资产的最新价格。
-        /// </summary>
-        /// <param name="underlying">标的资产，例如股票、期货、加密货币等。</param>
-        /// <returns>返回该标的资产的最新价格。</returns>
-        Task<decimal> GetLatestPriceAsync(Underlying underlying);
-
-
         /// <summary>
         /// 基础货币，用于定价或汇率计算。
         /// </summary>
@@ -32,6 +24,4 @@ namespace Quant.Infra.Net.Broker.Service
 
         Task<DataFrame> GetHistoricalDataFrameAsync(Underlying underlying, DateTime startDate, DateTime endDate, ResolutionLevel resolutionLevel);
     }
-
-    
 }

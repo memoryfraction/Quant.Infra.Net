@@ -194,9 +194,9 @@ namespace Quant.Infra.Net.Portfolio.Models
     /// </summary>
     public class StockPortfolio : PortfolioBase
     {
-        private readonly IBrokerService _brokerService;
+        private readonly IBrokerPriceService _brokerService;
 
-        public StockPortfolio(IBrokerService brokerService)
+        public StockPortfolio(IBrokerPriceService brokerService)
         {
             _brokerService = brokerService;
         }
@@ -228,9 +228,9 @@ namespace Quant.Infra.Net.Portfolio.Models
     /// </summary>
     public class CryptoPortfolio : PortfolioBase
     {
-        private readonly IBrokerService _brokerService;
+        private readonly IBrokerPriceService _brokerService;
 
-        public CryptoPortfolio(IBrokerService brokerService)
+        public CryptoPortfolio(IBrokerPriceService brokerService)
         {
             _brokerService = brokerService;
         }

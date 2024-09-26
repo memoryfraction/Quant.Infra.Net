@@ -38,6 +38,15 @@ namespace Quant.Infra.Net.Analysis
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="symbol1"></param>
+        /// <param name="symbol2"></param>
+        /// <param name="df1">需要包括:DateTime, Close列</param>
+        /// <param name="df2">需要包括:DateTime, Close列</param>
+        /// <param name="resolutionLevel"></param>
+        /// <exception cref="ArgumentException"></exception>
         protected SpreadCalculatorFixLength(
             string symbol1,
             string symbol2,

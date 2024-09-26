@@ -1,11 +1,13 @@
-﻿using Quant.Infra.Net.Shared.Model;
+﻿using Microsoft.Data.Analysis;
+using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Service
 {
-    public interface IBrokerService
+    public interface IBrokerPriceService
     {
         /// <summary>
         /// 获取指定标的资产的最新价格。
@@ -20,10 +22,16 @@ namespace Quant.Infra.Net.Broker.Service
         /// </summary>
         Currency BaseCurrency { get; set; }
 
-        Task<Ohlcv> GetOhlcvAsync(string symbol, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly,
-            AssetType assetType = AssetType.CryptoSpot,
+
+        Task<List<Ohlcv>> GetOhlcvListAsync(
+            Underlying underlying,
+            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly,
             DateTime? startDt = null,
             DateTime? endDt = null,
             int limit = 1);
+
+        Task<DataFrame> GetHistoricalDataFrameAsync(Underlying underlying, DateTime startDate, DateTime endDate, ResolutionLevel resolutionLevel);
     }
+
+    
 }

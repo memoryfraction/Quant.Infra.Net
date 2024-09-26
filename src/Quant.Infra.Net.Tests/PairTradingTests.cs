@@ -21,8 +21,7 @@ namespace Quant.Infra.Net.Tests
             var df2 = UtilityService.LoadCsvToDataFrame(sourceFullPathFilename2);
 
             // Action
-            var calculator = new SpreadCalculatorPerpetualContract(symbol1, symbol2, df1, df2,
-                resolutionLevel: ResolutionLevel.Hourly);
+            var calculator = new SpreadCalculatorPerpetualContract(symbol1, symbol2, df1, df2, resolutionLevel: ResolutionLevel.Hourly);
 
             // Assety
             // 如果无报错，说明工作正常

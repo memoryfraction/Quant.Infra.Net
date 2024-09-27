@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Quant.Infra.Net.Account.Service;
 using Quant.Infra.Net.Broker.Service;
+using Quant.Infra.Net.SourceData.Service.RealTime;
 
 namespace Quant.Infra.Net.Portfolio.Models
 {
@@ -194,11 +195,11 @@ namespace Quant.Infra.Net.Portfolio.Models
     /// </summary>
     public class StockPortfolio : PortfolioBase
     {
-        private readonly IBrokerPriceService _brokerService;
+        private readonly IRealtimeDataSourceService _realtimeDataSourceService;
 
-        public StockPortfolio(IBrokerPriceService brokerService)
+        public StockPortfolio(IRealtimeDataSourceService realtimeDataSourceService)
         {
-            _brokerService = brokerService;
+            _realtimeDataSourceService = realtimeDataSourceService;
         }
 
         /// <summary>
@@ -228,11 +229,11 @@ namespace Quant.Infra.Net.Portfolio.Models
     /// </summary>
     public class CryptoPortfolio : PortfolioBase
     {
-        private readonly IBrokerPriceService _brokerService;
+        private readonly IRealtimeDataSourceService _realtimeDataSourceService;
 
-        public CryptoPortfolio(IBrokerPriceService brokerService)
+        public CryptoPortfolio(IRealtimeDataSourceService realtimeDataSourceService)
         {
-            _brokerService = brokerService;
+            _realtimeDataSourceService = realtimeDataSourceService;
         }
 
         /// <summary>
@@ -251,7 +252,7 @@ namespace Quant.Infra.Net.Portfolio.Models
         public override async Task<decimal> HoldingsValueAsync(Underlying underlying)
         {
             // Get the latest price for the underlying asset
-            decimal latestPrice = await _brokerService.GetLatestPriceAsync(underlying);
+            decimal latestPrice = await _realtimeDataSourceService.GetLatestPriceAsync(underlying);
 
             // Calculate total holdings value for the specified underlying asset
             decimal totalHoldingsValue = PortfolioSnapshots.Values.Sum(snapshot =>
@@ -281,7 +282,7 @@ namespace Quant.Infra.Net.Portfolio.Models
                         Symbol = position.Symbol,
                         AssetType = position.AssetType
                     };
-                    var latestPrice = await _brokerService.GetLatestPriceAsync(underlying);
+                    var latestPrice = await _realtimeDataSourceService.GetLatestPriceAsync(underlying);
                     latestPrices[position.Symbol] = latestPrice;
                 }
             }

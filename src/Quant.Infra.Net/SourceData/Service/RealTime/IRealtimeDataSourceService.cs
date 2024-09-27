@@ -28,4 +28,14 @@ namespace Quant.Infra.Net.SourceData.Service.RealTime
         /// </summary>
         Currency BaseCurrency { get; set; }
     }
+
+    public interface IRealtimeDataSourceServiceCrypto : IRealtimeDataSourceService
+    {
+
+    }
+
+    public interface IRealtimeDataSourceServiceTraditionalFinance
+    {
+
+    }
 }

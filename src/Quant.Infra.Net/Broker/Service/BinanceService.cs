@@ -2,7 +2,6 @@
 using Microsoft.Data.Analysis;
 using Microsoft.Extensions.Configuration;
 using Polly;
-using Quant.Infra.Net.Broker.Service;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service.Historical;
@@ -19,7 +18,7 @@ namespace Quant.Infra.Net.Account.Service
     /// Binance服务类，实现了与Binance相关的操作
     /// Binance Service class, implements operations related to Binance
     /// </summary>
-    public class BinanceService : BrokerServiceBase, IBrokerPriceService, ICryptoHistoricalDataSourceService, ICryptoRealtimeDataSourceService
+    public class BinanceService : BrokerServiceBase, IHistoricalDataSourceServiceCryptoBinance, IRealtimeDataSourceServiceCrypto
     {
         private readonly BinanceRestClient _binanceRestClient;
 
@@ -295,5 +294,9 @@ namespace Quant.Infra.Net.Account.Service
             return dataFrame;
         }
 
+        public Task<List<Ohlcv>> GetOhlcvListAsync(Underlying underlying, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -236,4 +236,13 @@ namespace Quant.Infra.Net.Shared.Model
         USDT, // 泰达币
         USDC  // USD Coin
     }
+
+    public enum PairTradingActionType
+    {
+        Open, // 开仓
+        TakeProfit,
+        StopLoss,
+        MeanReverseExit
+    }
+
 }

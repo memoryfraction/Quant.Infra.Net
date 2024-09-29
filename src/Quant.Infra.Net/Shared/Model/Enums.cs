@@ -242,7 +242,8 @@ namespace Quant.Infra.Net.Shared.Model
         Open, // 开仓
         TakeProfit,
         StopLoss,
-        MeanReverseExit
+        MeanReverseExit,
+        DoNothing
     }
 
 }

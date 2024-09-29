@@ -6,7 +6,7 @@ using Quant.Infra.Net.Shared.Service;
 namespace Quant.Infra.Net.Tests
 {
     [TestClass]
-    public class PairTradingTests
+    public class SpreadCalculatorTests
     {
         
         [TestMethod]

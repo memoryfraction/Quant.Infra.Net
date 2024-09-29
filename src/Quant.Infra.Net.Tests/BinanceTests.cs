@@ -25,7 +25,7 @@ namespace Quant.Infra.Net.Tests
             _services = new ServiceCollection();
             _services.AddScoped<IDingtalkService, DingtalkService>();
             _services.AddScoped<IBinanceOrderService, BinanceOrderService>();
-            _services.AddScoped<AbstractBrokerService, BinanceService>();
+            _services.AddScoped<BrokerServiceBase, BinanceService>();
 
             // Read Secret
             _configuration = new ConfigurationBuilder()
@@ -165,7 +165,7 @@ namespace Quant.Infra.Net.Tests
         public async Task GetSpotSymbolListAsync_Should_Work()
         {
             // Arrange
-            var binanceOrderService = _serviceProvider.GetRequiredService<AbstractBrokerService>();
+            var binanceOrderService = _serviceProvider.GetRequiredService<BrokerServiceBase>();
 
             // act
             var spotSymbolList = await binanceOrderService.GetSpotSymbolListAsync();

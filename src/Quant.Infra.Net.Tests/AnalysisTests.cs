@@ -154,6 +154,9 @@ namespace Quant.Infra.Net.Tests
         }
 
 
+        /// <summary>
+        /// 对于Python的Ols结果， $"spread = {symbolA} - ({slope} * {symbolB} + {intercept})";
+        /// </summary>
         [TestMethod]
         public void Python_LinerRegression_Should_Work()
         {
@@ -191,7 +194,7 @@ namespace Quant.Infra.Net.Tests
                     var a = pyObjectResponse.GetItem("a").As<double>();
                     var constant = pyObjectResponse.GetItem("constant").As<double>();
                     
-                    string formula = $"diff = {symbolA} - ({a} * {symbolB} + {constant})";
+                    string formula = $"spread = {symbolA} - ({a} * {symbolB} + {constant})";
                     Console.WriteLine($"{formula}");
                 }
                 catch (PythonException ex)
@@ -228,8 +231,22 @@ namespace Quant.Infra.Net.Tests
             using (var reader = new StreamReader(filePath))
             using (var csv = new CsvReader(reader, config))
             {
-                var records = csv.GetRecords<BasicOhlcv>().ToList();
-                return records.Select(x => (double)x.Close).ToList();
+                // 读取 CSV 的表头
+                csv.Read();
+                csv.ReadHeader();
+
+                // 创建一个 List<double> 来保存 Close 列的数据
+                var closeValues = new List<double>();
+
+                // 读取每一行数据
+                while (csv.Read())
+                {
+                    // 获取 Close 列的数据并添加到列表中
+                    var closeValue = csv.GetField<double>("Close");
+                    closeValues.Add(closeValue);
+                }
+
+                return closeValues;
             }
         }
 

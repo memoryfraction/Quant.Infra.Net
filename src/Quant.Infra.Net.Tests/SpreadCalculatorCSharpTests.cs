@@ -6,7 +6,7 @@ using Quant.Infra.Net.Shared.Service;
 namespace Quant.Infra.Net.Tests
 {
     [TestClass]
-    public class SpreadCalculatorTests
+    public class SpreadCalculatorCSharpTests
     {
         
         [TestMethod]
@@ -79,17 +79,13 @@ namespace Quant.Infra.Net.Tests
             var df2 = UtilityService.LoadCsvToDataFrame(sourceFullPathFilename2);
 
             // Action
-            var calculator = new SpreadCalculatorPerpetualContract(symbol1, symbol2, df1, df2,
-                resolutionLevel: ResolutionLevel.Hourly);
-
+            var calculator = new SpreadCalculatorPerpetualContract(symbol1, symbol2, df1, df2, resolutionLevel: ResolutionLevel.Hourly);
             calculator.UpsertSpreadAndEquation();
-
             var dateTimeColumn = calculator.DataFrame.Columns["DateTime"];
             var endDateTime = dateTimeColumn.Cast<DateTime>().Max();
 
             // Fetch the row index for the given endDateTime
             int rowIndex = calculator.DataFrame.GetRowIndex("DateTime", endDateTime);
-
             double spread = rowIndex != -1 ? (double)calculator.DataFrame["Spread"][rowIndex] : default(double);
             string equation = rowIndex != -1 ? (string)calculator.DataFrame["Equation"][rowIndex] : default(string);
 

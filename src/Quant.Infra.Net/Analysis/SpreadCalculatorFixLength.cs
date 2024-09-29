@@ -283,7 +283,7 @@ namespace Quant.Infra.Net.Analysis
             var lastElmInSeriesA = seriesA.FirstOrDefault();
             var lastElmInSeriesB = seriesB.FirstOrDefault();
             var spread = lastElmInSeriesB - slope * lastElmInSeriesA - intercept;
-            var equation = $"{symbol2} -  {slope}*{symbol1} - {intercept}";
+            var equation = $"spread = {symbol2} -  {slope}*{symbol1} - {intercept}";
             return (spread, equation);
         }
 

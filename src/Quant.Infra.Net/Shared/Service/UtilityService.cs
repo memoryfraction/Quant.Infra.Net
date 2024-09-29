@@ -279,6 +279,39 @@ namespace Quant.Infra.Net.Shared.Service
             return dataFrame;
         }
 
-        // 这里可以添加其他方法的注释 / Additional methods can have comments added here.
+
+        /// <summary>
+        /// 读取Csv文件，返回Close列(List<double>)
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns>返回Close列</returns>
+        public static List<double> ReadCloseColFromCsv(string fullPathFileName)
+        {
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                HasHeaderRecord = true,
+            };
+
+            using (var reader = new StreamReader(fullPathFileName))
+            using (var csv = new CsvReader(reader, config))
+            {
+                // 读取 CSV 的表头
+                csv.Read();
+                csv.ReadHeader();
+
+                // 创建一个 List<double> 来保存 Close 列的数据
+                var closeValues = new List<double>();
+
+                // 读取每一行数据
+                while (csv.Read())
+                {
+                    // 获取 Close 列的数据并添加到列表中
+                    var closeValue = csv.GetField<double>("Close");
+                    closeValues.Add(closeValue);
+                }
+
+                return closeValues;
+            }
+        }
     }
 }

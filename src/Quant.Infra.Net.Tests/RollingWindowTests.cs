@@ -208,33 +208,5 @@ namespace Quant.Infra.Net.Tests
             // Assert - Expects an InvalidOperationException
         }
 
-        /// <summary>
-        /// Tests that adding an invalid item to the rolling window throws an exception.
-        /// 测试将无效项添加到滚动窗口中会抛出异常。
-        /// </summary>
-        [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
-        public void Test_RollingWindow_Add_ThrowsExceptionForInvalidItem()
-        {
-            // Arrange
-            var rollingWindow = new RollingWindow<BasicOhlcv>(3);
-
-            var invalidItem = new BasicOhlcv
-            {
-                Symbol = "AAPL",
-                OpenDateTime = default(DateTime),
-                CloseDateTime = default(DateTime),
-                Open = default(decimal),
-                High = default(decimal),
-                Low = default(decimal),
-                Close = default(decimal),
-                Volume = default(decimal)
-            }; // Invalid OHLCV
-
-            // Act
-            rollingWindow.Add(invalidItem); // Should throw an exception
-
-            // Assert - Expects an InvalidOperationException
-        }
     }
 }

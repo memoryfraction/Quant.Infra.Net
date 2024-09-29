@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Quant.Infra.Net.Account.Service;
 using Quant.Infra.Net.Portfolio.Models;
 using Quant.Infra.Net.Portfolio.Services;
 using Quant.Infra.Net.SourceData.Model;
+using Quant.Infra.Net.SourceData.Service.RealTime;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -14,12 +16,16 @@ namespace Quant.Infra.Net.Tests
         private IConfigurationRoot _configuration;
         private PortfolioBase _portfolio;
         private Random _random;
+        private readonly IRealtimeDataSourceService _readtimeDataSourceService;
+        private readonly StockPortfolio _stockPortfolio;
 
         public PortfolioTests()
         {
             // 依赖注入
             _services = new ServiceCollection();
-            _services.AddScoped<PortfolioBase, CryptoPerpetualContractPortfolio>();
+            _services.AddScoped<IRealtimeDataSourceService, BinanceService>();
+            _services.AddScoped<PortfolioBase, CryptoPortfolio>();
+            _services.AddScoped<StockPortfolio>();
 
             // 读取配置文件
             _configuration = new ConfigurationBuilder()
@@ -33,7 +39,12 @@ namespace Quant.Infra.Net.Tests
             // 获取Portfolio实例
             _portfolio = _serviceProvider.GetService<PortfolioBase>();
 
+            // Create a portfolio
+            _stockPortfolio = _serviceProvider.GetService<StockPortfolio>();
+
             _random = new Random();
+
+
         }
 
 
@@ -301,8 +312,7 @@ namespace Quant.Infra.Net.Tests
                 }
             };
 
-            // Create a portfolio
-            var _portfolio = new StockPortfolio();
+            
 
             // Add initial snapshot
             _portfolio.UpsertSnapshot(timePoints[0], new Balance

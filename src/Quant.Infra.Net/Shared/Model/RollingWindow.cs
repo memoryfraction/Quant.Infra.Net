@@ -55,5 +55,14 @@ namespace Quant.Infra.Net.Shared.Model
         {
             return GetEnumerator();
         }
+
+        public T Latest()
+        {
+            if (_window.Count == 0)
+                throw new InvalidOperationException("The window is empty.");
+
+            return _window.ToArray()[_window.Count - 1]; // Returns the most recent element (last in the queue)
+        }
+
     }
 }

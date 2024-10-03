@@ -6,131 +6,107 @@ namespace Quant.Infra.Net.Shared.Model
     /// 代表不同市场类型
     /// Represents different market types
     /// </summary>
+    /// <summary>
+    /// 代表不同市场类型
+    /// Represents different market types
+    /// </summary>
     public enum MarketType
     {
         /// <summary>
         /// 加密货币市场，24小时交易
         /// Cryptocurrency market, open 24 hours
         /// </summary>
-        Crypto,
+        Crypto = 1,
 
         /// <summary>
         /// 美股市场，早9:30到16:00交易
         /// US equity market, open from 9:30 AM to 4:00 PM
         /// </summary>
-        UsEquityMarket,
+        UsEquityMarket = 2,
 
         /// <summary>
         /// 香港股市
         /// Hong Kong equity market
         /// </summary>
-        HkEquityMarket,
-
-        /// <summary>
-        /// 中国股市
-        /// China equity market
-        /// </summary>
-        ChinaEquityMarket,
-
-        /// <summary>
-        /// 外汇市场
-        /// Forex market
-        /// </summary>
-        Forex,
-
-        /// <summary>
-        /// 大宗商品市场
-        /// Commodities market
-        /// </summary>
-        Commodities,
+        HkEquityMarket = 3,
 
         /// <summary>
         /// 欧洲股市
         /// European equity market
         /// </summary>
-        EuropeEquityMarket,
-
-        /// <summary>
-        /// 印度股市
-        /// Indian equity market
-        /// </summary>
-        IndiaEquityMarket
+        EuEquityMarket = 4
     }
 
     public enum Broker
     {
-        Binance,              // Binance
-        OKEX,                 // OKEX
-        InteractiveBrokers,   // Interactive Brokers
-        Coinbase,             // Coinbase
-        Kraken,               // Kraken
-        Bitfinex,             // Bitfinex
-        Bitstamp,             // Bitstamp
-        FTX,                  // FTX (assuming still supported)
-        Deribit,              // Deribit
-        Huobi,                // Huobi
-        Kucoin,               // Kucoin
-        Gemini                // Gemini
+        Binance = 1,              // Binance
+        OKEX = 2,                 // OKEX
+        InteractiveBrokers = 3,   // Interactive Brokers
+        Coinbase = 4,             // Coinbase
+        Kraken = 5,               // Kraken
+        Bitfinex = 6,             // Bitfinex
+        Bitstamp = 7,             // Bitstamp
+        FTX = 8,                  // FTX
+        Deribit = 9,              // Deribit
+        Huobi = 10,               // Huobi
+        Kucoin = 11,              // Kucoin
+        Gemini = 12               // Gemini
     }
+
 
     /// <summary>
     /// 表示订单的不同状态。
+    /// Represents different order statuses.
     /// </summary>
     public enum OrderStatus
     {
         /// <summary>
         /// 新订单，已创建但尚未处理。
+        /// New order, created but not yet processed.
         /// </summary>
-        New,
+        New = 1,
 
         /// <summary>
         /// 部分成交，订单的一部分数量已经成交。
+        /// Partially filled, part of the order quantity has been filled.
         /// </summary>
-        PartiallyFilled,
+        PartiallyFilled = 2,
 
         /// <summary>
         /// 全部成交，订单的所有数量已经成交。
+        /// Fully filled, the entire order quantity has been filled.
         /// </summary>
-        Filled,
+        Filled = 3,
 
         /// <summary>
         /// 待处理，订单已提交但尚未被券商确认或接受。
+        /// Pending, the order has been submitted but not yet confirmed or accepted by the broker.
         /// </summary>
-        PendingNew,
+        PendingNew = 4,
 
         /// <summary>
-        /// 已拒绝，订单因某些原因被券商拒绝，未能进入市场或成交。
+        /// 已拒绝，订单因某些原因被拒绝。
+        /// Rejected, the order was rejected for some reason.
         /// </summary>
-        Rejected,
+        Rejected = 5,
 
         /// <summary>
-        /// 已取消，订单在未成交的情况下被用户或系统取消。
+        /// 已取消，订单在执行之前被取消。
+        /// Cancelled, the order was cancelled before execution.
         /// </summary>
-        Cancelled,
+        Canceled = 6,
 
         /// <summary>
-        /// 取消中，取消请求已提交，但尚未确认取消。
+        /// 已过期，订单因时效问题而过期，未能执行。
+        /// Expired, the order expired and was not executed.
         /// </summary>
-        PendingCancel,
-
-        /// <summary>
-        /// 已过期，订单因超过有效期未能成交而失效。
-        /// </summary>
-        Expired,
-
-        /// <summary>
-        /// 已暂停，订单被暂停执行。
-        /// </summary>
-        Suspended,
-
-        /// <summary>
-        /// 修改中，修改请求已提交，但尚未确认修改。
-        /// </summary>
-        PendingReplace
+        Expired = 7
     }
+
 
     public enum AssetType
     {
+        Other = 0,
         UsEquity = 1,                  // US Equity
         UsOption = 2,                  // US Option
         CryptoSpot = 3,                // Cryptocurrency Spot
@@ -143,107 +119,47 @@ namespace Quant.Infra.Net.Shared.Model
     public enum ResolutionLevel
     {
         [EnumMember(Value = "t")]
-        Tick,
+        Tick = 0,
 
         [EnumMember(Value = "s")]
-        Second,
+        Second = 1,
 
         [EnumMember(Value = "min")]
-        Minute,
+        Minute = 2,
 
         [EnumMember(Value = "h")]
-        Hourly,
+        Hourly = 3,
 
         [EnumMember(Value = "d")]
-        Daily,
+        Daily = 4,
 
         [EnumMember(Value = "wk")]
-        Weekly,
+        Weekly = 5,
 
         [EnumMember(Value = "mo")]
-        Monthly,
+        Monthly = 6,
 
         [EnumMember(Value = "other")]
-        Other
+        Other = 7
     }
 
     public enum DataSource
     {
-        YahooFinance,
-        Binance
+        YahooFinance = 0,
+        Binance = 1
     }
 
     public enum TradeDirection
     {
-        Long,  // 做多
-        Short  // 做空
+        Long = 0,  // 做多
+        Short = 1  // 做空
     }
 
     public enum OrderActionType
     {
-        Buy,
-        Sell
+        Buy = 0,
+        Sell = 1
     }
 
-    public enum OrderExecutionType
-    {
-        /// <summary>
-        /// Limit orders will be placed at a specific price. If the price isn't available in the order book for that asset the order will be added in the order book for someone to fill.
-        /// </summary>
-        Limit,
-
-        /// <summary>
-        /// Market order will be placed without a price. The order will be executed at the best price available at that time in the order book.
-        /// </summary>
-        Market,
-
-        /// <summary>
-        /// Stop loss order. Will execute a market order when the price drops below a price to sell and therefor limit the loss
-        /// </summary>
-        StopLoss,
-
-        /// <summary>
-        /// Stop loss order. Will execute a limit order when the price drops below a price to sell and therefor limit the loss
-        /// </summary>
-        StopLossLimit,
-
-        /// <summary>
-        /// Take profit order. Will execute a market order when the price rises above a price to sell and therefor take a profit
-        /// </summary>
-        TakeProfit,
-
-        /// <summary>
-        /// Take profit limit order. Will execute a limit order when the price rises above a price to sell and therefor take a profit
-        /// </summary>
-        TakeProfitLimit,
-
-        /// <summary>
-        /// Same as a limit order, however it will fail if the order would immediately match, therefor preventing taker orders
-        /// </summary>
-        LimitMaker
-    }
-
-    public enum ContractSecurityType
-    {
-        Stock
-    }
-
-    public enum Currency
-    {
-        USD,  // 美元
-        CNY,  // 人民币
-        HKD,  // 港币
-        USDT, // 泰达币
-        USDC  // USD Coin
-    }
-
-    public enum PairTradingActionType
-    {
-        Open, // 开仓
-        TakeProfit,
-        StopLoss,
-        MeanReverseExit,
-        DoNothing
-    }
 
 }

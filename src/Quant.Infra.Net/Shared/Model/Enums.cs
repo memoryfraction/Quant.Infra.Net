@@ -2,10 +2,7 @@
 
 namespace Quant.Infra.Net.Shared.Model
 {
-    /// <summary>
-    /// 代表不同市场类型
-    /// Represents different market types
-    /// </summary>
+
     /// <summary>
     /// 代表不同市场类型
     /// Represents different market types
@@ -160,6 +157,174 @@ namespace Quant.Infra.Net.Shared.Model
         Buy = 0,
         Sell = 1
     }
+
+
+    public enum OrderExecutionType
+    {
+        /// <summary>
+        /// Limit orders will be placed at a specific price. If the price isn't available in the order book for that asset, the order will be added in the order book for someone to fill.
+        /// </summary>
+        Limit = 0,
+
+        /// <summary>
+        /// Market order will be placed without a price. The order will be executed at the best price available at that time in the order book.
+        /// </summary>
+        Market = 1,
+
+        /// <summary>
+        /// Stop loss order. Will execute a market order when the price drops below a price to sell and therefore limit the loss.
+        /// </summary>
+        StopLoss = 2,
+
+        /// <summary>
+        /// Stop loss limit order. Will execute a limit order when the price drops below a price to sell, aiming to limit the loss but at a specific price.
+        /// </summary>
+        StopLossLimit = 3,
+
+        /// <summary>
+        /// Take profit order. Will execute a market order when the price rises above a certain point to secure profits.
+        /// </summary>
+        TakeProfit = 4,
+
+        /// <summary>
+        /// Take profit limit order. Will execute a limit order when the price rises above a certain point to secure profits at a specific price.
+        /// </summary>
+        TakeProfitLimit = 5,
+
+        /// <summary>
+        /// Trailing stop order. Follows the price movement by a certain distance and executes when the price reverses by that distance.
+        /// </summary>
+        TrailingStop = 6,
+
+        /// <summary>
+        /// Fills an order at a given price or better.
+        /// </summary>
+        FillOrKill = 7,
+
+        /// <summary>
+        /// Executes as much of the order as possible and cancels the remaining unfilled portion.
+        /// </summary>
+        ImmediateOrCancel = 8
+    }
+
+
+    public enum ContractSecurityType
+    {
+        /// <summary>
+        /// 股票合约
+        /// Stock contract
+        /// </summary>
+        Stock = 0,
+
+        /// <summary>
+        /// 期权合约
+        /// Options contract
+        /// </summary>
+        Option = 1,
+
+        /// <summary>
+        /// 期货合约
+        /// Futures contract
+        /// </summary>
+        Future = 2,
+
+        /// <summary>
+        /// 交易所交易基金
+        /// Exchange Traded Fund
+        /// </summary>
+        ETF = 3,
+
+        /// <summary>
+        /// 其他合约类型
+        /// Other contract types
+        /// </summary>
+        Other = 4
+    }
+
+
+    public enum Currency
+    {
+        /// <summary>
+        /// 美元
+        /// US Dollar
+        /// </summary>
+        USD = 0,
+
+        /// <summary>
+        /// 欧元
+        /// Euro
+        /// </summary>
+        EUR = 1,
+
+        /// <summary>
+        /// 英镑
+        /// British Pound
+        /// </summary>
+        GBP = 2,
+
+        /// <summary>
+        /// 日元
+        /// Japanese Yen
+        /// </summary>
+        JPY = 3,
+
+        /// <summary>
+        /// 瑞士法郎
+        /// Swiss Franc
+        /// </summary>
+        CHF = 4,
+
+        /// <summary>
+        /// 加拿大元
+        /// Canadian Dollar
+        /// </summary>
+        CAD = 5,
+
+        /// <summary>
+        /// 澳大利亚元
+        /// Australian Dollar
+        /// </summary>
+        AUD = 6,
+
+        /// <summary>
+        /// 人民币
+        /// Chinese Yuan
+        /// </summary>
+        CNY = 7,
+
+        // 可以根据需要添加更多货币
+    }
+
+
+    public enum PairTradingActionType
+    {
+        /// <summary>
+        /// 买入操作
+        /// Buy action
+        /// </summary>
+        Buy = 0,
+
+        /// <summary>
+        /// 卖出操作
+        /// Sell action
+        /// </summary>
+        Sell = 1,
+
+        /// <summary>
+        /// 对冲操作
+        /// Hedge action
+        /// </summary>
+        Hedge = 2,
+
+        /// <summary>
+        /// 清仓操作
+        /// Liquidate action
+        /// </summary>
+        Liquidate = 3,
+
+        // 可以根据需要添加更多操作类型
+    }
+
 
 
 }

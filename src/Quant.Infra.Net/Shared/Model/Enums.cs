@@ -244,53 +244,11 @@ namespace Quant.Infra.Net.Shared.Model
 
     public enum Currency
     {
-        /// <summary>
-        /// 美元
-        /// US Dollar
-        /// </summary>
-        USD = 0,
-
-        /// <summary>
-        /// 欧元
-        /// Euro
-        /// </summary>
-        EUR = 1,
-
-        /// <summary>
-        /// 英镑
-        /// British Pound
-        /// </summary>
-        GBP = 2,
-
-        /// <summary>
-        /// 日元
-        /// Japanese Yen
-        /// </summary>
-        JPY = 3,
-
-        /// <summary>
-        /// 瑞士法郎
-        /// Swiss Franc
-        /// </summary>
-        CHF = 4,
-
-        /// <summary>
-        /// 加拿大元
-        /// Canadian Dollar
-        /// </summary>
-        CAD = 5,
-
-        /// <summary>
-        /// 澳大利亚元
-        /// Australian Dollar
-        /// </summary>
-        AUD = 6,
-
-        /// <summary>
-        /// 人民币
-        /// Chinese Yuan
-        /// </summary>
-        CNY = 7,
+        USD=0,  // 美元
+        CNY=1,  // 人民币
+        HKD=2,  // 港币
+        USDT=3, // 泰达币
+        USDC=4  // USD Coi
 
         // 可以根据需要添加更多货币
     }
@@ -298,29 +256,11 @@ namespace Quant.Infra.Net.Shared.Model
 
     public enum PairTradingActionType
     {
-        /// <summary>
-        /// 买入操作
-        /// Buy action
-        /// </summary>
-        Buy = 0,
-
-        /// <summary>
-        /// 卖出操作
-        /// Sell action
-        /// </summary>
-        Sell = 1,
-
-        /// <summary>
-        /// 对冲操作
-        /// Hedge action
-        /// </summary>
-        Hedge = 2,
-
-        /// <summary>
-        /// 清仓操作
-        /// Liquidate action
-        /// </summary>
-        Liquidate = 3,
+        Open=0, // 开仓
+        TakeProfit=1,
+        StopLoss=2,
+        MeanReverseExit=3,
+        DoNothing=4
 
         // 可以根据需要添加更多操作类型
     }

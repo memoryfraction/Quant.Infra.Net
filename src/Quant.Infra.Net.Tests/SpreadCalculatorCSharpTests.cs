@@ -45,6 +45,7 @@ namespace Quant.Infra.Net.Tests
                 resolutionLevel: ResolutionLevel.Hourly);
 
             calculator.UpsertSpreadAndEquation();
+            var spreads = calculator.GetSpreadsFromColumn();
 
             var dt = new DateTime(2024, 8, 1);
             var algoPrice = 0.1377;

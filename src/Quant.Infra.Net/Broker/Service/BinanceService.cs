@@ -150,6 +150,40 @@ namespace Quant.Infra.Net.Account.Service
             throw new NotImplementedException();
         }
 
+
+        /// <summary>
+        /// 获取给定交易对的最新 OHLCV 数据, 从endDt倒序获取， 通过while循环，直到结果集合满足limit数量。
+        /// </summary>
+        /// <param name="underlying"></param>
+        /// <param name="endDt"></param>
+        /// <param name="limit"></param>
+        /// <param name="resolutionLevel"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(
+            Underlying underlying,
+            DateTime endDt,
+            int limit,
+            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
+        {
+            var hashSet = new HashSet<Ohlcv>();
+            DateTime tmpEndDt = endDt;
+            var oneTimeNumber = 1000; // 每次request，取1000条;
+            while (hashSet.Count < limit)
+            {
+                var tmpList = await GetOhlcvListAsync(underlying, resolutionLevel: resolutionLevel, startDt:null, endDt: tmpEndDt, oneTimeNumber);
+                foreach(var tmpElm in tmpList)
+                    hashSet.Add(tmpElm);
+                tmpEndDt = hashSet.OrderBy(x => x.CloseDateTime).Select(x => x.CloseDateTime).FirstOrDefault();
+            }
+
+            // 根据CloseDateTime正向排序，从hashSet尾部取数据limit个;
+            return hashSet
+                .OrderBy(x => x.CloseDateTime)    // Sort by CloseDateTime in ascending order
+                .TakeLast(limit)                  // Take the last 'limit' items
+                .ToList();                        // Convert to List or IEnumerable as required
+        }
+
+
         /// <summary>
         /// 获取给定交易对的最新 OHLCV 数据。
         /// <para>Fetch the latest OHLCV data for the specified trading pair.</para>
@@ -159,11 +193,11 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="assetType">资产类型，默认为加密货币现货。<para>Asset type, default is cryptocurrency spot.</para></param>
         /// <param name="startDt">开始时间，可选。<para>Start time, optional.</para></param>
         /// <param name="endDt">结束时间，可选。<para>End time, optional.</para></param>
-        /// <param name="limit">获取的 K线数量，默认为 1。<para>Number of Klines to fetch, default is 1.</para></param>
+        /// <param name="limit">获取的 K线数量，默认为 1。Binance规定上限: 1500。<para>Number of Klines to fetch, default is 1.</para></param>
         /// <returns>返回指定交易对的最新 OHLCV 数据。<para>Returns the latest OHLCV data for the specified trading pair.</para></returns>
         /// <exception cref="NotSupportedException">当资产类型不被支持时抛出此异常。<para>Throws this exception when the asset type is not supported.</para></exception>
         /// <exception cref="Exception">当无法成功获取 OHLCV 数据时抛出此异常。<para>Throws this exception when unable to successfully fetch OHLCV data.</para></exception>
-        public async Task<List<Ohlcv>> GetOhlcvListAsync(
+        private async Task<List<Ohlcv>> GetOhlcvListAsync(
             Underlying underlying,
             ResolutionLevel resolutionLevel = ResolutionLevel.Hourly,
             DateTime? startDt = null,

@@ -19,22 +19,20 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
 
     public interface IHistoricalDataSourceServiceCryptoBinance : IHistoricalDataSourceService
     {
-        // 默认方法表示现货Spot， 如果需要其他的数据，可以此处添加;
+
         /// <summary>
-        /// 调用Binance API， 获取历史数据
+        /// 从Binance取数据, 定义endDt和limit(数量)和ResolutionLevel
         /// </summary>
         /// <param name="underlying"></param>
-        /// <param name="resolutionLevel"></param>
-        /// <param name="startDt"></param>
         /// <param name="endDt"></param>
-        /// <param name="limit"></param>
+        /// <param name="limit">无上限，可以循环操作</param>
+        /// <param name="resolutionLevel"></param>
         /// <returns></returns>
-        public Task<List<Ohlcv>> GetOhlcvListAsync(
+        Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(
             Underlying underlying,
-            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly,
-            DateTime? startDt = null,
-            DateTime? endDt = null,
-            int limit = 1);
+            DateTime endDt,
+            int limit,
+            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly);
     }
 
     public interface IHistoricalDataSourceServiceCryptoMySql : IHistoricalDataSourceService

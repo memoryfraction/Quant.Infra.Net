@@ -15,13 +15,20 @@ namespace Quant.Infra.Net.SourceData.Service.RealTime
         /// <returns>返回该标的资产的最新价格。</returns>
         Task<decimal> GetLatestPriceAsync(Underlying underlying);
 
-        Task<List<Ohlcv>> GetOhlcvListAsync(
-            Underlying underlying,
-            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly,
-            DateTime? startDt = null,
-            DateTime? endDt = null,
-            int limit = 1);
 
+        /// <summary>
+        /// 从Binance取数据, 定义endDt和limit(数量)和ResolutionLevel
+        /// </summary>
+        /// <param name="underlying"></param>
+        /// <param name="endDt"></param>
+        /// <param name="limit"></param>
+        /// <param name="resolutionLevel">无上限，可以循环操作</param>
+        /// <returns></returns>
+        Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(
+            Underlying underlying,
+            DateTime endDt,
+            int limit,
+            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly);
 
         /// <summary>
         /// 基础货币，用于定价或汇率计算。

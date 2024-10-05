@@ -228,6 +228,23 @@ namespace Quant.Infra.Net.Analysis
         }
 
         /// <summary>
+        /// 根据DateTime列的排序，从Spread列获得数据， 并返回; 需要在GetSpreadsFromColumn以后调用;
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<double> GetSpreadsFromColumn()
+        {
+            var spreads = new List<double>();
+            for (int i = 0; i < _dataFrame.Rows.Count; i++)
+            {
+                if (_dataFrame.Columns["Spread"][i] != null)
+                {
+                    spreads.Add((double)_dataFrame.Columns["Spread"][i]);
+                }
+            }
+            return spreads;
+        }
+
+        /// <summary>
         /// 根据endDateTime获取SeriesA, SeriesB
         /// </summary>
         /// <param name="endDateTime"></param>

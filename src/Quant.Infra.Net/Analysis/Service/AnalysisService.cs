@@ -129,6 +129,7 @@ namespace Quant.Infra.Net.Analysis.Service
             return (value - mean) / stdDev;
         }
 
+
         public double CalculateZScores(double mean, double stdDev, double value)
         {
             return (value - mean) / stdDev;

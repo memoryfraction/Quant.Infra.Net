@@ -236,9 +236,10 @@ namespace Quant.Infra.Net.Analysis
             var spreads = new List<double>();
             for (int i = 0; i < _dataFrame.Rows.Count; i++)
             {
-                if (_dataFrame.Columns["Spread"][i] != null)
+                var spreadObj = _dataFrame.Columns["Spread"][i];
+                if (spreadObj != null && Convert.ToDouble(spreadObj) != 0)
                 {
-                    spreads.Add((double)_dataFrame.Columns["Spread"][i]);
+                    spreads.Add(Convert.ToDouble(spreadObj));
                 }
             }
             return spreads;
@@ -278,8 +279,8 @@ namespace Quant.Infra.Net.Analysis
             for (int i = startIndex; i <= endIndex; i++)
             {
                 var row = _dataFrame.Rows[i];
-                seriesA.Add((double)row[$"{Symbol1}Close"]);
-                seriesB.Add((double)row[$"{Symbol2}Close"]);
+                seriesA.Add(Convert.ToDouble(row[$"{Symbol1}Close"]));
+                seriesB.Add(Convert.ToDouble(row[$"{Symbol2}Close"]));
             }
 
             return (seriesA, seriesB);

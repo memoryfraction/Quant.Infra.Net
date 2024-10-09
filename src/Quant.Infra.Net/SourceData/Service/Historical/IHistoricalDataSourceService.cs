@@ -14,12 +14,23 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
         /// </summary>
         Currency BaseCurrency { get; set; }
 
-        Task<DataFrame> GetHistoricalDataFrameAsync(Underlying underlying, DateTime startDate, DateTime endDate, ResolutionLevel resolutionLevel);
+        Task<DataFrame> GetHistoricalDataFrameAsync(
+            Underlying underlying, 
+            DateTime startDate, 
+            DateTime endDate, 
+            ResolutionLevel resolutionLevel);
+
+
+        Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(
+            Underlying underlying,
+            DateTime startDt,
+            DateTime endDt,
+            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly
+        );
     }
 
     public interface IHistoricalDataSourceServiceCryptoBinance : IHistoricalDataSourceService
     {
-
         /// <summary>
         /// 从Binance取数据, 定义endDt和limit(数量)和ResolutionLevel
         /// </summary>
@@ -32,27 +43,20 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
             Underlying underlying,
             DateTime endDt,
             int limit,
-            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly);
+            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly
+            );
+
+
+        
     }
+
 
     public interface IHistoricalDataSourceServiceCryptoMySql : IHistoricalDataSourceService
     {
-        /// <summary>
-        /// 读取MySql，获取历史数据
-        /// </summary>
-        /// <param name="underlying"></param>
-        /// <param name="startDt"></param>
-        /// <param name="endDt"></param>
-        /// <param name="resolutionLevel"></param>
-        /// <returns></returns>
-        Task<List<Ohlcv>> GetOhlcvListAsync(
-            Underlying underlying,
-            DateTime startDt,
-            DateTime endDt,
-            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly);
         
         // 默认方法表示现货Spot， 如果需要其他的数据，可以此处添加;
     }
+
 
     public interface IHistoricalDataSourceServiceTraditionalFinance : IHistoricalDataSourceService
     {

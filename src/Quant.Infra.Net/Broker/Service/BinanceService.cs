@@ -328,7 +328,48 @@ namespace Quant.Infra.Net.Account.Service
             return dataFrame;
         }
 
-        public Task<List<Ohlcv>> GetOhlcvListAsync(Underlying underlying, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
+
+        async Task<IEnumerable<Ohlcv>> IHistoricalDataSourceService.GetOhlcvListAsync(
+            Underlying underlying, 
+            DateTime startDt, 
+            DateTime endDt, 
+            ResolutionLevel resolutionLevel)
+        {
+            var limit = calculateLimit(startDt, endDt, resolutionLevel);
+            return await GetOhlcvListAsync(underlying, endDt, limit, resolutionLevel);
+        }
+
+
+        /// <summary>
+        /// Calculates the number of bars (limit) based on the time range and resolution level.
+        /// 根据时间范围和解析级别，计算需要的bar数量（limit）。
+        /// </summary>
+        /// <param name="startDt">The start date and time for the time range. 时间范围的开始日期和时间。</param>
+        /// <param name="endDt">The end date and time for the time range. 时间范围的结束日期和时间。</param>
+        /// <param name="resolutionLevel">The resolution level (tick, second, minute, etc.). 解析级别（Tick、秒、分钟等）。</param>
+        /// <returns>The number of bars required to cover the time range. 覆盖此时间范围所需的bar数量。</returns>
+        int calculateLimit(DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel)
+        {
+            // Calculate the total time span between the start and end dates
+            // 计算开始日期和结束日期之间的总时间跨度
+            var timeSpan = endDt - startDt;
+
+            // Calculate the number of bars based on the resolution level
+            // 根据解析级别计算bar的数量
+            return resolutionLevel switch
+            {
+                ResolutionLevel.Tick => (int)Math.Ceiling(timeSpan.TotalMilliseconds),  // Assuming 1 ms per tick 假设每个tick为1毫秒
+                ResolutionLevel.Second => (int)Math.Ceiling(timeSpan.TotalSeconds),     // 每秒
+                ResolutionLevel.Minute => (int)Math.Ceiling(timeSpan.TotalMinutes),     // 每分钟
+                ResolutionLevel.Hourly => (int)Math.Ceiling(timeSpan.TotalHours),       // 每小时
+                ResolutionLevel.Daily => (int)Math.Ceiling(timeSpan.TotalDays),         // 每天
+                ResolutionLevel.Weekly => (int)Math.Ceiling(timeSpan.TotalDays / 7),    // 每周
+                ResolutionLevel.Monthly => (int)Math.Ceiling(timeSpan.TotalDays / 30),  // 近似为每月30天
+                _ => throw new ArgumentException("Unsupported resolution level")        // 不支持的解析级别
+            };
+        }
+
+        public Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(Underlying underlying, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
         {
             throw new NotImplementedException();
         }

@@ -53,7 +53,7 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
            return dataFrame;
         }
 
-        public async Task<List<Ohlcv>> GetOhlcvListAsync(Underlying underlying, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
+        public async Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(Underlying underlying, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
         {
             var allOhlcvList = new List<Ohlcv>();
             try

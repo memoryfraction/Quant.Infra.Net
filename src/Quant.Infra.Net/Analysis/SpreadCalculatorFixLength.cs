@@ -246,6 +246,31 @@ namespace Quant.Infra.Net.Analysis
         }
 
         /// <summary>
+        /// 获取最晚的单元格的记录
+        /// </summary>
+        /// <param name="colName"></param>
+        /// <returns></returns>
+        public Object GetTheLatestCellValue(string colName)
+        {
+            if (string.IsNullOrEmpty(colName))
+            {
+                throw new ArgumentNullException();
+            }
+            if (this.DataFrame.Columns.Any(x => x.Name == colName) == false)
+            {
+                throw new ArgumentOutOfRangeException($"column name:{colName} does not exist.");
+            }
+
+            var dateTimeColumn = this.DataFrame.Columns["DateTime"];
+            var endDateTime = dateTimeColumn.Cast<DateTime>().Max();
+
+            // Fetch the row index for the given endDateTime
+            int rowIndex = this.DataFrame.GetRowIndex("DateTime", endDateTime);
+            Object obj = rowIndex != -1 ? (double)this.DataFrame[colName][rowIndex] : default(Object);
+            return obj;
+        }
+
+        /// <summary>
         /// 根据endDateTime获取SeriesA, SeriesB
         /// </summary>
         /// <param name="endDateTime"></param>

@@ -8,7 +8,8 @@ namespace Quant.Infra.Net.Account.Service
 {
     public class InMemoryBinanceBrokerService: BrokerServiceBase
     {
-        public CryptoPortfolio Portfolio { get; set; }
+        public new CryptoPortfolio Portfolio { get; set; } // 使用 new 隐藏基类属性
+
 
         /// <summary>
         /// 构造函数初始化 CryptoPerpetualContractPortfolio
@@ -25,7 +26,12 @@ namespace Quant.Infra.Net.Account.Service
             throw new NotImplementedException();
         }
 
-        public override Task SetHoldingsAsync(Underlying underlying, decimal ratio)
+        public override void SetHoldings(Underlying underlying, decimal ratio)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Liquidate(Underlying underlying)
         {
             throw new NotImplementedException();
         }

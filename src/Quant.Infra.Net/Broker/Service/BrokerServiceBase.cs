@@ -1,4 +1,5 @@
-﻿using Quant.Infra.Net.Shared.Model;
+﻿using Quant.Infra.Net.Portfolio.Models;
+using Quant.Infra.Net.Shared.Model;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ namespace Quant.Infra.Net.Account.Service
     public abstract class BrokerServiceBase
     {
         public virtual Currency BaseCurrency { get; set; } = Currency.USD;
+        public virtual PortfolioBase Portfolio { get; set; } // 定义一个通用的 Portfolio 属性
 
         public virtual Task<IEnumerable<string>> GetSymbolListAsync()
         {
@@ -37,7 +39,9 @@ namespace Quant.Infra.Net.Account.Service
         /// </summary>
         /// <param name="symbol">股票或资产的代码</param>
         /// <param name="ratio">持仓比例</param>
-        public abstract Task SetHoldingsAsync(Underlying underlying, decimal ratio);
+        public abstract void SetHoldings(Underlying underlying, decimal ratio);
+
+        public abstract void Liquidate(Underlying underlying);
 
         /// <summary>
         /// 异步获取持仓比例

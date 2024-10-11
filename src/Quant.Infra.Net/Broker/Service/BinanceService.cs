@@ -1,4 +1,5 @@
 ﻿using Binance.Net.Clients;
+using CryptoExchange.Net.CommonObjects;
 using Microsoft.Data.Analysis;
 using Microsoft.Extensions.Configuration;
 using Polly;
@@ -91,7 +92,29 @@ namespace Quant.Infra.Net.Account.Service
 
         public override async Task<decimal> GetLatestPriceAsync(Underlying underlying)
         {
-            throw new NotImplementedException();
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                if (underlying.AssetType == AssetType.CryptoSpot)
+                {
+                    var getPriceResponse = await client.SpotApi.ExchangeData.GetPriceAsync(underlying.Symbol);
+                    if (getPriceResponse.Success == true)
+                        return getPriceResponse.Data.Price;
+                    else
+                        throw new Exception();
+                }
+                else if(underlying.AssetType == AssetType.CryptoPerpetualContract)
+                {
+                    var getPriceResponse = await client.UsdFuturesApi.ExchangeData.GetPriceAsync(underlying.Symbol);
+                    if (getPriceResponse.Success == true)
+                        return getPriceResponse.Data.Price;
+                    else
+                        throw new Exception();
+                }
+                else
+                {
+                    throw new Exception();
+                }
+            }
         }
 
         /// <summary>
@@ -101,7 +124,12 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="symbol">资产的代码 / The asset symbol</param>
         /// <param name="assetType">资产类型 / The type of asset</param>
         /// <param name="ratio">持仓比例 / The holdings ratio</param>
-        public override async Task SetHoldingsAsync(Underlying underlying, decimal ratio)
+        public override void SetHoldings(Underlying underlying, decimal ratio)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Liquidate(Underlying underlying)
         {
             throw new NotImplementedException();
         }

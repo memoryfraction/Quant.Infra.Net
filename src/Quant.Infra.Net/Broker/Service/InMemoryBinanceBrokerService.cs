@@ -28,11 +28,18 @@ namespace Quant.Infra.Net.Account.Service
 
         public override void SetHoldings(Underlying underlying, decimal ratio)
         {
+            // Todo: 查看当前持仓; 
+            // todo: 计算目标持仓和当前持仓的差额
+            // todo： 执行差额交易
             throw new NotImplementedException();
         }
 
         public override void Liquidate(Underlying underlying)
         {
+            // 查看当前持仓; 
+            var underlyingQuantity = Portfolio.GetUnderlyingQuantity(underlying);
+            // Todo: 做反向交易;
+
             throw new NotImplementedException();
         }
 

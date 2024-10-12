@@ -27,17 +27,16 @@ namespace Quant.Infra.Net.Account.Service
             throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// 异步设置指定资产的持仓比例
-        /// Asynchronously set holdings ratio for a specific asset
-        /// </summary>
-        /// <param name="symbol">资产的代码</param>
-        /// <param name="assetType">资产类型</param>
-        /// <param name="ratio">持仓比例</param>
-        public override async Task SetHoldingsAsync(Underlying underlying, decimal ratio)
+        public override void SetHoldings(Underlying underlying, decimal ratio)
         {
             throw new NotImplementedException();
         }
+
+        public override void Liquidate(Underlying underlying)
+        {
+            throw new NotImplementedException();
+        }
+
 
         /// <summary>
         /// 异步获取指定资产的持仓份额

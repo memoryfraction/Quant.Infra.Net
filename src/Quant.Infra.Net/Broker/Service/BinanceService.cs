@@ -1,5 +1,5 @@
 ﻿using Binance.Net.Clients;
-using CryptoExchange.Net.CommonObjects;
+using CryptoExchange.Net.Authentication;
 using Microsoft.Data.Analysis;
 using Microsoft.Extensions.Configuration;
 using Polly;
@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Binance.Net.Enums;
 
 namespace Quant.Infra.Net.Account.Service
 {
@@ -30,6 +31,7 @@ namespace Quant.Infra.Net.Account.Service
         public override Currency BaseCurrency { get; set; } = Currency.USD;
 
         private string _apiKey, _apiSecret;
+
         private IConfiguration _configuration;
 
         public BinanceService(IConfiguration configuration)
@@ -126,10 +128,56 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="ratio">持仓比例 / The holdings ratio</param>
         public override void SetHoldings(Underlying underlying, decimal ratio)
         {
+            // Todo: 查看当前持仓; 
+
             throw new NotImplementedException();
         }
 
         public override void Liquidate(Underlying underlying)
+        {
+            // 查看当前持仓; 
+            var quantity = GetHoldingAsync(underlying).Result;
+
+            // Todo: 做反向交易;
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// 创建 UsdFuture Market Order
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="orderSide">开关仓此信号需要相反</param>
+        /// <param name="quantity">关仓数量需要与开仓数量一致， 总是正数; 最小交易数量5U</param>
+        /// <param name="positionSide">LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT</param>
+        /// <param name="futuresOrderType">FuturesOrderType.Market可以确保成交</param>
+        /// <returns></returns>
+        private async Task CreateUsdFutureOrder(
+            string symbol, 
+            OrderSide orderSide, 
+            decimal quantity,
+            PositionSide positionSide, 
+            FuturesOrderType futuresOrderType = FuturesOrderType.Market)
+        {
+            BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
+
+            // 创建 Binance 客户端            
+            using (var client = new BinanceRestClient())
+            {
+                // 永续合约，开空仓
+                var enterShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
+                    symbol: symbol,
+                    side: orderSide, // 开关仓此信号需要相反
+                    type: futuresOrderType,
+                    quantity: quantity, // 关仓数量需要与开仓数量一致， 总是正数; 最小交易数量5U
+                    positionSide: positionSide // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
+                );
+            }
+        }
+
+        private async Task CreateSpotOrder(string symbol, decimal quantity, SpotOrderType spotOrderType = SpotOrderType.Market)
         {
             throw new NotImplementedException();
         }
@@ -143,7 +191,40 @@ namespace Quant.Infra.Net.Account.Service
         /// <returns>返回持有该资产的份额 / Returns the holdings shares of the asset</returns>
         public override async Task<decimal> GetHoldingAsync(Underlying underlying)
         {
-            throw new NotImplementedException();
+            BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
+            // 创建 Binance 客户端            
+            using (var client = new BinanceRestClient())
+            {
+                if(underlying.AssetType == AssetType.CryptoPerpetualContract)
+                {
+                    // 获取当前持仓数量
+                    var accountInfo = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
+                    var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
+                    var holdingPositions = position.Data.Where(x => x.Quantity != 0)
+                        .Select(x => x);
+                    var underlyingPosition = holdingPositions
+                        .Where(x => x.Symbol == underlying.Symbol)
+                        .FirstOrDefault();
+                    return underlyingPosition.Quantity;
+                }
+                else if(underlying.AssetType == AssetType.CryptoSpot)
+                {
+                    // 获取当前持仓数量
+                    var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
+                    var holdingPosition = accountInfo.Data.Balances
+                        .Where(x => x.Asset.ToLower() == underlying.Symbol.ToLower())
+                        .FirstOrDefault();
+                    return holdingPosition.Total;
+                }
+                else
+                {
+                    throw new Exception($"Not supported AssetType:{underlying.AssetType}");
+                }
+
+            }
         }
 
         /// <summary>

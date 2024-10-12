@@ -1,6 +1,8 @@
 ﻿
+V 1.0.2 - 2024.10.12
+Adjusted the nuget packages version
 
 V 1.0.1 - 2024.9.9
-新增Portfolio， Date， MarketValue的Chart生成功能
+Added features, e.g. chart feature for Portfolio， Date， and MarketValue.
 
 

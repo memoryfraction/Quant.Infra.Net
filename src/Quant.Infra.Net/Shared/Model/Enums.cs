@@ -3,6 +3,15 @@
 namespace Quant.Infra.Net.Shared.Model
 {
 
+    public enum StartMode
+    {
+        NextSecond = 0,
+        NextMinute = 1,
+        NextHour = 2,
+        NextDay = 3
+    }
+
+
     /// <summary>
     /// 代表不同市场类型
     /// Represents different market types

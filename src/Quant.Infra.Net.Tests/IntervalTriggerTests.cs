@@ -1,4 +1,5 @@
-﻿using Quant.Infra.Net.Shared.Service;
+﻿using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.Shared.Service;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -9,138 +10,83 @@ namespace Quant.Infra.Net.Tests
     [TestClass]
     public class IntervalTriggerTests
     {
-        private DateTime fixedCurrentTime;
+        private bool _eventTriggered;
 
-        /// <summary>
-        /// 设置固定的当前时间，测试开始前调用
-        /// Sets a fixed current time, called before the tests.
-        /// </summary>
         [TestInitialize]
         public void Setup()
         {
-            fixedCurrentTime = new DateTime(2024, 9, 21, 14, 0, 0, DateTimeKind.Utc); // 2024年9月21日 14:00 UTC
+            _eventTriggered = false;
         }
 
         /// <summary>
-        /// 测试加密货币市场闭市触发器
-        /// Tests the cryptocurrency market close trigger.
+        /// 测试从下一个小时开始触发事件，并设置一个小的延迟时间。
         /// </summary>
         [TestMethod]
-        public void TestCryptoMarketCloseTrigger()
+        public void TestNextHourTriggerWithDelay()
         {
-            // Arrange
-            IntervalTriggerBase trigger = new CryptoMarketCloseIntervalTrigger
-            {
-                TriggerInterval = TimeSpan.FromHours(24), // 每24小时触发一次
-                AdvanceTime = TimeSpan.FromMinutes(1)      // 提前1分钟触发
-            };
-
-            bool eventTriggered = false;
-
-            // Act
-            trigger.IntervalTriggered += (sender, e) => eventTriggered = true;
+            IntervalTrigger trigger = new IntervalTrigger(StartMode.NextHour, TimeSpan.FromMinutes(1));
+            trigger.IntervalTriggered += OnIntervalTriggered;
             trigger.Start();
 
-            // Assert
-            Assert.IsTrue(trigger.StartUtcDateTime <= fixedCurrentTime.AddHours(24).AddMinutes(-1)); // 确保时间计算正确
-            Assert.IsFalse(eventTriggered); // 事件不会立即触发，因为触发时间是未来
+            // 等待2秒钟以确保触发器启动并计算了正确的时间
+            Thread.Sleep(2000);
+
+            Assert.IsFalse(_eventTriggered, "事件不应该马上触发");
         }
 
         /// <summary>
-        /// 测试美股开盘时间触发器
-        /// Tests the US stock market opening trigger.
+        /// 测试从下一个分钟开始触发事件，延迟为0。
         /// </summary>
         [TestMethod]
-        public void TestUsStockMarketOpenTrigger()
+        public void TestNextMinuteTriggerWithoutDelay()
         {
-            // Arrange
-            IntervalTriggerBase trigger = new UsStockMarketOpenIntervalTrigger
-            {
-                TriggerInterval = TimeSpan.FromDays(1), // 每天触发一次
-                AdvanceTime = TimeSpan.FromMinutes(1)    // 提前1分钟触发
-            };
-
-            bool eventTriggered = false;
-
-            // Act
-            trigger.IntervalTriggered += (sender, e) => eventTriggered = true;
+            IntervalTrigger trigger = new IntervalTrigger(StartMode.NextMinute, TimeSpan.Zero);
+            trigger.IntervalTriggered += OnIntervalTriggered;
             trigger.Start();
 
-            // Assert
-            DateTime expectedStartTime = GetNextMarketOpenTime(fixedCurrentTime);
-            Assert.IsTrue(trigger.StartUtcDateTime <= expectedStartTime); // 确保时间计算正确
-            Assert.IsFalse(eventTriggered); // 事件不会立即触发，因为触发时间是未来
+            // 等待2秒钟以确保触发器启动并计算了正确的时间
+            Thread.Sleep(2000);
+
+            Assert.IsFalse(_eventTriggered, "事件不应该立即触发，因为设置为下一分钟");
         }
 
         /// <summary>
-        /// 测试美股闭市时间触发器
-        /// Tests the US stock market close trigger.
+        /// 测试从下一个秒开始触发事件。
         /// </summary>
         [TestMethod]
-        public void TestUsStockMarketCloseTrigger()
+        public void TestNextSecondTrigger()
         {
-            // Arrange
-            IntervalTriggerBase trigger = new UsStockMarketCloseIntervalTrigger
-            {
-                TriggerInterval = TimeSpan.FromDays(1), // 每天触发一次
-                AdvanceTime = TimeSpan.FromMinutes(1)    // 提前1分钟触发
-            };
-
-            bool eventTriggered = false;
-
-            // Act
-            trigger.IntervalTriggered += (sender, e) => eventTriggered = true;
+            IntervalTrigger trigger = new IntervalTrigger(StartMode.NextSecond, TimeSpan.Zero);
+            trigger.IntervalTriggered += OnIntervalTriggered;
             trigger.Start();
 
-            // Assert
-            DateTime nextMarketCloseTime = GetNextMarketCloseTime(fixedCurrentTime);
-            Assert.IsTrue(trigger.StartUtcDateTime <= nextMarketCloseTime.AddMinutes(-1)); // 确保时间计算正确
-            Assert.IsFalse(eventTriggered); // 事件不会立即触发，因为触发时间是未来
-        }
+            // 等待2秒钟确保触发事件
+            Thread.Sleep(1500);
 
-
-        /// <summary>
-        /// 获取下一个美股开盘时间，如果当前时间为周末，则调整到下周一的9:30 AM
-        /// Gets the next US stock market open time, adjusting to Monday if it's the weekend.
-        /// </summary>
-        /// <param name="currentTime">当前时间</param>
-        /// <returns>下一个开盘时间</returns>
-        private DateTime GetNextMarketOpenTime(DateTime currentTime)
-        {
-            DateTime marketOpenTime = new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, 14, 30, 0, DateTimeKind.Utc); // 9:30 AM EST = UTC 14:30
-
-            // 使用 UtilityService 中的 AdjustToNextWeekday 方法
-            marketOpenTime = UtilityService.AdjustToNextWeekday(marketOpenTime);
-
-            // 如果当前时间已经超过开盘时间，则设定为第二天的开盘时间
-            if (currentTime >= marketOpenTime)
-            {
-                marketOpenTime = marketOpenTime.AddDays(1);
-            }
-
-            return marketOpenTime;
+            Assert.IsTrue(_eventTriggered, "事件应该在1秒后触发");
         }
 
         /// <summary>
-        /// 获取下一个美股闭市时间，如果当前时间为周末，则调整到下周一的4:00 PM
-        /// Gets the next US stock market close time, adjusting to Monday if it's the weekend.
+        /// 测试从下一个天开始触发事件。
         /// </summary>
-        /// <param name="currentTime">当前时间</param>
-        /// <returns>下一个闭市时间</returns>
-        private DateTime GetNextMarketCloseTime(DateTime currentTime)
+        [TestMethod]
+        public void TestNextDayTrigger()
         {
-            DateTime marketCloseTime = new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, 20, 0, 0, DateTimeKind.Utc); // 4:00 PM EST = UTC 20:00
+            IntervalTrigger trigger = new IntervalTrigger(StartMode.NextDay, TimeSpan.Zero);
+            trigger.IntervalTriggered += OnIntervalTriggered;
+            trigger.Start();
 
-            // 使用 UtilityService 中的 AdjustToNextWeekday 方法
-            marketCloseTime = UtilityService.AdjustToNextWeekday(marketCloseTime);
+            // 等待2秒钟以确保触发器启动
+            Thread.Sleep(2000);
 
-            // 如果当前时间已经超过闭市时间，则设定为第二天的闭市时间
-            if (currentTime >= marketCloseTime)
-            {
-                marketCloseTime = marketCloseTime.AddDays(1);
-            }
+            Assert.IsFalse(_eventTriggered, "事件不应该立即触发，因为设置为下一天");
+        }
 
-            return marketCloseTime;
+        
+
+        private void OnIntervalTriggered(object sender, EventArgs e)
+        {
+            _eventTriggered = true;
         }
 
     }

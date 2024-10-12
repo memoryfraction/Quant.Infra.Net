@@ -3,8 +3,8 @@
     <TargetFramework>net8.0</TargetFramework>
 	<LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
-	<Version>1.0.1</Version>   <!-- NuGet 包版本 -->
-	<FileVersion>1.0.1.0</FileVersion>  <!-- 文件版本 -->
+	<Version>1.0.2</Version>   <!-- NuGet 包版本 -->
+	<FileVersion>1.0.2.0</FileVersion>  <!-- 文件版本 -->
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Broker\Model\**" />

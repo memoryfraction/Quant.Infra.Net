@@ -240,7 +240,7 @@ namespace Quant.Infra.Net.Tests
             {
                 // 永续合约，开空仓
                 var enterShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
-                symbol: "ALGOUSDT",
+                   symbol: "ALGOUSDT",
                    side: Binance.Net.Enums.OrderSide.Sell, // 开关仓此信号需要相反
                    type: Binance.Net.Enums.FuturesOrderType.Market,
                    quantity: 40, // 关仓数量需要与开仓数量一致， 总是正数; 最小交易数量5U

@@ -619,11 +619,23 @@ namespace Quant.Infra.Net.Account.Service
             }
         }
 
+        public async Task<bool> HasUsdFuturePositionAsync(string symbol)
+        {
+            var positionResponse = await ExecuteWithRetryAsync(() => _binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
+            if (!positionResponse.Success)
+            {
+                throw new Exception("Failed to retrieve position information.");
+            }
+
+            var position = positionResponse.Data.FirstOrDefault(p => p.Symbol == symbol);
+            return position.Quantity > 0.000001m;
+        }
 
         private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> apiCall)
         {
             return await _retryPolicy.ExecuteAsync(async () => await apiCall());
         }
 
+        
     }
 }

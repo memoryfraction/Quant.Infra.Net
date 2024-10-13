@@ -18,6 +18,6 @@ namespace Quant.Infra.Net.Broker.Interfaces
 
         Task SetUsdFutureHoldingsAsync(string symbol, double rate);
 
-
+        Task<bool> HasUsdFuturePositionAsync(string symbol);
     }
 }

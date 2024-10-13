@@ -13,6 +13,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Binance.Net.Enums;
+using Quant.Infra.Net.Broker.Interfaces;
+using Mysqlx.Crud;
 
 namespace Quant.Infra.Net.Account.Service
 {
@@ -20,7 +22,7 @@ namespace Quant.Infra.Net.Account.Service
     /// Binance服务类，实现了与Binance相关的操作
     /// Binance Service class, implements operations related to Binance
     /// </summary>
-    public class BinanceService : BrokerServiceBase, IHistoricalDataSourceServiceCryptoBinance, IRealtimeDataSourceServiceCrypto
+    public class BinanceService : BrokerServiceBase, IHistoricalDataSourceServiceCryptoBinance, IRealtimeDataSourceServiceCrypto, IBinanceUsdFutureServices
     {
         private readonly BinanceRestClient _binanceRestClient;
 
@@ -480,6 +482,37 @@ namespace Quant.Infra.Net.Account.Service
 
         public Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(Underlying underlying, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
         {
+            throw new NotImplementedException();
+        }
+
+        public async Task<decimal> GetusdFutureAccountBalanceAsync()
+        {
+            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
+            // 创建 Binance 客户端            
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                // 获取账户信息, 比如: usdt计价的余额
+                var response = client.UsdFuturesApi.Account.GetBalancesAsync().Result;
+                decimal totalUSDBasedBalance = 0m;
+                foreach (var token in response.Data)
+                {
+                    totalUSDBasedBalance += token.WalletBalance;
+                }
+                return totalUSDBasedBalance;
+            }
+        }
+
+        /// <summary>
+        /// usd future 账户的为实现利润比例;
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public Task<double> GetusdFutureUnrealizedProfitRateAsync()
+        {
+            // TODO GetUnrealizedProfitRateAsync
             throw new NotImplementedException();
         }
     }

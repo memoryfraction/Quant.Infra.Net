@@ -1,5 +1,6 @@
 using AutoMapper;
 using Binance.Net.Clients;
+using CryptoExchange.Net;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,28 +100,7 @@ namespace Quant.Infra.Net.Tests
         }
 
 
-        [TestMethod]
-        public async Task GetBinanceAccountFuturesBalance_Should_Work()
-        {
-            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
-            {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret); 
-            });
-            // 创建 Binance 客户端            
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
-            {
-                // 获取账户信息, 比如: usdt计价的余额
-                var response = client.UsdFuturesApi.Account.GetBalancesAsync().Result;
-                decimal totalUSDBasedBalance = 0m;
-                foreach (var token in response.Data)
-                {
-                    totalUSDBasedBalance += token.WalletBalance;
-                }
-                Console.WriteLine($"Total USD Based Balance:{totalUSDBasedBalance}");
-                Assert.IsTrue(totalUSDBasedBalance >= 0);
-            }
-        }
-
+       
 
         /// <summary>
         /// Test to get history 5 years data; ip address need be outside of China, and US;
@@ -209,6 +189,30 @@ namespace Quant.Infra.Net.Tests
 
 
         #region UsdFuture
+
+        [TestMethod]
+        public async Task GetBinanceAccountFuturesBalance_Should_Work()
+        {
+            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
+            // 创建 Binance 客户端            
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                // 获取账户信息, 比如: usdt计价的余额
+                var response = client.UsdFuturesApi.Account.GetBalancesAsync().Result;
+                decimal totalUSDBasedBalance = 0m;
+                foreach (var token in response.Data)
+                {
+                    totalUSDBasedBalance += token.WalletBalance;
+                }
+                Console.WriteLine($"Total USD Based Balance:{totalUSDBasedBalance}");
+                Assert.IsTrue(totalUSDBasedBalance >= 0);
+            }
+        }
+
+
         [TestMethod]
         public async Task GetUsdFutureAccountBalance_Should_Work()
         {

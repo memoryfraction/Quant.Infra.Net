@@ -267,7 +267,7 @@ namespace Quant.Infra.Net.Analysis
         /// </summary>
         /// <param name="colName"></param>
         /// <returns></returns>
-        public Object GetTheLatestCellValue(string colName)
+        public Object GetTheLastCellValue(string colName)
         {
             if (string.IsNullOrEmpty(colName))
             {

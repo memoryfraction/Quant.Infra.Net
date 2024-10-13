@@ -15,6 +15,9 @@ using System.Threading.Tasks;
 using Binance.Net.Enums;
 using Quant.Infra.Net.Broker.Interfaces;
 using Mysqlx.Crud;
+using MySqlX.XDevAPI;
+using Polly.Retry;
+using Binance.Net.Objects;
 
 namespace Quant.Infra.Net.Account.Service
 {
@@ -25,6 +28,7 @@ namespace Quant.Infra.Net.Account.Service
     public class BinanceService : BrokerServiceBase, IHistoricalDataSourceServiceCryptoBinance, IRealtimeDataSourceServiceCrypto, IBinanceUsdFutureServices
     {
         private readonly BinanceRestClient _binanceRestClient;
+        private readonly AsyncRetryPolicy _retryPolicy;
 
         /// <summary>
         /// 基础货币，默认为USD
@@ -41,6 +45,9 @@ namespace Quant.Infra.Net.Account.Service
             _configuration = configuration;
             _apiKey = _configuration["LiveTradingSettings:ApiKey"];
             _apiSecret = _configuration["LiveTradingSettings:ApiSecret"];
+            _retryPolicy = Policy
+            .Handle<Exception>() // 可以根据需要处理其他类型的错误
+            .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))); // 指数退避
         }
 
         /// <summary>
@@ -487,33 +494,136 @@ namespace Quant.Infra.Net.Account.Service
 
         public async Task<decimal> GetusdFutureAccountBalanceAsync()
         {
-            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            // 获取账户信息, 比如: usdt计价的余额
+            var response = await _binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync();
+            decimal totalUSDBasedBalance = 0m;
+            foreach (var token in response.Data)
             {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
-            });
-            // 创建 Binance 客户端            
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
+                totalUSDBasedBalance += token.WalletBalance;
+            }
+            return totalUSDBasedBalance;      
+        }
+
+        /// <summary>
+        /// 获取账户余额，并计算未实现利润比例
+        /// </summary>
+        public async Task<double> GetusdFutureUnrealizedProfitRateAsync(decimal LastOpenPortfolioMarketValue)
+        {
+            var response = await ExecuteWithRetryAsync(() => _binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());
+            if (!response.Success)
             {
-                // 获取账户信息, 比如: usdt计价的余额
-                var response = client.UsdFuturesApi.Account.GetBalancesAsync().Result;
-                decimal totalUSDBasedBalance = 0m;
-                foreach (var token in response.Data)
-                {
-                    totalUSDBasedBalance += token.WalletBalance;
-                }
-                return totalUSDBasedBalance;
+                throw new Exception("Failed to retrieve account balances.");
+            }
+
+            decimal currentPortfolioMarketValue = response.Data.Sum(token => token.WalletBalance);
+
+            if (LastOpenPortfolioMarketValue == 0)
+            {
+                throw new Exception("Last open portfolio market value cannot be zero.");
+            }
+
+            double unrealizedProfitRate = (double)((currentPortfolioMarketValue - LastOpenPortfolioMarketValue) / LastOpenPortfolioMarketValue);
+            return unrealizedProfitRate;
+        }
+
+        /// <summary>
+        /// 清仓操作
+        /// </summary>
+        public async Task usdFutureLiquidateAsync(string symbol)
+        {
+            var response = await ExecuteWithRetryAsync(() => _binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
+            if (!response.Success)
+            {
+                throw new Exception("Failed to retrieve position information.");
+            }
+
+            var position = response.Data.FirstOrDefault(p => p.Symbol == symbol);
+            if (position == null || position.Quantity == 0)
+            {
+                throw new Exception("No open position found for the given symbol.");
+            }
+
+            var orderSide = position.Quantity > 0 ? Binance.Net.Enums.OrderSide.Sell : Binance.Net.Enums.OrderSide.Buy;
+            var exitResponse = await ExecuteWithRetryAsync(() =>
+                _binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
+                    symbol: symbol,
+                    side: orderSide,
+                    type: Binance.Net.Enums.FuturesOrderType.Market,
+                    quantity: Math.Abs(position.Quantity),
+                    positionSide: orderSide == Binance.Net.Enums.OrderSide.Sell ? Binance.Net.Enums.PositionSide.Long : Binance.Net.Enums.PositionSide.Short
+                )
+            );
+
+            if (!exitResponse.Success)
+            {
+                throw new Exception($"Failed to liquidate position for {symbol}: {exitResponse.Error?.Message}");
             }
         }
 
         /// <summary>
-        /// usd future 账户的为实现利润比例;
+        /// 根据投资组合比例调整仓位
         /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public Task<double> GetusdFutureUnrealizedProfitRateAsync()
+        public async Task SetUsdFutureHoldingsAsync(string symbol, double rate)
         {
-            // TODO GetUnrealizedProfitRateAsync
-            throw new NotImplementedException();
+            var accountResponse = await ExecuteWithRetryAsync(() => _binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());
+            if (!accountResponse.Success)
+            {
+                throw new Exception("Failed to retrieve account balance.");
+            }
+
+            decimal usdtBalance = accountResponse.Data.First(b => b.Asset == "USDT").WalletBalance;
+
+            var priceResponse = await ExecuteWithRetryAsync(() => _binanceRestClient.UsdFuturesApi.ExchangeData.GetPriceAsync(symbol));
+            if (!priceResponse.Success)
+            {
+                throw new Exception($"Failed to retrieve the latest price for {symbol}.");
+            }
+
+            decimal latestPrice = priceResponse.Data.Price;
+
+            var positionResponse = await ExecuteWithRetryAsync(() => _binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
+            if (!positionResponse.Success)
+            {
+                throw new Exception("Failed to retrieve position information.");
+            }
+
+            var position = positionResponse.Data.FirstOrDefault(p => p.Symbol == symbol);
+            decimal currentPositionSize = position != null ? position.Quantity : 0m;
+
+            decimal targetPositionSize = (usdtBalance * (decimal)rate) / latestPrice;
+            decimal positionDifference = targetPositionSize - currentPositionSize;
+
+            if (positionDifference != 0)
+            {
+                var orderSide = positionDifference > 0 ? Binance.Net.Enums.OrderSide.Buy : Binance.Net.Enums.OrderSide.Sell;
+                decimal quantityToTrade = Math.Abs(positionDifference);
+
+                var orderResponse = await ExecuteWithRetryAsync(() =>
+                    _binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
+                        symbol: symbol,
+                        side: orderSide,
+                        type: Binance.Net.Enums.FuturesOrderType.Market,
+                        quantity: quantityToTrade,
+                        positionSide: currentPositionSize >= 0 ? Binance.Net.Enums.PositionSide.Long : Binance.Net.Enums.PositionSide.Short
+                    )
+                );
+
+                if (!orderResponse.Success)
+                {
+                    throw new Exception($"Failed to place market order for {symbol}: {orderResponse.Error?.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Position already at target size, no action required.");
+            }
         }
+
+
+        private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> apiCall)
+        {
+            return await _retryPolicy.ExecuteAsync(async () => await apiCall());
+        }
+
     }
 }

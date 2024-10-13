@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Polly;
 using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
-using Serilog;
+using Quant.Infra.Net.Shared.Service;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -38,12 +38,11 @@ namespace Quant.Infra.Net.Broker.Service
         public async Task<decimal> GetusdFutureAccountBalanceAsync()
         {
             using var binanceRestClient = InitializeBinanceRestClient();
-            Log.Information("Requesting account balances at {UtcNow}", DateTime.UtcNow);
+            UtilityService.LogAndConsole($"Requesting account balances at {DateTime.UtcNow}");
 
             var response = await binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync();
 
-            Log.Information("Received response at {UtcNow}: Success = {Success}, Error = {Error}",
-                DateTime.UtcNow, response.Success, response.Error?.Message);
+            UtilityService.LogAndConsole($"Received response at {DateTime.UtcNow}: Success = {response.Success}, Error = {response.Error?.Message}");
 
             if (!response.Success)
             {
@@ -57,12 +56,11 @@ namespace Quant.Infra.Net.Broker.Service
         public async Task<double> GetusdFutureUnrealizedProfitRateAsync(decimal lastOpenPortfolioMarketValue)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
-            Log.Information("Requesting account balances at {UtcNow}", DateTime.UtcNow);
+            UtilityService.LogAndConsole($"Requesting account balances at {DateTime.UtcNow}");
 
             var response = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());
 
-            Log.Information("Received response at {UtcNow}: Success = {Success}, Error = {Error}",
-                DateTime.UtcNow, response.Success, response.Error?.Message);
+            UtilityService.LogAndConsole($"Received response at {DateTime.UtcNow}: Success = {response.Success}, Error = {response.Error?.Message}");
 
             if (!response.Success)
             {
@@ -83,12 +81,11 @@ namespace Quant.Infra.Net.Broker.Service
         public async Task usdFutureLiquidateAsync(string symbol)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
-            Log.Information("Requesting position information for {Symbol} at {UtcNow}", symbol, DateTime.UtcNow);
+            UtilityService.LogAndConsole($"Requesting position information for {symbol} at {DateTime.UtcNow}");
 
             var response = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
 
-            Log.Information("Received position information at {UtcNow}: Success = {Success}, Error = {Error}",
-                DateTime.UtcNow, response.Success, response.Error?.Message);
+            UtilityService.LogAndConsole($"Received position information at {DateTime.UtcNow}: Success = {response.Success}, Error = {response.Error?.Message}");
 
             if (!response.Success)
             {
@@ -102,7 +99,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
 
             var orderSide = position.Quantity > 0 ? Binance.Net.Enums.OrderSide.Sell : Binance.Net.Enums.OrderSide.Buy;
-            Log.Information("Placing liquidation order for {Symbol} at {UtcNow}", symbol, DateTime.UtcNow);
+            UtilityService.LogAndConsole($"Placing liquidation order for {symbol} at {DateTime.UtcNow}");
 
             var exitResponse = await ExecuteWithRetryAsync(() =>
                 binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
@@ -114,8 +111,7 @@ namespace Quant.Infra.Net.Broker.Service
                 )
             );
 
-            Log.Information("Liquidation order response at {UtcNow}: Success = {Success}, Error = {Error}",
-                DateTime.UtcNow, exitResponse.Success, exitResponse.Error?.Message);
+            UtilityService.LogAndConsole($"Liquidation order response at {DateTime.UtcNow}: Success = {exitResponse.Success}, Error = {exitResponse.Error?.Message}");
 
             if (!exitResponse.Success)
             {
@@ -126,12 +122,11 @@ namespace Quant.Infra.Net.Broker.Service
         public async Task SetUsdFutureHoldingsAsync(string symbol, double rate)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
-            Log.Information("Requesting account balance for {Symbol} at {UtcNow}", symbol, DateTime.UtcNow);
+            UtilityService.LogAndConsole($"Requesting account balance for {symbol} at {DateTime.UtcNow}");
 
             var accountResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());
 
-            Log.Information("Received account balance response at {UtcNow}: Success = {Success}, Error = {Error}",
-                DateTime.UtcNow, accountResponse.Success, accountResponse.Error?.Message);
+            UtilityService.LogAndConsole($"Received account balance response at {DateTime.UtcNow}: Success = {accountResponse.Success}, Error = {accountResponse.Error?.Message}");
 
             if (!accountResponse.Success)
             {
@@ -142,8 +137,7 @@ namespace Quant.Infra.Net.Broker.Service
 
             var priceResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.ExchangeData.GetPriceAsync(symbol));
 
-            Log.Information("Received latest price for {Symbol} at {UtcNow}: Success = {Success}, Error = {Error}",
-                symbol, DateTime.UtcNow, priceResponse.Success, priceResponse.Error?.Message);
+            UtilityService.LogAndConsole($"Received latest price for {symbol} at {DateTime.UtcNow}: Success = {priceResponse.Success}, Error = {priceResponse.Error?.Message}");
 
             if (!priceResponse.Success)
             {
@@ -154,8 +148,7 @@ namespace Quant.Infra.Net.Broker.Service
 
             var positionResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
 
-            Log.Information("Received position information for {Symbol} at {UtcNow}: Success = {Success}, Error = {Error}",
-                symbol, DateTime.UtcNow, positionResponse.Success, positionResponse.Error?.Message);
+            UtilityService.LogAndConsole($"Received position information for {symbol} at {DateTime.UtcNow}: Success = {positionResponse.Success}, Error = {positionResponse.Error?.Message}");
 
             if (!positionResponse.Success)
             {
@@ -173,7 +166,7 @@ namespace Quant.Infra.Net.Broker.Service
                 var orderSide = positionDifference > 0 ? Binance.Net.Enums.OrderSide.Buy : Binance.Net.Enums.OrderSide.Sell;
                 decimal quantityToTrade = Math.Abs(positionDifference);
 
-                Log.Information("Placing order for {Symbol} to adjust position size at {UtcNow}", symbol, DateTime.UtcNow);
+                UtilityService.LogAndConsole($"Placing order for {symbol} to adjust position size at {DateTime.UtcNow}");
 
                 var orderResponse = await ExecuteWithRetryAsync(() =>
                     binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
@@ -185,29 +178,23 @@ namespace Quant.Infra.Net.Broker.Service
                     )
                 );
 
-                Log.Information("Order response for {Symbol} at {UtcNow}: Success = {Success}, Error = {Error}",
-                    symbol, DateTime.UtcNow, orderResponse.Success, orderResponse.Error?.Message);
+                UtilityService.LogAndConsole($"Order response for {symbol} at {DateTime.UtcNow}: Success = {orderResponse.Success}, Error = {orderResponse.Error?.Message}");
 
                 if (!orderResponse.Success)
                 {
-                    throw new Exception($"Failed to place market order for {symbol}. Error Code: {orderResponse.Error.Code}, Message: {orderResponse.Error.Message}");
+                    throw new Exception($"Failed to place order for {symbol}. Error Code: {orderResponse.Error.Code}, Message: {orderResponse.Error.Message}");
                 }
-            }
-            else
-            {
-                Log.Information("Position already at target size for {Symbol}, no action required at {UtcNow}", symbol, DateTime.UtcNow);
             }
         }
 
         public async Task<bool> HasUsdFuturePositionAsync(string symbol)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
-            Log.Information("Checking if there is an open position for {Symbol} at {UtcNow}", symbol, DateTime.UtcNow);
+            UtilityService.LogAndConsole($"Checking if there is an open position for {symbol} at {DateTime.UtcNow}");
 
             var positionResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
 
-            Log.Information("Position check response for {Symbol} at {UtcNow}: Success = {Success}, Error = {Error}",
-                symbol, DateTime.UtcNow, positionResponse.Success, positionResponse.Error?.Message);
+            UtilityService.LogAndConsole($"Position check response for {symbol} at {DateTime.UtcNow}: Success = {positionResponse.Success}, Error = {positionResponse.Error?.Message}");
 
             if (!positionResponse.Success)
             {

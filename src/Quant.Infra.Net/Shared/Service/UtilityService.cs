@@ -5,6 +5,8 @@ using Microsoft.Data.Analysis;
 using Python.Runtime;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
+using Serilog;
+using Serilog.Events;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -16,6 +18,45 @@ namespace Quant.Infra.Net.Shared.Service
 {
     public class UtilityService
     {
+
+        /// <summary>
+        /// Logs a message at the specified log level and outputs it to the console.
+        /// 在指定的日志级别下记录消息，并将其输出到控制台。
+        /// </summary>
+        /// <param name="message">The message to log. 要记录的消息。</param>
+        /// <param name="logLevel">The log level for the message. 消息的日志级别，默认为 Information。</param>
+        public static void LogAndConsole(string message, LogEventLevel logLevel = LogEventLevel.Information)
+        {
+            // 根据入参，使用不同级别的日志
+            switch (logLevel)
+            {
+                case LogEventLevel.Verbose:
+                    Serilog.Log.Verbose(message);
+                    break;
+                case LogEventLevel.Debug:
+                    Serilog.Log.Debug(message);
+                    break;
+                case LogEventLevel.Information:
+                    Serilog.Log.Information(message);
+                    break;
+                case LogEventLevel.Warning:
+                    Serilog.Log.Warning(message);
+                    break;
+                case LogEventLevel.Error:
+                    Serilog.Log.Error(message);
+                    break;
+                case LogEventLevel.Fatal:
+                    Serilog.Log.Fatal(message);
+                    break;
+                default:
+                    Serilog.Log.Information(message);
+                    break;
+            }
+
+            // 将消息输出到控制台
+            Console.WriteLine(message);
+        }
+
         /// <summary>
         /// 调整时间到下一个工作日，如果为周六或周日，则顺延到下周一。
         /// Adjusts the time to the next weekday; if it's Saturday or Sunday, moves to the following Monday.

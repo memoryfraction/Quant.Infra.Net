@@ -39,8 +39,8 @@
     <ProjectReference Include="..\..\..\InterReact\InterReact\InterReact.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="Readme.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    <None Update="Quant.Infra.Net.Readme.Version.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 </Project>

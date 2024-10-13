@@ -12,7 +12,7 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// 获取未变现的利润率
         /// </summary>
         /// <returns></returns>
-        Task<double> GetusdFutureUnrealizedProfitRateAsync();
+        Task<double> GetusdFutureUnrealizedProfitRateAsync(decimal LastOpenPortfolioMarketValue);
 
         Task usdFutureLiquidateAsync(string symbol);
 

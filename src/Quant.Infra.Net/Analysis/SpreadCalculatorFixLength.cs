@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Analysis;
+using Quant.Infra.Net.Analysis.Models;
 using Quant.Infra.Net.Shared.Extension;
 using Quant.Infra.Net.Shared.Model;
 using System;
@@ -175,9 +176,9 @@ namespace Quant.Infra.Net.Analysis
             var (seriesA, seriesB) = GetSeries(endDateTime.Value);
 
             // 计算spread,注意：此时SeriesA和SeriesB为DateTime倒序;
-            var (spread, equation) = CalculateSpreadAndEquation(Symbol1, Symbol2, seriesA, seriesB);
+            var row = CalculateSpreadAndEquation(Symbol1, Symbol2, seriesA, seriesB);
 
-            return spread;
+            return row.Spread;
         }
 
         /// <summary>
@@ -203,6 +204,20 @@ namespace Quant.Infra.Net.Analysis
                 _dataFrame.Columns.Add(equationColumn);
             }
 
+            if (!_dataFrame.Columns.Any(x => x.Name == "Slope"))
+            {
+                // Create the new column for Equation with double type
+                var slopeColumn = new DoubleDataFrameColumn("Slope", _dataFrame.Rows.Count);
+                _dataFrame.Columns.Add(slopeColumn);
+            }
+
+            if (!_dataFrame.Columns.Any(x => x.Name == "Intercept"))
+            {
+                // Create the new column for Equation with double type
+                var interceptColumn = new DoubleDataFrameColumn("Intercept", _dataFrame.Rows.Count);
+                _dataFrame.Columns.Add(interceptColumn);
+            }
+
             for (int i = 0; i < _dataFrame.Rows.Count; i++)
             {
                 if (i <= FixedWindowLength)
@@ -219,11 +234,13 @@ namespace Quant.Infra.Net.Analysis
                     continue;
 
                 var (seriesA, seriesB) = GetSeries(currentDateTime);
-                var (spread, equation) = CalculateSpreadAndEquation(Symbol1, Symbol2, seriesA, seriesB);
+                var row = CalculateSpreadAndEquation(Symbol1, Symbol2, seriesA, seriesB);
 
                 // Update the DataFrame with calculated Spread and Equation
-                _dataFrame.Columns["Spread"][i] = spread;
-                _dataFrame.Columns["Equation"][i] = equation;
+                _dataFrame.Columns["Spread"][i] = row.Spread;
+                _dataFrame.Columns["Equation"][i] = row.Equation;
+                _dataFrame.Columns["Slope"][i] = row.Slope;
+                _dataFrame.Columns["Intercept"][i] = row.Intercept;
             }
         }
 
@@ -317,17 +334,22 @@ namespace Quant.Infra.Net.Analysis
         /// <param name="seriesA"></param>
         /// <param name="seriesB"></param>
         /// <returns></returns>
-        private (double, string) CalculateSpreadAndEquation(string symbol1, string symbol2, IEnumerable<double> seriesA, IEnumerable<double> seriesB)
+        private SpreadCalculatorRow CalculateSpreadAndEquation(string symbol1, string symbol2, IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
+            var row = new SpreadCalculatorRow();
             // 执行线性回归，获取slope和interception
             var (slope, intercept) = (new Analysis.Service.AnalysisService()).PerformOLSRegression(seriesA, seriesB);
+            row.Slope = slope;
+            row.Intercept = intercept;
 
             // 计算spread,注意：此时SeriesA和SeriesB为DateTime倒序;
             var lastElmInSeriesA = seriesA.FirstOrDefault();
             var lastElmInSeriesB = seriesB.FirstOrDefault();
             var spread = lastElmInSeriesB - slope * lastElmInSeriesA - intercept;
-            var equation = $"spread = {symbol2} -  {slope}*{symbol1} - {intercept}";
-            return (spread, equation);
+            var equation = $"spread = {symbol2} -  {slope} * {symbol1} - {intercept}";
+            row.Spread = spread;
+            row.Equation = equation;
+            return row;
         }
 
         /// <summary>

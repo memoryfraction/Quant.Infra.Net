@@ -32,13 +32,13 @@ namespace Quant.Infra.Net.Shared.Service
         // Starts the trigger event at the next whole hour/minute/day/second depending on the mode
         public void Start()
         {
-            _startDateTime = CalculateNextTriggerTime();
+            _startDateTime = CalculateNextTriggerTime() + DelayTimeSpan;
             TimeSpan initialDelay = _startDateTime - DateTime.UtcNow + DelayTimeSpan;
 
             // 使用 initialDelay 来设置初始定时器间隔
             _timer = new Timer(initialDelay.TotalMilliseconds);
             _timer.Elapsed += OnIntervalTriggered;
-            _timer.AutoReset = false; // 只在下一个触发时间触发一次
+            _timer.AutoReset = true; 
             _timer.Start();
 
             // Display StartMode in English to prevent user confusion
@@ -54,6 +54,9 @@ namespace Quant.Infra.Net.Shared.Service
         private void OnIntervalTriggered(object sender, ElapsedEventArgs e)
         {
             IntervalTriggered?.Invoke(this, EventArgs.Empty); // 触发事件
+
+            // 更新_startDateTime为下一次触发的时间
+            _startDateTime = CalculateNextTriggerTime();
 
             // 重新设置定时器，确保后续每次按设定的时间间隔触发
             _timer.Interval = _triggerInterval.TotalMilliseconds;

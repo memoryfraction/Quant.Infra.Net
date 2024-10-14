@@ -26,7 +26,7 @@ namespace Quant.Infra.Net.Broker.Interfaces
 
         /// <summary>
         /// Liquidates the open position for the specified symbol.
-        /// 清算指定交易对的持仓。
+        /// 清算指定symbol的持仓。
         /// </summary>
         /// <param name="symbol">The trading symbol, e.g., "BTCUSDT". 交易对符号，例如"BTCUSDT"。</param>
         /// <returns>A task representing the asynchronous operation. 表示异步操作的任务。</returns>

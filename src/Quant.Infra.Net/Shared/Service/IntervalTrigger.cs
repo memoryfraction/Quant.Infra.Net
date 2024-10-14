@@ -19,6 +19,9 @@ namespace Quant.Infra.Net.Shared.Service
         private DateTime _startDateTime;
         private TimeSpan _triggerInterval;
 
+        // 只读属性，用于获取下次触发的时间
+        public DateTime NextTriggerTime => _startDateTime;
+
         public IntervalTrigger(StartMode mode, TimeSpan delayTimeSpan)
         {
             Mode = mode;
@@ -32,11 +35,14 @@ namespace Quant.Infra.Net.Shared.Service
             _startDateTime = CalculateNextTriggerTime();
             TimeSpan initialDelay = _startDateTime - DateTime.UtcNow + DelayTimeSpan;
 
-            // 设置定时器初始间隔为1秒
-            _timer = new Timer(1000);
+            // 使用 initialDelay 来设置初始定时器间隔
+            _timer = new Timer(initialDelay.TotalMilliseconds);
             _timer.Elapsed += OnIntervalTriggered;
-            _timer.AutoReset = true; // 确保每次都自动重置
+            _timer.AutoReset = false; // 只在下一个触发时间触发一次
             _timer.Start();
+
+            // Display StartMode in English to prevent user confusion
+            System.Console.WriteLine($"StartMode: {Mode}; The next trigger Utc time: {this.NextTriggerTime}");
         }
 
         public void Stop()
@@ -47,28 +53,31 @@ namespace Quant.Infra.Net.Shared.Service
 
         private void OnIntervalTriggered(object sender, ElapsedEventArgs e)
         {
-            IntervalTriggered?.Invoke(this, EventArgs.Empty); // Fire the event
+            IntervalTriggered?.Invoke(this, EventArgs.Empty); // 触发事件
 
-            // Schedule the next trigger
+            // 重新设置定时器，确保后续每次按设定的时间间隔触发
             _timer.Interval = _triggerInterval.TotalMilliseconds;
-            _timer.AutoReset = true;
+            _timer.AutoReset = true; // 确保每次都自动重置
             _timer.Start();
+
+            // Display StartMode in English to prevent user confusion
+            System.Console.WriteLine($"StartMode: {Mode}; The next trigger Utc time: {this.NextTriggerTime}");
         }
 
         private DateTime CalculateNextTriggerTime()
         {
-            DateTime now = DateTime.UtcNow;
+            DateTime utcNow = DateTime.UtcNow;
 
             switch (Mode)
             {
                 case StartMode.NextSecond:
-                    return new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second).AddSeconds(1);
+                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second).AddSeconds(1);
                 case StartMode.NextMinute:
-                    return new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0).AddMinutes(1);
+                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0).AddMinutes(1);
                 case StartMode.NextHour:
-                    return new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0).AddHours(1);
+                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0).AddHours(1);
                 case StartMode.NextDay:
-                    return new DateTime(now.Year, now.Month, now.Day, 0, 0, 0).AddDays(1);
+                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0).AddDays(1);
                 default:
                     throw new ArgumentOutOfRangeException();
             }

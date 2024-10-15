@@ -5,7 +5,6 @@ using Quant.Infra.Net.Account.Service;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Service;
 using Quant.Infra.Net.Notification.Service;
-using Quant.Infra.Net.Shared.Model;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -58,7 +57,7 @@ namespace Quant.Infra.Net.Tests
             Assert.IsTrue(balance>10000);
         }
 
-        // todo 其他方法;
+        // todo 其他方法; 
 
     }
 }

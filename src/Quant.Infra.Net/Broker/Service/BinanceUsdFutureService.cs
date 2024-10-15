@@ -216,7 +216,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
 
             var position = positionResponse.Data.FirstOrDefault(p => p.Symbol == symbol);
-            return position != null && position.Quantity != 0;
+            return position != null && position.Quantity > 0.0001m;
         }
 
         private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> action)

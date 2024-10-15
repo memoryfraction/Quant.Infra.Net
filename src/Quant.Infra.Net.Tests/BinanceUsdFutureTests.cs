@@ -57,6 +57,17 @@ namespace Quant.Infra.Net.Tests
             Assert.IsTrue(balance>10000);
         }
 
+
+        [TestMethod]
+        public async Task HasUsdFuturePositionAsync_Should_Work()
+        {
+            var usdFutureService = _serviceProvider.GetService<IBinanceUsdFutureService>();
+
+            var result = await usdFutureService.HasUsdFuturePositionAsync("ALGOUSDT");
+
+            Assert.IsTrue(result == false);
+        }
+
         // todo 其他方法; 
 
     }

@@ -1,9 +1,11 @@
-﻿using Binance.Net.Clients;
+﻿using Binance.Net;
+using Binance.Net.Clients;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Polly;
 using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
+using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
 using System;
 using System.Linq;
@@ -16,10 +18,13 @@ namespace Quant.Infra.Net.Broker.Service
         private readonly AsyncRetryPolicy _retryPolicy;
         private readonly string _apiKey, _apiSecret;
 
+        public ExchangeEnvironment ExchangeEnvironment { get; set; } = ExchangeEnvironment.Testnet;
+
         public BinanceUsdFutureService(IConfiguration configuration)
         {
-            _apiKey = configuration["LiveTradingSettings:ApiKey"];
-            _apiSecret = configuration["LiveTradingSettings:ApiSecret"];
+            _apiKey = configuration["Exchange:ApiKey"];
+            _apiSecret = configuration["Exchange:ApiSecret"];
+            ExchangeEnvironment = (ExchangeEnvironment)Enum.Parse(typeof(ExchangeEnvironment), configuration["Exchange:Environment"].ToString());
 
             _retryPolicy = Policy
                 .Handle<Exception>()
@@ -31,6 +36,15 @@ namespace Quant.Infra.Net.Broker.Service
             BinanceRestClient.SetDefaultOptions(options =>
             {
                 options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+                // 启动测试网络
+                if (ExchangeEnvironment == ExchangeEnvironment.Testnet)
+                {
+                    options.Environment = BinanceEnvironment.Testnet;
+                }
+                else if(ExchangeEnvironment == ExchangeEnvironment.Live)
+                {
+                    options.Environment = BinanceEnvironment.Live;
+                }
             });
             return new BinanceRestClient();
         }

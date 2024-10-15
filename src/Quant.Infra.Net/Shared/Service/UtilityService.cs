@@ -19,6 +19,7 @@ namespace Quant.Infra.Net.Shared.Service
     public class UtilityService
     {
 
+
         /// <summary>
         /// Logs a message at the specified log level and outputs it to the console.
         /// 在指定的日志级别下记录消息，并将其输出到控制台。

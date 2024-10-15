@@ -9,6 +9,7 @@ namespace Quant.Infra.Net.Broker.Interfaces
     /// </summary>
     public interface IBinanceUsdFutureService
     {
+        public ExchangeEnvironment ExchangeEnvironment { get; set; } 
         /// <summary>
         /// Retrieves the USD-based futures account balance.
         /// 获取以USD计价的期货账户余额。

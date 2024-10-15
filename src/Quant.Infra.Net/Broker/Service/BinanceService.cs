@@ -39,8 +39,8 @@ namespace Quant.Infra.Net.Account.Service
         public BinanceService(IConfiguration configuration)
         {
             _configuration = configuration;
-            _apiKey = _configuration["LiveTradingSettings:ApiKey"];
-            _apiSecret = _configuration["LiveTradingSettings:ApiSecret"];
+            _apiKey = _configuration["Exchange:ApiKey"];
+            _apiSecret = _configuration["Exchange:ApiSecret"];
 
             _binanceRestClient = new Binance.Net.Clients.BinanceRestClient();
 

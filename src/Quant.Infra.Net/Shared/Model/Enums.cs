@@ -2,6 +2,14 @@
 
 namespace Quant.Infra.Net.Shared.Model
 {
+    /// <summary>
+    /// 交易所环境：测试、实盘
+    /// </summary>
+    public enum ExchangeEnvironment
+    {
+        Testnet=0,
+        Live=1
+    }
 
     public enum StartMode
     {

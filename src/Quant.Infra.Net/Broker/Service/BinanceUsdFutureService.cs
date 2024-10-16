@@ -13,6 +13,7 @@ using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -57,11 +58,15 @@ namespace Quant.Infra.Net.Broker.Service
         public async Task<decimal> GetusdFutureAccountBalanceAsync()
         {
             using var binanceRestClient = InitializeBinanceRestClient();
-            UtilityService.LogAndConsole($"Requesting account balances at {DateTime.UtcNow}");
+            var msg = UtilityService.GenerateMessage("Requesting account balances");
+            UtilityService.LogAndConsole(msg);
 
             var response = await binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync();
 
-            UtilityService.LogAndConsole($"Received response at {DateTime.UtcNow}: Success = {response.Success}, Error = {response.Error?.Message}");
+            msg = $"Received response: Success = {response.Success}";
+            var errors = new List<string>() { response.Error?.Message };
+            var message = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(message);
 
             if (!response.Success)
             {
@@ -75,12 +80,17 @@ namespace Quant.Infra.Net.Broker.Service
         public async Task<double> GetusdFutureUnrealizedProfitRateAsync(decimal lastOpenPortfolioMarketValue)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
-            UtilityService.LogAndConsole($"Requesting account balances at {DateTime.UtcNow}");
+
+            var msg = "Requesting account balances";
+            var message = UtilityService.GenerateMessage(msg);
+            UtilityService.LogAndConsole(message);
 
             var response = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());
 
-            UtilityService.LogAndConsole($"Received response at {DateTime.UtcNow}: Success = {response.Success}, Error = {response.Error?.Message}");
-
+            msg = $"Received response: Success = {response.Success}";
+            var errors = new List<string>() { response.Error?.Message };
+            message = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(message);
             if (!response.Success)
             {
                 throw new Exception($"Failed to retrieve account balances. Error Code: {response.Error.Code}, Message: {response.Error.Message}");
@@ -100,11 +110,19 @@ namespace Quant.Infra.Net.Broker.Service
         public async Task LiquidateUsdFutureAsync(string symbol)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
-            UtilityService.LogAndConsole($"Requesting position information for {symbol} at {DateTime.UtcNow}");
+
+            var msg = $"Requesting position information for {symbol}";
+            var errors = new List<string>() {  };
+            var message = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(message);
 
             var response = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
 
             UtilityService.LogAndConsole($"Received position information at {DateTime.UtcNow}: Success = {response.Success}, Error = {response.Error?.Message}");
+            msg = $"Received position information: Success = {response.Success}";
+            errors = new List<string>() { response.Error?.Message };
+            message = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(message);
 
             if (!response.Success)
             {
@@ -114,8 +132,10 @@ namespace Quant.Infra.Net.Broker.Service
             var positions = response.Data.Where(x => x.Symbol == symbol).ToList();
             if (positions.Count() == 0 || positions.Select(x=>x.Quantity).Sum() == 0m)
             {
-                var msg = $"No open position found for the given symbol: {symbol}";
+                msg = $"No open position found for the given symbol: {symbol}";
+                msg = UtilityService.GenerateMessage(msg);
                 UtilityService.LogAndConsole(msg);
+
                 return;
             }
 
@@ -123,7 +143,9 @@ namespace Quant.Infra.Net.Broker.Service
             var positivePosition = positions.Where(x => x.Quantity > 0).FirstOrDefault();            
             if (positivePosition != null) // 持有正向仓位，Sell以平仓
             {
-                UtilityService.LogAndConsole($"Placing liquidation order for {symbol} at {DateTime.UtcNow}");
+                msg = $"Placing liquidation order for {symbol}";
+                msg = UtilityService.GenerateMessage(msg);
+                UtilityService.LogAndConsole(msg);
 
                 exitResponse = await ExecuteWithRetryAsync(() =>
                     binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
@@ -139,7 +161,10 @@ namespace Quant.Infra.Net.Broker.Service
             var negativePosition = positions.Where(x => x.Quantity < 0).FirstOrDefault();
             if (negativePosition != null) 
             {
-                UtilityService.LogAndConsole($"Placing liquidation order for {symbol} at {DateTime.UtcNow}");
+                msg = $"Placing liquidation order for {symbol}";
+                msg = UtilityService.GenerateMessage(msg);
+                UtilityService.LogAndConsole(msg);
+
                 exitResponse = await ExecuteWithRetryAsync(() =>
                     binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
                         symbol: symbol,
@@ -151,7 +176,10 @@ namespace Quant.Infra.Net.Broker.Service
                 );
             }
 
-            UtilityService.LogAndConsole($"Liquidation order response at {DateTime.UtcNow}: Success = {exitResponse.Success}, Error = {exitResponse.Error?.Message}");
+            msg = $"Liquidation order response: Success = {exitResponse.Success}";
+            errors = new List<string>() {  exitResponse.Error?.Message  };
+            msg = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(msg);
 
             if (!exitResponse.Success)
             {
@@ -163,10 +191,16 @@ namespace Quant.Infra.Net.Broker.Service
         {
             using var binanceRestClient = InitializeBinanceRestClient();
             UtilityService.LogAndConsole($"Requesting account balance for {symbol} at {DateTime.UtcNow}");
+            var msg = $"Requesting account balance for {symbol}";
+            msg = UtilityService.GenerateMessage(msg);
+            UtilityService.LogAndConsole(msg);
 
             var accountResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());
 
-            UtilityService.LogAndConsole($"Received account balance response at {DateTime.UtcNow}: Success = {accountResponse.Success}, Error = {accountResponse.Error?.Message}");
+            msg = $"Received account balance response: Success = {accountResponse.Success}";
+            var errors = new List<string>()  { accountResponse.Error?.Message  };
+            msg = UtilityService.GenerateMessage(msg);
+            UtilityService.LogAndConsole(msg);
 
             if (!accountResponse.Success)
             {
@@ -213,7 +247,11 @@ namespace Quant.Infra.Net.Broker.Service
                 var orderSide = positionDifference > 0 ? Binance.Net.Enums.OrderSide.Buy : Binance.Net.Enums.OrderSide.Sell;
                 decimal quantityToTrade = Math.Abs(positionDifference);
 
-                UtilityService.LogAndConsole($"Placing order for {symbol} to adjust position size at {DateTime.UtcNow}");
+                msg = $"Placing order for {symbol} to adjust position size";
+                errors = new List<string>() { };
+                var message = UtilityService.GenerateMessage(msg, errors);
+                UtilityService.LogAndConsole(message);
+
 
                 var orderResponse = await ExecuteWithRetryAsync(() =>
                     binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
@@ -225,7 +263,10 @@ namespace Quant.Infra.Net.Broker.Service
                     )
                 );
 
-                UtilityService.LogAndConsole($"Order response for {symbol} at {DateTime.UtcNow}: Success = {orderResponse.Success}, Error = {orderResponse.Error?.Message}");
+                msg = $"Order response for {symbol}: Success = {orderResponse.Success}";
+                errors = new List<string>() { orderResponse.Error?.Message };
+                msg = UtilityService.GenerateMessage(msg);
+                UtilityService.LogAndConsole(msg);
 
                 if (!orderResponse.Success)
                 {
@@ -237,11 +278,18 @@ namespace Quant.Infra.Net.Broker.Service
         public async Task<bool> HasUsdFuturePositionAsync(string symbol)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
-            UtilityService.LogAndConsole($"Checking if there is an open position for {symbol} at {DateTime.UtcNow}");
+
+            var msg = $"Checking if there is an open position for {symbol}";
+            var errors = new List<string>() {  };
+            msg = UtilityService.GenerateMessage(msg);
+            UtilityService.LogAndConsole(msg);
 
             var positionResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
 
-            UtilityService.LogAndConsole($"Position check response for {symbol} at {DateTime.UtcNow}: Success = {positionResponse.Success}, Error = {positionResponse.Error?.Message}");
+            msg = $"Position check response for {symbol}: Success = {positionResponse.Success}";
+            errors = new List<string>() { positionResponse.Error?.Message };
+            msg = UtilityService.GenerateMessage(msg);
+            UtilityService.LogAndConsole(msg);
 
             if (!positionResponse.Success)
             {

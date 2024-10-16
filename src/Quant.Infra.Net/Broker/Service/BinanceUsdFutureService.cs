@@ -1,7 +1,12 @@
 ﻿using Binance.Net;
 using Binance.Net.Clients;
+using Binance.Net.Enums;
+using Binance.Net.Interfaces.Clients;
+using Binance.Net.Objects.Models.Futures;
 using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.Objects;
 using Microsoft.Extensions.Configuration;
+using MySqlX.XDevAPI;
 using Polly;
 using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
@@ -92,7 +97,7 @@ namespace Quant.Infra.Net.Broker.Service
             return unrealizedProfitRate;
         }
 
-        public async Task usdFutureLiquidateAsync(string symbol)
+        public async Task LiquidateUsdFutureAsync(string symbol)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
             UtilityService.LogAndConsole($"Requesting position information for {symbol} at {DateTime.UtcNow}");
@@ -106,24 +111,45 @@ namespace Quant.Infra.Net.Broker.Service
                 throw new Exception($"Failed to retrieve position information. Error Code: {response.Error.Code}, Message: {response.Error.Message}");
             }
 
-            var position = response.Data.FirstOrDefault(p => p.Symbol == symbol);
-            if (position == null || position.Quantity == 0)
+            var positions = response.Data.Where(x => x.Symbol == symbol).ToList();
+            if (positions.Count() == 0 || positions.Select(x=>x.Quantity).Sum() == 0m)
             {
-                throw new InvalidOperationException($"No open position found for the given symbol: {symbol}");
+                var msg = $"No open position found for the given symbol: {symbol}";
+                UtilityService.LogAndConsole(msg);
+                return;
             }
 
-            var orderSide = position.Quantity > 0 ? Binance.Net.Enums.OrderSide.Sell : Binance.Net.Enums.OrderSide.Buy;
-            UtilityService.LogAndConsole($"Placing liquidation order for {symbol} at {DateTime.UtcNow}");
+            WebCallResult<BinanceUsdFuturesOrder> exitResponse = null;
+            var positivePosition = positions.Where(x => x.Quantity > 0).FirstOrDefault();            
+            if (positivePosition != null) // 持有正向仓位，Sell以平仓
+            {
+                UtilityService.LogAndConsole($"Placing liquidation order for {symbol} at {DateTime.UtcNow}");
 
-            var exitResponse = await ExecuteWithRetryAsync(() =>
-                binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
-                    symbol: symbol,
-                    side: orderSide,
-                    type: Binance.Net.Enums.FuturesOrderType.Market,
-                    quantity: Math.Abs(position.Quantity),
-                    positionSide: orderSide == Binance.Net.Enums.OrderSide.Sell ? Binance.Net.Enums.PositionSide.Long : Binance.Net.Enums.PositionSide.Short
-                )
-            );
+                exitResponse = await ExecuteWithRetryAsync(() =>
+                    binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
+                        symbol: symbol,
+                        side: OrderSide.Sell,
+                        type: Binance.Net.Enums.FuturesOrderType.Market,
+                        quantity: Math.Abs(positivePosition.Quantity),
+                        positionSide: positivePosition.PositionSide
+                    )
+                );
+            }
+
+            var negativePosition = positions.Where(x => x.Quantity < 0).FirstOrDefault();
+            if (negativePosition != null) 
+            {
+                UtilityService.LogAndConsole($"Placing liquidation order for {symbol} at {DateTime.UtcNow}");
+                exitResponse = await ExecuteWithRetryAsync(() =>
+                    binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
+                        symbol: symbol,
+                        side: OrderSide.Buy,
+                        type: Binance.Net.Enums.FuturesOrderType.Market,
+                        quantity: Math.Abs(negativePosition.Quantity),
+                        positionSide: negativePosition.PositionSide
+                    )
+                );
+            }
 
             UtilityService.LogAndConsole($"Liquidation order response at {DateTime.UtcNow}: Success = {exitResponse.Success}, Error = {exitResponse.Error?.Message}");
 
@@ -133,7 +159,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
         }
 
-        public async Task SetUsdFutureHoldingsAsync(string symbol, double rate)
+        public async Task SetUsdFutureHoldingsAsync(string symbol, double rate, PositionSide positionSide = PositionSide.Both)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
             UtilityService.LogAndConsole($"Requesting account balance for {symbol} at {DateTime.UtcNow}");
@@ -175,6 +201,13 @@ namespace Quant.Infra.Net.Broker.Service
             decimal targetPositionSize = (usdtBalance * (decimal)rate) / latestPrice;
             decimal positionDifference = targetPositionSize - currentPositionSize;
 
+            var exchangeInfo = await binanceRestClient.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
+            var symbolInfo = exchangeInfo.Data.Symbols.Single(s => s.Name == symbol);
+            var pricePrecision = symbolInfo.PricePrecision;
+            var quantityPrecision = symbolInfo.QuantityPrecision;
+            positionDifference = Math.Round(positionDifference, quantityPrecision);
+
+
             if (positionDifference != 0)
             {
                 var orderSide = positionDifference > 0 ? Binance.Net.Enums.OrderSide.Buy : Binance.Net.Enums.OrderSide.Sell;
@@ -188,7 +221,7 @@ namespace Quant.Infra.Net.Broker.Service
                         side: orderSide,
                         type: Binance.Net.Enums.FuturesOrderType.Market,
                         quantity: quantityToTrade,
-                        positionSide: currentPositionSize >= 0 ? Binance.Net.Enums.PositionSide.Long : Binance.Net.Enums.PositionSide.Short
+                        positionSide: positionSide // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
                     )
                 );
 
@@ -215,13 +248,43 @@ namespace Quant.Infra.Net.Broker.Service
                 throw new Exception($"Failed to retrieve position information. Error Code: {positionResponse.Error.Code}, Message: {positionResponse.Error.Message}");
             }
 
-            var position = positionResponse.Data.FirstOrDefault(p => p.Symbol == symbol);
-            return position != null && position.Quantity > 0.0001m;
+            var positions = positionResponse.Data.Where(x => x.Symbol == symbol).ToList();
+
+            return positions.Any() && positions.Any(x=>x.Quantity>0.0001m);
         }
 
         private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> action)
         {
             return await _retryPolicy.ExecuteAsync(action);
+        }
+
+        public async Task ShowPositionModeAsync()
+        {
+            using var binanceRestClient = InitializeBinanceRestClient();
+            var positionMode = await binanceRestClient.UsdFuturesApi.Account.GetPositionModeAsync();
+            if (positionMode.Data.IsHedgeMode)
+            {
+                Console.WriteLine("Hedge mode is enabled.");
+            }
+            else
+            {
+                Console.WriteLine("One-way mode is enabled. Unable to differentiate between long and short positions.");
+            }
+
+        }
+
+        public async Task SetPositionModeAsync(bool isDualPositionSide = true)
+        {
+            using var binanceRestClient = InitializeBinanceRestClient();
+            var response = await binanceRestClient.UsdFuturesApi.Account.ModifyPositionModeAsync(isDualPositionSide);
+            if (response.Success)
+            {
+                Console.WriteLine(isDualPositionSide ? "Hedge mode has been set." : "One-way mode has been set.");
+            }
+            else
+            {
+                Console.WriteLine("Failed to set position mode: " + response.Error?.Message);
+            }
         }
     }
 }

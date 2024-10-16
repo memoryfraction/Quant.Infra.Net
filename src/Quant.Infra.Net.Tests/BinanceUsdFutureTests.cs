@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using Binance.Net.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MySqlX.XDevAPI;
 using Quant.Infra.Net.Account.Service;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Service;
@@ -45,15 +47,22 @@ namespace Quant.Infra.Net.Tests
 
             _apiKey = _configuration["Exchange:apiKey"];
             _apiSecret = _configuration["Exchange:apiSecret"];
+
         }
+
+        [TestMethod]
+        public async Task ShowPositionMode_Should_Work()
+        {
+            var usdFutureService = _serviceProvider.GetService<IBinanceUsdFutureService>();
+            await usdFutureService.ShowPositionModeAsync();
+        }
+
 
         [TestMethod]
         public async Task GetBalanceAsync_Should_Work()
         {
             var usdFutureService = _serviceProvider.GetService<IBinanceUsdFutureService>();
-
             var balance = await usdFutureService.GetusdFutureAccountBalanceAsync();
-
             Assert.IsTrue(balance>10000);
         }
 
@@ -62,13 +71,39 @@ namespace Quant.Infra.Net.Tests
         public async Task HasUsdFuturePositionAsync_Should_Work()
         {
             var usdFutureService = _serviceProvider.GetService<IBinanceUsdFutureService>();
-
-            var result = await usdFutureService.HasUsdFuturePositionAsync("ALGOUSDT");
-
+            var result = await usdFutureService.HasUsdFuturePositionAsync("BTCUSDT");
             Assert.IsTrue(result == false);
         }
 
-        // todo 其他方法; 
+        [TestMethod]
+        public async Task LiquidateUsdFutureAsync_Should_Work()
+        {
+            var usdFutureService = _serviceProvider.GetService<IBinanceUsdFutureService>();
+            await usdFutureService.LiquidateUsdFutureAsync("BTCUSDT");
+        }
+
+
+        [TestMethod]
+        public async Task SetUsdFutureLongHoldingsAsync_Should_Work()
+        {
+            var usdFutureService = _serviceProvider.GetService<IBinanceUsdFutureService>();
+
+            var symbol = "BTCUSDT";
+            await usdFutureService.SetUsdFutureHoldingsAsync(symbol, 0.01, PositionSide.Long); // 多头选择 PositionSide.Long;
+            Thread.Sleep(5000);
+            await usdFutureService.LiquidateUsdFutureAsync(symbol);
+        }
+
+        [TestMethod]
+        public async Task SetUsdFutureShortHoldingsAsync_Should_Work()
+        {
+            var usdFutureService = _serviceProvider.GetService<IBinanceUsdFutureService>();
+
+            var symbol = "BTCUSDT";
+            await usdFutureService.SetUsdFutureHoldingsAsync(symbol, -0.01, PositionSide.Short);  // 空头选择 PositionSide.Short;
+            Thread.Sleep(5000);
+            await usdFutureService.LiquidateUsdFutureAsync(symbol);
+        }
 
     }
 }

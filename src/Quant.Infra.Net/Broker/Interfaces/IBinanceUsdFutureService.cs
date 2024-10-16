@@ -1,4 +1,5 @@
-﻿using Quant.Infra.Net.Shared.Model;
+﻿using Binance.Net.Enums;
+using Quant.Infra.Net.Shared.Model;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Interfaces
@@ -31,7 +32,7 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// </summary>
         /// <param name="symbol">The trading symbol, e.g., "BTCUSDT". 交易对符号，例如"BTCUSDT"。</param>
         /// <returns>A task representing the asynchronous operation. 表示异步操作的任务。</returns>
-        Task usdFutureLiquidateAsync(string symbol);
+        Task LiquidateUsdFutureAsync(string symbol);
 
         /// <summary>
         /// Adjusts the futures position based on the specified portfolio rate.
@@ -40,7 +41,7 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// <param name="symbol">The trading symbol, e.g., "BTCUSDT". 交易对符号，例如"BTCUSDT"。</param>
         /// <param name="rate">The target portfolio rate. 目标投资组合比例。</param>
         /// <returns>A task representing the asynchronous operation. 表示异步操作的任务。</returns>
-        Task SetUsdFutureHoldingsAsync(string symbol, double rate);
+        Task SetUsdFutureHoldingsAsync(string symbol, double rate, PositionSide positionSide = PositionSide.Both);
 
         /// <summary>
         /// Checks if there is an open position for the specified symbol.
@@ -49,5 +50,18 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// <param name="symbol">The trading symbol, e.g., "BTCUSDT". 交易对符号，例如"BTCUSDT"。</param>
         /// <returns>True if there is an open position, false otherwise. 如果有未平仓头寸，则返回true；否则返回false。</returns>
         Task<bool> HasUsdFuturePositionAsync(string symbol);
+
+        /// <summary>
+        /// 显示持仓模式： 双向 VS 单向
+        /// </summary>
+        /// <returns></returns>
+        Task ShowPositionModeAsync();
+
+        /// <summary>
+        /// 设置持仓模式，默认设置为双向持仓模式（Hedge Mode）。
+        /// </summary>
+        /// <param name="isHedgeMode">设置为 true 表示双向持仓模式，false 表示单向持仓模式。</param>
+        /// <returns>表示异步操作的任务。</returns>
+        Task SetPositionModeAsync(bool isHedgeMode = true);
     }
 }

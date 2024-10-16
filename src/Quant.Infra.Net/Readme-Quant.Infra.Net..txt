@@ -1,4 +1,7 @@
 ﻿
+V 1.0.3 - 2024.10.15
+Added test cases for BinanceUsdFutureTests using binance testnet
+
 V 1.0.2 - 2024.10.12
 Adjusted the nuget packages version
 

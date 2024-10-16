@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -56,6 +57,36 @@ namespace Quant.Infra.Net.Shared.Service
 
             // 将消息输出到控制台
             Console.WriteLine(message);
+        }
+
+        /// <summary>
+        /// 结构化输出
+        /// </summary>
+        /// <param name="dataContent"></param>
+        /// <param name="errors"></param>
+        /// <returns></returns>
+        public static string GenerateMessage(string dataContent, IEnumerable<string> errors = null)
+        {
+            var sb = new System.Text.StringBuilder();
+
+            // Add UTC date and time at the beginning
+            sb.AppendLine($"UTC Date/Time: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+
+            // Add the data content in the middle
+            sb.AppendLine(dataContent);
+
+            // Add errors at the end if any
+            if (errors != null && errors.Any())
+            {
+                sb.AppendLine();  // Add a blank line before errors section
+                sb.AppendLine("Errors:");
+                foreach (var error in errors)
+                {
+                    sb.AppendLine($"- {error}");
+                }
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>

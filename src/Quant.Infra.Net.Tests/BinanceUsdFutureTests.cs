@@ -104,5 +104,26 @@ namespace Quant.Infra.Net.Tests
             await usdFutureService.LiquidateUsdFutureAsync(symbol);
         }
 
+
+        [TestMethod]
+        public async Task GetusdFutureUnrealizedProfitRateAsync_Should_Work()
+        {
+            var usdFutureService = _serviceProvider.GetService<IBinanceUsdFutureService>();
+            var symbol1 = "BTCUSDT";
+            var symbol2 = "ETHUSDT";
+
+            // 同时做多和做空
+            await usdFutureService.SetUsdFutureHoldingsAsync(symbol1, 0.01, PositionSide.Long);  
+            await usdFutureService.SetUsdFutureHoldingsAsync(symbol2, -0.01, PositionSide.Short);  
+            
+            Thread.Sleep(10000);
+
+            var unrealizedProfitRate = await usdFutureService.GetusdFutureUnrealizedProfitRateAsync();
+            Console.WriteLine($"UnrealizedProfitRate:{unrealizedProfitRate}");
+
+            await usdFutureService.LiquidateUsdFutureAsync(symbol1);
+            await usdFutureService.LiquidateUsdFutureAsync(symbol2);
+        }
+
     }
 }

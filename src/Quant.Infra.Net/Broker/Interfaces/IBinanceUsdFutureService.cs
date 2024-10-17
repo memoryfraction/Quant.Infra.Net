@@ -24,7 +24,7 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// </summary>
         /// <param name="LastOpenPortfolioMarketValue">The market value of the portfolio at the last open position. 上次开仓时的投资组合市值。</param>
         /// <returns>The unrealized profit rate. 返回未变现的利润率。</returns>
-        Task<double> GetusdFutureUnrealizedProfitRateAsync(decimal LastOpenPortfolioMarketValue);
+        Task<double> GetusdFutureUnrealizedProfitRateAsync();
 
         /// <summary>
         /// Liquidates the open position for the specified symbol.

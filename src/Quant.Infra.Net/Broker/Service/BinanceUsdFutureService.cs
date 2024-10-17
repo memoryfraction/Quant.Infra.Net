@@ -1,13 +1,11 @@
 ﻿using Binance.Net;
 using Binance.Net.Clients;
 using Binance.Net.Enums;
-using Binance.Net.Interfaces.Clients;
 using Binance.Net.Objects.Models.Futures;
 using CryptoExchange.Net.Authentication;
-using CryptoExchange.Net.CommonObjects;
 using CryptoExchange.Net.Objects;
+using CryptoExchange.Net.SharedApis;
 using Microsoft.Extensions.Configuration;
-using MySqlX.XDevAPI;
 using Polly;
 using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
@@ -79,7 +77,7 @@ namespace Quant.Infra.Net.Broker.Service
             return totalUSDBasedBalance;
         }
 
-        public async Task<double> GetusdFutureUnrealizedProfitRateAsync(decimal lastOpenPortfolioMarketValue)
+        public async Task<double> GetusdFutureUnrealizedProfitRateAsync()
         {
             using var binanceRestClient = InitializeBinanceRestClient();
 
@@ -87,25 +85,19 @@ namespace Quant.Infra.Net.Broker.Service
             var message = UtilityService.GenerateMessage(msg);
             UtilityService.LogAndConsole(message);
 
-            var response = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());       
-            if (!response.Success)
-            {
-                throw new Exception($"Failed to retrieve account balances. Error Code: {response.Error.Code}, Message: {response.Error.Message}");
+            var positionInformation = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
+            if (!positionInformation.Success) {
+                throw new Exception($"Failed to get account positions. Error Code: {positionInformation.Error.Code}, Message: {positionInformation.Error.Message}.");
             }
-            decimal currentPortfolioMarketValue = response.Data.Sum(token => token.WalletBalance);
-
-            msg = $"Received response: Success = {response.Success}. currentPortfolioMarketValue: {currentPortfolioMarketValue}";
-            var errors = new List<string>() { response.Error?.Message };
-            message = UtilityService.GenerateMessage(msg, errors);
-            UtilityService.LogAndConsole(message);
-
-            if (lastOpenPortfolioMarketValue == 0)
+            var holdingPositions = positionInformation.Data.Where(x => x.Quantity != 0m).Select(x => x).ToList();
+            var totalCostBase = 0m;
+            var totalCurrentMarketValue = 0m;
+            foreach (var holdingPosition in holdingPositions)
             {
-                throw new ArgumentException("Last open portfolio market value cannot be zero.");
+                totalCostBase = holdingPosition.EntryPrice * holdingPosition.Quantity;
+                totalCurrentMarketValue = holdingPosition.MarkPrice * holdingPosition.Quantity;
             }
-
-            double unrealizedProfitRate = (double)((currentPortfolioMarketValue - lastOpenPortfolioMarketValue) / lastOpenPortfolioMarketValue);
-            return unrealizedProfitRate;
+            return Convert.ToDouble((totalCurrentMarketValue - totalCostBase) / totalCostBase);
         }
 
         public async Task LiquidateUsdFutureAsync(string symbol)

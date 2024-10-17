@@ -98,7 +98,6 @@ namespace Quant.Infra.Net.Tests
         public async Task SetUsdFutureShortHoldingsAsync_Should_Work()
         {
             var usdFutureService = _serviceProvider.GetService<IBinanceUsdFutureService>();
-
             var symbol = "BTCUSDT";
             await usdFutureService.SetUsdFutureHoldingsAsync(symbol, -0.01, PositionSide.Short);  // 空头选择 PositionSide.Short;
             Thread.Sleep(5000);

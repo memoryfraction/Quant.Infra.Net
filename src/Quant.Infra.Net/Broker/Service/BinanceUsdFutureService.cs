@@ -4,6 +4,7 @@ using Binance.Net.Enums;
 using Binance.Net.Interfaces.Clients;
 using Binance.Net.Objects.Models.Futures;
 using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.CommonObjects;
 using CryptoExchange.Net.Objects;
 using Microsoft.Extensions.Configuration;
 using MySqlX.XDevAPI;
@@ -62,18 +63,19 @@ namespace Quant.Infra.Net.Broker.Service
             UtilityService.LogAndConsole(msg);
 
             var response = await binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync();
-
-            msg = $"Received response: Success = {response.Success}";
-            var errors = new List<string>() { response.Error?.Message };
-            var message = UtilityService.GenerateMessage(msg, errors);
-            UtilityService.LogAndConsole(message);
-
+         
             if (!response.Success)
             {
                 throw new Exception($"Failed to retrieve account balances. Error Code: {response.Error.Code}, Message: {response.Error.Message}");
             }
 
             decimal totalUSDBasedBalance = response.Data.Sum(token => token.WalletBalance);
+
+            msg = $"Received response: Success = {response.Success}. Balance: totalUSDBasedBalance USD";
+            var errors = new List<string>() { response.Error?.Message };
+            var message = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(message);
+
             return totalUSDBasedBalance;
         }
 
@@ -85,18 +87,17 @@ namespace Quant.Infra.Net.Broker.Service
             var message = UtilityService.GenerateMessage(msg);
             UtilityService.LogAndConsole(message);
 
-            var response = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());
-
-            msg = $"Received response: Success = {response.Success}";
-            var errors = new List<string>() { response.Error?.Message };
-            message = UtilityService.GenerateMessage(msg, errors);
-            UtilityService.LogAndConsole(message);
+            var response = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());       
             if (!response.Success)
             {
                 throw new Exception($"Failed to retrieve account balances. Error Code: {response.Error.Code}, Message: {response.Error.Message}");
             }
-
             decimal currentPortfolioMarketValue = response.Data.Sum(token => token.WalletBalance);
+
+            msg = $"Received response: Success = {response.Success}. currentPortfolioMarketValue: {currentPortfolioMarketValue}";
+            var errors = new List<string>() { response.Error?.Message };
+            message = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(message);
 
             if (lastOpenPortfolioMarketValue == 0)
             {
@@ -143,7 +144,7 @@ namespace Quant.Infra.Net.Broker.Service
             var positivePosition = positions.Where(x => x.Quantity > 0).FirstOrDefault();            
             if (positivePosition != null) // 持有正向仓位，Sell以平仓
             {
-                msg = $"Placing liquidation order for {symbol}";
+                msg = $"Placing liquidation order for {symbol}, positivePosition quantity: {positivePosition}";
                 msg = UtilityService.GenerateMessage(msg);
                 UtilityService.LogAndConsole(msg);
 
@@ -161,7 +162,7 @@ namespace Quant.Infra.Net.Broker.Service
             var negativePosition = positions.Where(x => x.Quantity < 0).FirstOrDefault();
             if (negativePosition != null) 
             {
-                msg = $"Placing liquidation order for {symbol}";
+                msg = $"Placing liquidation order for {symbol}, negativePosition quantity: {negativePosition}";
                 msg = UtilityService.GenerateMessage(msg);
                 UtilityService.LogAndConsole(msg);
 
@@ -187,6 +188,15 @@ namespace Quant.Infra.Net.Broker.Service
             }
         }
 
+        /// <summary>
+        /// 调整持仓为目标百分比; 
+        /// 需要注意：usdFuture 持仓有Long, Short两种，需要区别对待;
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="rate"></param>
+        /// <param name="positionSide"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public async Task SetUsdFutureHoldingsAsync(string symbol, double rate, PositionSide positionSide = PositionSide.Both)
         {
             using var binanceRestClient = InitializeBinanceRestClient();
@@ -197,17 +207,17 @@ namespace Quant.Infra.Net.Broker.Service
 
             var accountResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetBalancesAsync());
 
-            msg = $"Received account balance response: Success = {accountResponse.Success}";
-            var errors = new List<string>()  { accountResponse.Error?.Message  };
-            msg = UtilityService.GenerateMessage(msg);
-            UtilityService.LogAndConsole(msg);
-
             if (!accountResponse.Success)
             {
                 throw new Exception($"Failed to retrieve account balance. Error Code: {accountResponse.Error.Code}, Message: {accountResponse.Error.Message}");
             }
 
             decimal usdtBalance = accountResponse.Data.First(b => b.Asset == "USDT").WalletBalance;
+
+            msg = $"Received account balance response: Success = {accountResponse.Success}. usdtBalcne: {usdtBalance}";
+            var errors = new List<string>() { accountResponse.Error?.Message };
+            msg = UtilityService.GenerateMessage(msg);
+            UtilityService.LogAndConsole(msg);
 
             var priceResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.ExchangeData.GetPriceAsync(symbol));
 
@@ -219,60 +229,84 @@ namespace Quant.Infra.Net.Broker.Service
             }
 
             decimal latestPrice = priceResponse.Data.Price;
+            decimal targetPositionSize = (usdtBalance * (decimal)rate) / latestPrice;
 
             var positionResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
-
-            UtilityService.LogAndConsole($"Received position information for {symbol} at {DateTime.UtcNow}: Success = {positionResponse.Success}, Error = {positionResponse.Error?.Message}");
 
             if (!positionResponse.Success)
             {
                 throw new Exception($"Failed to retrieve position information. Error Code: {positionResponse.Error.Code}, Message: {positionResponse.Error.Message}");
             }
 
-            var position = positionResponse.Data.FirstOrDefault(p => p.Symbol == symbol);
-            decimal currentPositionSize = position != null ? position.Quantity : 0m;
+            var positions = positionResponse.Data.Where(x => x.Symbol == symbol);
+            var positivePosition = positions.Where(x => x.PositionSide == PositionSide.Long).FirstOrDefault();
+            var negativePosition = positions.Where(x => x.PositionSide == PositionSide.Short).FirstOrDefault();
 
-            decimal targetPositionSize = (usdtBalance * (decimal)rate) / latestPrice;
-            decimal positionDifference = targetPositionSize - currentPositionSize;
+            msg = $"Received position information for {symbol}: Success = {positionResponse.Success}. positivePosition:{positivePosition.Quantity} , negativePosition: {negativePosition.Quantity} ";
+            errors = new List<string> { positionResponse.Error?.Message };
+            msg = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(msg);
 
             var exchangeInfo = await binanceRestClient.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
             var symbolInfo = exchangeInfo.Data.Symbols.Single(s => s.Name == symbol);
             var pricePrecision = symbolInfo.PricePrecision;
             var quantityPrecision = symbolInfo.QuantityPrecision;
+
+
+            WebCallResult<BinanceUsdFuturesOrder> orderResponse = null;
+            decimal positionDifference = 0m;
+            if (positionSide == PositionSide.Long) // 如果是做多持仓方向
+            {
+                // 使用positivePosition计算difference
+                positionDifference = targetPositionSize - positivePosition.Quantity;
+            }
+            else if (positionSide == PositionSide.Short)
+            {
+                // 使用negativePosition计算difference
+                positionDifference = targetPositionSize - negativePosition.Quantity;
+            }
+            else if (positionSide == PositionSide.Both)
+            {
+                // 使用negativePosition计算difference
+                positionDifference = targetPositionSize - positivePosition.Quantity;
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException("not supported position side.");
+            }
+
             positionDifference = Math.Round(positionDifference, quantityPrecision);
 
+            // place market buy order 
+            var orderSide = positionDifference > 0 ? Binance.Net.Enums.OrderSide.Buy : Binance.Net.Enums.OrderSide.Sell;
+            decimal quantityToTrade = Math.Abs(positionDifference);
 
-            if (positionDifference != 0)
+            // place market buy order 
+            msg = $"Placing order for {symbol} to adjust position size";
+            errors = new List<string>() { };
+            var message = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(message);
+
+            orderResponse = await ExecuteWithRetryAsync(() =>
+                binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
+            symbol: symbol,
+                    side: orderSide,
+                    type: Binance.Net.Enums.FuturesOrderType.Market,
+                    quantity: quantityToTrade,
+                    positionSide: positionSide // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
+                )
+            );
+
+            msg = $"Order response for {symbol}: Success = {orderResponse.Success}";
+            errors = new List<string>() { orderResponse.Error?.Message };
+            msg = UtilityService.GenerateMessage(msg);
+            UtilityService.LogAndConsole(msg);
+
+            if (!orderResponse.Success)
             {
-                var orderSide = positionDifference > 0 ? Binance.Net.Enums.OrderSide.Buy : Binance.Net.Enums.OrderSide.Sell;
-                decimal quantityToTrade = Math.Abs(positionDifference);
-
-                msg = $"Placing order for {symbol} to adjust position size";
-                errors = new List<string>() { };
-                var message = UtilityService.GenerateMessage(msg, errors);
-                UtilityService.LogAndConsole(message);
-
-
-                var orderResponse = await ExecuteWithRetryAsync(() =>
-                    binanceRestClient.UsdFuturesApi.Trading.PlaceOrderAsync(
-                        symbol: symbol,
-                        side: orderSide,
-                        type: Binance.Net.Enums.FuturesOrderType.Market,
-                        quantity: quantityToTrade,
-                        positionSide: positionSide // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
-                    )
-                );
-
-                msg = $"Order response for {symbol}: Success = {orderResponse.Success}";
-                errors = new List<string>() { orderResponse.Error?.Message };
-                msg = UtilityService.GenerateMessage(msg);
-                UtilityService.LogAndConsole(msg);
-
-                if (!orderResponse.Success)
-                {
-                    throw new Exception($"Failed to place order for {symbol}. Error Code: {orderResponse.Error.Code}, Message: {orderResponse.Error.Message}");
-                }
+                throw new Exception($"Failed to place order for {symbol}. Error Code: {orderResponse.Error.Code}, Message: {orderResponse.Error.Message}");
             }
+
         }
 
         public async Task<bool> HasUsdFuturePositionAsync(string symbol)
@@ -298,7 +332,7 @@ namespace Quant.Infra.Net.Broker.Service
 
             var positions = positionResponse.Data.Where(x => x.Symbol == symbol).ToList();
 
-            return positions.Any() && positions.Any(x=>x.Quantity>0.0001m);
+            return positions.Any() && positions.Any(x=> Math.Abs(x.Quantity) > 0.0001m);
         }
 
         private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> action)

@@ -140,8 +140,6 @@ namespace Quant.Infra.Net.Shared.Service
             return message;
         }
 
-
-
         /// <summary>
         /// 调整时间到下一个工作日，如果为周六或周日，则顺延到下周一。
         /// Adjusts the time to the next weekday; if it's Saturday or Sunday, moves to the following Monday.

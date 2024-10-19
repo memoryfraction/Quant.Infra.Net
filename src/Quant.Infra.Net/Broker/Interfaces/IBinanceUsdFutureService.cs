@@ -12,9 +12,7 @@ namespace Quant.Infra.Net.Broker.Interfaces
     /// </summary>
     public interface IBinanceUsdFutureService
     {
-
-        public Task<IEnumerable<BinancePositionDetailsUsdt>> GetHoldingPositionAsync();
-        
+        public Task<IEnumerable<BinancePositionDetailsUsdt>> GetHoldingPositionAsync();   
         public ExchangeEnvironment ExchangeEnvironment { get; set; } 
         /// <summary>
         /// Retrieves the USD-based futures account balance.

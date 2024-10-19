@@ -1,5 +1,7 @@
 ﻿using Binance.Net.Enums;
+using Binance.Net.Objects.Models.Futures;
 using Quant.Infra.Net.Shared.Model;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Interfaces
@@ -10,6 +12,9 @@ namespace Quant.Infra.Net.Broker.Interfaces
     /// </summary>
     public interface IBinanceUsdFutureService
     {
+
+        public Task<IEnumerable<BinancePositionDetailsUsdt>> GetHoldingPositionAsync();
+        
         public ExchangeEnvironment ExchangeEnvironment { get; set; } 
         /// <summary>
         /// Retrieves the USD-based futures account balance.

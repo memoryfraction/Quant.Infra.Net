@@ -1,4 +1,5 @@
 ﻿using Binance.Net.Clients;
+using Binance.Net.Objects.Models.Futures;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Data.Analysis;
@@ -69,8 +70,7 @@ namespace Quant.Infra.Net.Shared.Service
         {
             var sb = new System.Text.StringBuilder();
 
-            // Add UTC date and time at the beginning
-            sb.AppendLine($"UTC Date/Time: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+            // 不再显示时间;防止日志重复
 
             // Add the data content in the middle
             sb.AppendLine(dataContent);
@@ -89,6 +89,58 @@ namespace Quant.Infra.Net.Shared.Service
             sb.AppendLine("------");
             return sb.ToString();
         }
+
+
+        /// <summary>
+        /// 生成日志, 包含以下信息: UsdtBalance， HoldingPositions (不同symbol的持仓数量)， UnRealizedProfit， UnRealizedProfitRate
+        /// </summary>
+        /// <returns></returns>
+        public static string GenerateBinanceAccountSnapShotMessage(IEnumerable<BinancePositionDetailsUsdt> positions)
+        {
+            // 初始化统计变量
+            decimal totalUnRealizedProfit = 0;
+            decimal totalMarketValue = 0;
+            decimal totalCostBase = 0;
+            var holdingSymbols = new HashSet<string>();
+
+            // 遍历所有持仓
+            foreach (var position in positions)
+            {
+
+                // 计算当前市场价值 = MarkPrice * Quantity
+                decimal marketValue = position.MarkPrice * position.Quantity;
+
+                // 计算成本基数 = EntryPrice * Quantity
+                decimal costBase = position.EntryPrice * position.Quantity;
+
+                // 计算总市场价值和总成本基数
+                totalMarketValue += marketValue;
+                totalCostBase += costBase;
+
+                // 计算未实现利润
+                totalUnRealizedProfit += position.UnrealizedPnl;
+
+                // 统计持有的symbol
+                if (position.Quantity != 0)
+                {
+                    holdingSymbols.Add(position.Symbol); // 通过symbol来判断持仓
+                }
+            }
+
+            // 计算未实现利润率 = (总市场价值 - 总成本基数) / 总成本基数
+            decimal unRealizedProfitRate = totalCostBase != 0 ? (totalMarketValue - totalCostBase) / totalCostBase : 0;
+
+            // 生成日志信息
+            var message = $"Account Snapshot:\n" +
+                          $"Total Market Value: {totalMarketValue}\n" +
+                          $"Holding Symbols: {holdingSymbols.Count} ({string.Join(", ", holdingSymbols)})\n" + // 打印持仓symbol和数量
+                          $"Unrealized Profit: {totalUnRealizedProfit}\n" +
+                          $"Unrealized Profit Rate: {unRealizedProfitRate:P2}";
+
+            return message;
+        }
+
+
 
         /// <summary>
         /// 调整时间到下一个工作日，如果为周六或周日，则顺延到下周一。

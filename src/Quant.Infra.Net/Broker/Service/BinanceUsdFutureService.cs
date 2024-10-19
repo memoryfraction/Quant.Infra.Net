@@ -4,7 +4,6 @@ using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures;
 using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Objects;
-using CryptoExchange.Net.SharedApis;
 using Microsoft.Extensions.Configuration;
 using Polly;
 using Polly.Retry;
@@ -111,11 +110,7 @@ namespace Quant.Infra.Net.Broker.Service
 
             var response = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync());
 
-            UtilityService.LogAndConsole($"Received position information at {DateTime.UtcNow}: Success = {response.Success}, Error = {response.Error?.Message}");
-            msg = $"Received position information: Success = {response.Success}";
-            errors = new List<string>() { response.Error?.Message };
-            message = UtilityService.GenerateMessage(msg, errors);
-            UtilityService.LogAndConsole(message);
+           
 
             if (!response.Success)
             {
@@ -133,7 +128,18 @@ namespace Quant.Infra.Net.Broker.Service
             }
 
             WebCallResult<BinanceUsdFuturesOrder> exitResponse = null;
-            var positivePosition = positions.Where(x => x.Quantity > 0).FirstOrDefault();            
+            var positivePosition = positions.Where(x => x.Quantity > 0).FirstOrDefault();
+            var negativePosition = positions.Where(x => x.Quantity < 0).FirstOrDefault();
+
+            UtilityService.LogAndConsole($"Received positions information: Success = {response.Success}, " +
+                $"Positive Position Symbol:{positivePosition.Symbol}, quantity: {positivePosition.Quantity}" +
+                $"Negative Position Symbol:{negativePosition.Symbol}, quantity: {negativePosition.Quantity}" +
+                $", Error = {response.Error?.Message}");
+            msg = $"Received position information: Success = {response.Success}";
+            errors = new List<string>() { response.Error?.Message };
+            message = UtilityService.GenerateMessage(msg, errors);
+            UtilityService.LogAndConsole(message);
+
             if (positivePosition != null) // 持有正向仓位，Sell以平仓
             {
                 msg = $"Placing liquidation order for {symbol}, positivePosition quantity: {positivePosition}";
@@ -151,7 +157,6 @@ namespace Quant.Infra.Net.Broker.Service
                 );
             }
 
-            var negativePosition = positions.Where(x => x.Quantity < 0).FirstOrDefault();
             if (negativePosition != null) 
             {
                 msg = $"Placing liquidation order for {symbol}, negativePosition quantity: {negativePosition}";
@@ -206,14 +211,14 @@ namespace Quant.Infra.Net.Broker.Service
 
             decimal usdtBalance = accountResponse.Data.First(b => b.Asset == "USDT").WalletBalance;
 
-            msg = $"Received account balance response: Success = {accountResponse.Success}. usdtBalcne: {usdtBalance}";
+            msg = $"Received account balance response: Success = {accountResponse.Success}. usdtBalancne: {usdtBalance}";
             var errors = new List<string>() { accountResponse.Error?.Message };
             msg = UtilityService.GenerateMessage(msg);
             UtilityService.LogAndConsole(msg);
 
             var priceResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.ExchangeData.GetPriceAsync(symbol));
 
-            UtilityService.LogAndConsole($"Received latest price for {symbol} at {DateTime.UtcNow}: Success = {priceResponse.Success}, Error = {priceResponse.Error?.Message}");
+            UtilityService.LogAndConsole($"Received latest price for {symbol}: Success = {priceResponse.Success}, Error = {priceResponse.Error?.Message}");
 
             if (!priceResponse.Success)
             {
@@ -234,7 +239,7 @@ namespace Quant.Infra.Net.Broker.Service
             var positivePosition = positions.Where(x => x.PositionSide == PositionSide.Long).FirstOrDefault();
             var negativePosition = positions.Where(x => x.PositionSide == PositionSide.Short).FirstOrDefault();
 
-            msg = $"Received position information for {symbol}: Success = {positionResponse.Success}. positivePosition:{positivePosition.Quantity} , negativePosition: {negativePosition.Quantity} ";
+            msg = $"Received position information for {symbol}: Success = {positionResponse.Success}. Symbol: {symbol} , positivePosition:{positivePosition.Quantity} , negativePosition: {negativePosition.Quantity} ";
             errors = new List<string> { positionResponse.Error?.Message };
             msg = UtilityService.GenerateMessage(msg, errors);
             UtilityService.LogAndConsole(msg);
@@ -360,5 +365,14 @@ namespace Quant.Infra.Net.Broker.Service
                 Console.WriteLine("Failed to set position mode: " + response.Error?.Message);
             }
         }
+
+        public async Task<IEnumerable<BinancePositionDetailsUsdt>> GetHoldingPositionAsync()
+        {
+            using var binanceRestClient = InitializeBinanceRestClient();
+            var position = await binanceRestClient.UsdFuturesApi.Account.GetPositionInformationAsync();
+            var holdingPositions = position.Data.Where(x => x.Quantity != 0).Select(x => x);
+            return holdingPositions;
+        }
+
     }
 }

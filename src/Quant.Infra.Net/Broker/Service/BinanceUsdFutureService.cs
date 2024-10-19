@@ -68,7 +68,7 @@ namespace Quant.Infra.Net.Broker.Service
 
             decimal totalUSDBasedBalance = response.Data.Sum(token => token.WalletBalance);
 
-            msg = $"Received response: Success = {response.Success}. Balance: totalUSDBasedBalance USD";
+            msg = $"Received response: Success = {response.Success}. Balance: {totalUSDBasedBalance} USD";
             var errors = new List<string>() { response.Error?.Message };
             var message = UtilityService.GenerateMessage(msg, errors);
             UtilityService.LogAndConsole(message);

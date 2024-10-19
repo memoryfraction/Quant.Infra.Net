@@ -283,7 +283,7 @@ namespace Quant.Infra.Net.Analysis
 
             // Fetch the row index for the given endDateTime
             int rowIndex = this.DataFrame.GetRowIndex("DateTime", endDateTime);
-            Object obj = rowIndex != -1 ? (double)this.DataFrame[colName][rowIndex] : default(Object);
+            Object obj = rowIndex != -1 ? (Object)this.DataFrame[colName][rowIndex] : default(Object);
             return obj;
         }
 

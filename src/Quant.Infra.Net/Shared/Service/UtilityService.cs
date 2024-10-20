@@ -82,7 +82,8 @@ namespace Quant.Infra.Net.Shared.Service
                 sb.AppendLine("Errors:");
                 foreach (var error in errors)
                 {
-                    sb.AppendLine($"- {error}");
+                    if(!string.IsNullOrEmpty(error))
+                        sb.AppendLine($"- {error}");
                 }
             }
             // Add a separator after each complete log message

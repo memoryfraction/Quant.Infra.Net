@@ -76,7 +76,7 @@ namespace Quant.Infra.Net.Shared.Service
             sb.AppendLine(dataContent);
 
             // Add errors at the end if any
-            if (errors != null && errors.Any())
+            if (errors != null && errors.Any() && errors.FirstOrDefault() != null)
             {
                 sb.AppendLine();  // Add a blank line before errors section
                 sb.AppendLine("Errors:");

@@ -218,7 +218,6 @@ namespace Quant.Infra.Net.Broker.Service
 
             var priceResponse = await ExecuteWithRetryAsync(() => binanceRestClient.UsdFuturesApi.ExchangeData.GetPriceAsync(symbol));
 
-            UtilityService.LogAndConsole($"Received latest price for {symbol}: Success = {priceResponse.Success}, Error = {priceResponse.Error?.Message}");
 
             if (!priceResponse.Success)
             {

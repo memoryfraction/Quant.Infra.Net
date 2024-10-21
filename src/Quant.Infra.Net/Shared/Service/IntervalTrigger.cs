@@ -74,13 +74,13 @@ namespace Quant.Infra.Net.Shared.Service
             switch (Mode)
             {
                 case StartMode.NextSecond:
-                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second);
+                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second).AddSeconds(1);
                 case StartMode.NextMinute:
-                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0);
+                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0).AddMinutes(1);
                 case StartMode.NextHour:
-                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0);
+                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0).AddHours(1);
                 case StartMode.NextDay:
-                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0);
+                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0).AddDays(1);
                 default:
                     throw new ArgumentOutOfRangeException();
             }

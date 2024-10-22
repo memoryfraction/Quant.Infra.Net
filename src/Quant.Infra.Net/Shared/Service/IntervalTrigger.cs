@@ -1,13 +1,13 @@
 ﻿using Quant.Infra.Net.Shared.Model;
-using System.Timers;
 using System;
+using System.Timers;
 
 namespace Quant.Infra.Net.Shared.Service
 {
     /// <summary>
-    /// 用于规律性触发事件， 比如：每小时，每天，每分钟等; 
-    /// 使用enum StartMode，可以设置从下一个小时/分钟/天开始; 
-    /// 可以设置TimeSpan DelayTimeSpan属性， 延迟时间可以为正或负
+    /// 用于规律性触发事件，比如：每小时，每天，每分钟等;
+    /// 使用enum StartMode，可以设置从下一个小时/分钟/天开始;
+    /// 可以设置TimeSpan DelayTimeSpan属性，延迟时间可以为正或负
     /// </summary>
     public class IntervalTrigger
     {
@@ -33,16 +33,18 @@ namespace Quant.Infra.Net.Shared.Service
         public void Start()
         {
             _startDateTime = CalculateNextTriggerTime() + DelayTimeSpan;
-            TimeSpan initialDelay = _startDateTime - DateTime.UtcNow + DelayTimeSpan;
 
-            // 使用 initialDelay 来设置初始定时器间隔
-            _timer = new Timer(initialDelay.TotalMilliseconds);
+            // 初次定时器的间隔为当前时间到下一个触发时间的差值
+            TimeSpan timeUntilNextTrigger = _startDateTime - DateTime.UtcNow;
+
+            // 设置定时器的间隔
+            _timer = new Timer(timeUntilNextTrigger.TotalMilliseconds);
             _timer.Elapsed += OnIntervalTriggered;
-            _timer.AutoReset = true; 
+            _timer.AutoReset = false; // 确保每次触发后重新设置时间间隔
             _timer.Start();
 
             // Display StartMode in English to prevent user confusion
-            System.Console.WriteLine($"StartMode: {Mode}; The next trigger Utc time: {this.NextTriggerTime}");
+            System.Console.WriteLine($"Start(). StartMode: {Mode}; The next trigger Utc time: {this.NextTriggerTime}");
         }
 
         public void Stop()
@@ -53,20 +55,37 @@ namespace Quant.Infra.Net.Shared.Service
 
         private void OnIntervalTriggered(object sender, ElapsedEventArgs e)
         {
-            IntervalTriggered?.Invoke(this, EventArgs.Empty); // 触发事件
+            // 触发事件
+            IntervalTriggered?.Invoke(this, EventArgs.Empty);
 
-            // 更新_startDateTime为下一次触发的时间
-            _startDateTime = CalculateNextTriggerTime();
+            // 重新计算下一个触发时间
+            _startDateTime = CalculateNextTriggerTime() + DelayTimeSpan;
 
-            // 重新设置定时器，确保后续每次按设定的时间间隔触发
-            _timer.Interval = _triggerInterval.TotalMilliseconds;
-            _timer.AutoReset = true; // 确保每次都自动重置
+            // 再次计算下一次触发时间间隔
+            TimeSpan timeUntilNextTrigger = _startDateTime - DateTime.UtcNow;
+
+            // 更新定时器的间隔，确保每次都精确计算
+            if (timeUntilNextTrigger.TotalMilliseconds > 0)
+            {
+                _timer.Interval = timeUntilNextTrigger.TotalMilliseconds;
+            }
+            else
+            {
+                _timer.Interval = 1; // 立即触发
+            }
+
+            // 重启定时器
             _timer.Start();
 
             // Display StartMode in English to prevent user confusion
-            System.Console.WriteLine($"StartMode: {Mode}; The next trigger Utc time: {this.NextTriggerTime}");
+            System.Console.WriteLine($"OnIntervalTriggered(). StartMode: {Mode}; The next trigger Utc time: {this.NextTriggerTime}");
         }
 
+        /// <summary>
+        /// 根据当前时间计算并返回下一个整点时间
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
         private DateTime CalculateNextTriggerTime()
         {
             DateTime utcNow = DateTime.UtcNow;
@@ -74,13 +93,45 @@ namespace Quant.Infra.Net.Shared.Service
             switch (Mode)
             {
                 case StartMode.NextSecond:
-                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second).AddSeconds(1);
+                    if (utcNow.Millisecond == 0)
+                    {
+                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second);
+                    }
+                    else
+                    {
+                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second).AddSeconds(1);
+                    }
+
                 case StartMode.NextMinute:
-                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0).AddMinutes(1);
+                    if (utcNow.Second == 0 && utcNow.Millisecond == 0)
+                    {
+                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0);
+                    }
+                    else
+                    {
+                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0).AddMinutes(1);
+                    }
+
                 case StartMode.NextHour:
-                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0).AddHours(1);
+                    if (utcNow.Minute == 0 && utcNow.Second == 0 && utcNow.Millisecond == 0)
+                    {
+                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0);
+                    }
+                    else
+                    {
+                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0).AddHours(1);
+                    }
+
                 case StartMode.NextDay:
-                    return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0).AddDays(1);
+                    if (utcNow.Hour == 0 && utcNow.Minute == 0 && utcNow.Second == 0 && utcNow.Millisecond == 0)
+                    {
+                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0);
+                    }
+                    else
+                    {
+                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0).AddDays(1);
+                    }
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }

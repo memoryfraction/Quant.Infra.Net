@@ -1,4 +1,5 @@
 ﻿using Binance.Net.Clients;
+using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures;
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -21,6 +22,20 @@ namespace Quant.Infra.Net.Shared.Service
     public class UtilityService
     {
 
+        public static KlineInterval ConvertToKlineInterval(ResolutionLevel resolutionLevel)
+        {
+            return resolutionLevel switch
+            {
+                ResolutionLevel.Tick => KlineInterval.OneSecond,           // Assuming "Tick" maps to 1 second
+                ResolutionLevel.Second => KlineInterval.OneSecond,
+                ResolutionLevel.Minute => KlineInterval.OneMinute,
+                ResolutionLevel.Hourly => KlineInterval.OneHour,
+                ResolutionLevel.Daily => KlineInterval.OneDay,
+                ResolutionLevel.Weekly => KlineInterval.OneWeek,
+                ResolutionLevel.Monthly => KlineInterval.OneMonth,
+                _ => throw new ArgumentOutOfRangeException(nameof(resolutionLevel), $"Unsupported resolution level: {resolutionLevel}")
+            };
+        }
 
         /// <summary>
         /// Logs a message at the specified log level and outputs it to the console.

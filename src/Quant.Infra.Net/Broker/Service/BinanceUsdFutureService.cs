@@ -10,6 +10,7 @@ using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
+using Quant.Infra.Net.SourceData.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,7 +40,9 @@ namespace Quant.Infra.Net.Broker.Service
         {
             BinanceRestClient.SetDefaultOptions(options =>
             {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+                if(string.IsNullOrEmpty(_apiKey) == false && string.IsNullOrEmpty(_apiSecret) == false)
+                    options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+                
                 // 启动测试网络
                 if (ExchangeEnvironment == ExchangeEnvironment.Testnet)
                 {
@@ -373,5 +376,79 @@ namespace Quant.Infra.Net.Broker.Service
             return holdingPositions;
         }
 
+        public async Task<IEnumerable<string>> GetUsdFutureSymbolsAsync()
+        {
+            using var binanceRestClient = InitializeBinanceRestClient();
+            var exchangeInfo = await binanceRestClient.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
+            var symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
+            return symbols;
+        }
+
+
+        /// <summary>
+        /// 获取OHLCVs数据
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="startDt"></param>
+        /// <param name="endDt"></param>
+        /// <param name="resolutionLevel"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<Ohlcvs> GetOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
+        {
+            var ohlcvs = new Ohlcvs
+            {
+                Symbol = symbol,
+                ResolutionLevel = resolutionLevel,
+                StartDateTimeUtc = startDt,
+                EndDateTimeUtc = endDt
+            };
+            using var binanceRestClient = InitializeBinanceRestClient();
+            var klineInterval = UtilityService.ConvertToKlineInterval(resolutionLevel);
+
+            DateTime currentStart = startDt;
+            const int maxRecords = 1000; // Binance's max record limit
+
+            // Loop to fetch data until reaching the end date
+            while (currentStart < endDt)
+            {
+                // Fetch Kline data
+                var klineResult = await binanceRestClient.UsdFuturesApi.ExchangeData
+                    .GetKlinesAsync(symbol, klineInterval, currentStart, endDt, maxRecords);
+
+                if (!klineResult.Success)
+                {
+                    Console.WriteLine($"Error fetching data: {klineResult.Error}");
+                    break;
+                }
+
+                // Add each Kline entry to OhlcvSet
+                foreach (var kline in klineResult.Data)
+                {
+                    var ohlcv = new Ohlcv
+                    {
+                        Symbol = symbol,
+                        OpenDateTime = kline.OpenTime,
+                        CloseDateTime = kline.CloseTime,
+                        Open = kline.OpenPrice,
+                        High = kline.HighPrice,
+                        Low = kline.LowPrice,
+                        Close = kline.ClosePrice,
+                        Volume = kline.Volume,
+                        AdjustedClose = kline.ClosePrice // Assuming AdjustedClose is same as Close for simplicity
+                    };
+
+                    ohlcvs.OhlcvSet.Add(ohlcv);
+                }
+
+                // Update the start time for the next call to the last close time of this batch
+                currentStart = klineResult.Data.Last().CloseTime.AddMilliseconds(1);
+
+                // Exit if we've fetched all the data up to end date
+                if (currentStart >= endDt) break;
+            }
+
+            return ohlcvs;
+        }
     }
 }

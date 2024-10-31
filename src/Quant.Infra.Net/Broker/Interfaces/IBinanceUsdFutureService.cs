@@ -1,6 +1,8 @@
 ﻿using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures;
 using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.SourceData.Model;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,8 +14,11 @@ namespace Quant.Infra.Net.Broker.Interfaces
     /// </summary>
     public interface IBinanceUsdFutureService
     {
+        public Task<Ohlcvs> GetOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly);
+        public Task<IEnumerable<string>> GetUsdFutureSymbolsAsync();
         public Task<IEnumerable<BinancePositionDetailsUsdt>> GetHoldingPositionAsync();   
         public ExchangeEnvironment ExchangeEnvironment { get; set; } 
+        
         /// <summary>
         /// Retrieves the USD-based futures account balance.
         /// 获取以USD计价的期货账户余额。

@@ -160,7 +160,8 @@ namespace Quant.Infra.Net.Shared.Model
     public enum DataSource
     {
         YahooFinance = 0,
-        Binance = 1
+        Binance = 1,
+        MongoDBWebApi = 2
     }
 
     public enum TradeDirection

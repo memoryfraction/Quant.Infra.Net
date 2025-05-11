@@ -4,6 +4,7 @@ using HtmlAgilityPack;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
 using Quant.Infra.Net.SourceData.Model;
+using Quant.Infra.Net.SourceData.Service.Historical;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -11,17 +12,18 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using YahooFinanceApi;
 
 namespace Quant.Infra.Net.SourceData.Service
 {
     public class TraditionalFinanceSourceDataService : ITraditionalFinanceSourceDataService
     {
         private readonly IMapper _mapper;
+        private readonly IHistoricalDataSourceService _historicalDataSourceService;
 
-        public TraditionalFinanceSourceDataService(IMapper mapper)
+        public TraditionalFinanceSourceDataService(IMapper mapper, IHistoricalDataSourceService historicalDataSourceService)
         {
             _mapper = mapper;
+            _historicalDataSourceService = historicalDataSourceService;
         }
 
         public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Shared.Model.ResolutionLevel Period = Shared.Model.ResolutionLevel.Daily)
@@ -29,22 +31,26 @@ namespace Quant.Infra.Net.SourceData.Service
             throw new NotImplementedException();
         }
 
-        public async Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Shared.Model.ResolutionLevel period = Shared.Model.ResolutionLevel.Daily, DataSource dataSource = DataSource.YahooFinance)
+        public async Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Shared.Model.ResolutionLevel period = Shared.Model.ResolutionLevel.Daily, DataSource dataSource = DataSource.MongoDBWebApi)
         {
             var ohlcvs = new Ohlcvs();
-            var yahooFinancePeriod = _mapper.Map<YahooFinanceApi.Period>(period);
-            IEnumerable<Candle> candles = await Yahoo.GetHistoricalAsync(symbol, startDt, endDt, yahooFinancePeriod); // Daily, Weekly, Monthly
-            foreach (var candle in candles)
-            {
-                var ohlcv = _mapper.Map<Ohlcv>(candle);
-                ohlcvs.OhlcvSet.Add(ohlcv);
+            
+            if(dataSource == DataSource.MongoDBWebApi)
+            { 
+                // 根据_historicalDataSourceService 获取历史数据，并返回类型，忽略dataSource;
+                ohlcvs.OhlcvSet = (await  _historicalDataSourceService.GetOhlcvListAsync(new Underlying(symbol, AssetType.UsEquity), startDt, endDt, period)).ToHashSet();
+            
+                ohlcvs.Symbol = symbol;
+                ohlcvs.StartDateTimeUtc = startDt;
+                ohlcvs.EndDateTimeUtc = endDt;
+                ohlcvs.ResolutionLevel = period;
             }
-            ohlcvs.Symbol = symbol;
-            ohlcvs.StartDateTimeUtc = startDt;
-            ohlcvs.EndDateTimeUtc = endDt;
-            ohlcvs.ResolutionLevel = period;
+
             return ohlcvs;
         }
+
+
+      
 
         public async Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFileName)
         {

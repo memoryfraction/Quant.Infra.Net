@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System;
+using Quant.Infra.Net.Shared.Service;
+using System.Linq;
 
 namespace Quant.Infra.Net.SourceData.Service.Historical
 {
@@ -17,13 +19,15 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
         private readonly string _endpoint;
         private readonly RestClient _client;
         private readonly AsyncRetryPolicy<RestResponse> _retryPolicy;
+        private readonly ResolutionConversionService _resolutionConversionService;
 
         public Currency BaseCurrency { get; set; } = Currency.USD;
 
-        public HistoricalDataSourceServiceMongodb(string endpoint)
+        public HistoricalDataSourceServiceMongodb(string endpoint, ResolutionConversionService resolutionConversionService)
         {
             _endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
             _client = new RestClient();
+            _resolutionConversionService = resolutionConversionService ?? throw new ArgumentNullException(nameof(resolutionConversionService));
 
             _retryPolicy = Policy
                 .HandleResult<RestResponse>(r => !r.IsSuccessful || string.IsNullOrWhiteSpace(r.Content))
@@ -44,10 +48,36 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
 
         public async Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(Underlying underlying, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
         {
+            if (resolutionLevel < ResolutionLevel.Hourly)
+                throw new NotSupportedException($"Cannot convert from hourly to {resolutionLevel} granularity.");
+
+            // 调用FetchRawOhlcvHourlyAsync获取小时级别的数据;
+            var rawOhlcvHourlyList = await FetchRawOhlcvHourlyAsync(underlying, startDt, endDt);
+            
+            // 上一个步骤的结果转化为需要的级别，比如：Daily, Weekly, Monthly等;
+            var ohlcvs = _resolutionConversionService.ConvertResolution(rawOhlcvHourlyList, resolutionLevel);
+
+            return ohlcvs.OhlcvSet.ToList();
+        }
+
+
+        /// <summary>
+        /// 从数据库读取小时级别数据的原始拉取方法
+        /// </summary>
+        /// <param name="underlying"></param>
+        /// <param name="startDt"></param>
+        /// <param name="endDt"></param>
+        /// <param name="resolutionLevel"></param>
+        /// <returns></returns>
+        private async Task<List<Ohlcv>> FetchRawOhlcvHourlyAsync(
+            Underlying underlying,
+            DateTime startDt,
+            DateTime endDt)
+        {
             var results = new List<Ohlcv>();
             int page = 1;
             int pageSize = 500;
-            int resolutionCode = (int)resolutionLevel;
+            int resolutionCode = (int)ResolutionLevel.Hourly;
 
             while (true)
             {
@@ -59,7 +89,7 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
                 request.AddParameter("page", page);
                 request.AddParameter("pageSize", pageSize);
 
-                Console.WriteLine($"[INFO] Fetching page {page}: {underlying.Symbol}, {startDt:yyyy-MM-dd} ~ {endDt:yyyy-MM-dd}, {resolutionLevel}");
+                Console.WriteLine($"[INFO] Fetching page {page}: {underlying.Symbol}, {startDt:yyyy-MM-dd} ~ {endDt:yyyy-MM-dd}, {ResolutionLevel.Hourly}");
 
                 var response = await _retryPolicy.ExecuteAsync(() => _client.ExecuteAsync(request));
 

@@ -131,6 +131,35 @@ namespace Quant.Infra.Net.Shared.Service
                     {
                         return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0).AddDays(1);
                     }
+                case StartMode.TodayBeforeUSMarketClose:
+                    {
+                        // 1. 定位到美东时区（含夏令时）
+                        TimeZoneInfo easternZone;
+                        try
+                        {
+                            easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"); // Windows
+                        }
+                        catch (TimeZoneNotFoundException)
+                        {
+                            easternZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York"); // Linux/macOS
+                        }
+
+                        // 2. 将当前 UTC 转为美东时间
+                        DateTime estNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, easternZone);
+
+                        // 3. 当日美东 16:00
+                        DateTime todayCloseEst = new DateTime(
+                            estNow.Year, estNow.Month, estNow.Day,
+                            16, 0, 0, DateTimeKind.Unspecified);
+
+                        // 4. 判断是今天还是明天
+                        DateTime targetCloseEst = estNow < todayCloseEst
+                            ? todayCloseEst
+                            : todayCloseEst.AddDays(1);
+
+                        // 5. **不要在这里加 DelayTimeSpan**，只返回基准关闭时间的 UTC
+                        return TimeZoneInfo.ConvertTimeToUtc(targetCloseEst, easternZone);
+                    }
 
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -145,6 +174,7 @@ namespace Quant.Infra.Net.Shared.Service
                 StartMode.NextMinute => TimeSpan.FromMinutes(1),
                 StartMode.NextHour => TimeSpan.FromHours(1),
                 StartMode.NextDay => TimeSpan.FromDays(1),
+                StartMode.TodayBeforeUSMarketClose => TimeSpan.FromDays(1),
                 _ => throw new ArgumentOutOfRangeException(nameof(mode), "Unsupported mode")
             };
         }

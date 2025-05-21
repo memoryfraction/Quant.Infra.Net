@@ -1,5 +1,6 @@
 ﻿using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
+using System.Reflection;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -33,6 +34,27 @@ namespace Quant.Infra.Net.Tests
 
             Assert.IsFalse(_eventTriggered, "事件不应该马上触发");
         }
+
+
+        /// <summary>
+        /// 美股日级别测试TodayBeforeUSMarketClose：DelayTimeSpan = -2 分钟时，下次触发应为 15:58 EST/EDT。
+        /// when Delay = -2 min, next trigger should be 15:58 EST/EDT.
+        /// </summary>
+        [TestMethod]
+        public void TestTodayBeforeUSMarketCloseWithNegativeDelay()
+        {
+            IntervalTrigger trigger = new IntervalTrigger(StartMode.TodayBeforeUSMarketClose, TimeSpan.FromMinutes(-2));
+            trigger.IntervalTriggered += OnIntervalTriggered;
+            trigger.Start();
+
+            // 等待2秒钟以确保触发器启动并计算了正确的时间
+            Thread.Sleep(2000);
+
+            Assert.IsFalse(_eventTriggered, "事件不应该立即触发，因为设置为下一分钟");
+        }
+
+
+
 
         /// <summary>
         /// 测试从下一个分钟开始触发事件，延迟为0。

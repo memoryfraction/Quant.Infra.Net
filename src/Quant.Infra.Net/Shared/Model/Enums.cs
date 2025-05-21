@@ -8,7 +8,8 @@ namespace Quant.Infra.Net.Shared.Model
     public enum ExchangeEnvironment
     {
         Testnet=0,
-        Live=1
+        Live=1,
+        Paper=2
     }
 
     public enum StartMode
@@ -16,7 +17,8 @@ namespace Quant.Infra.Net.Shared.Model
         NextSecond = 0,
         NextMinute = 1,
         NextHour = 2,
-        NextDay = 3
+        NextDay = 3,
+        TodayBeforeUSMarketClose = 4 // 通常指美东时间下午四点
     }
 
 

@@ -84,10 +84,10 @@ namespace Quant.Infra.Net.Broker.Service
         /// 获取指定标的的最新成交价格。
         /// Get latest trade price for a given symbol.
         /// </summary>
-        public decimal GetLatestPrice(string symbol)
+        public async Task<decimal> GetLatestPriceAsync(string symbol)
         {
             var request = new LatestMarketDataRequest(symbol);
-            var quote = _dataClient.GetLatestTradeAsync(request).Result;
+            var quote = await _dataClient.GetLatestTradeAsync(request);
             return quote.Price;
         }
 
@@ -102,6 +102,11 @@ namespace Quant.Infra.Net.Broker.Service
         /// <param name="afterHours">是否盘后交易 / Allow extended hours</param>
         public async Task PlaceOrderAsync(string symbol, decimal quantity, OrderType orderType = OrderType.Market, Alpaca.Markets.TimeInForce timeInForce = Alpaca.Markets.TimeInForce.Day, bool afterHours = false)
         {
+            if (string.IsNullOrWhiteSpace(symbol))
+                throw new ArgumentNullException(nameof(symbol), "Symbol cannot be null or empty.");
+            if (quantity == 0)
+                throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity cannot be 0.");
+
             var side = quantity > 0 ? Alpaca.Markets.OrderSide.Buy : Alpaca.Markets.OrderSide.Sell;
             var qty = Math.Abs(quantity);
             var request = new NewOrderRequest(symbol, OrderQuantity.Fractional(qty), side, orderType, timeInForce)
@@ -118,6 +123,9 @@ namespace Quant.Infra.Net.Broker.Service
         /// </summary>
         public async Task ExitPositionAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol))
+                throw new ArgumentNullException(nameof(symbol), "Symbol cannot be null or empty.");
+
             try
             {
                 await _tradeClient.DeletePositionAsync(new DeletePositionRequest(symbol));
@@ -175,6 +183,9 @@ namespace Quant.Infra.Net.Broker.Service
         /// </summary>
         public void CancelOrder(Guid orderId)
         {
+            if (orderId == Guid.Empty)
+                throw new ArgumentException("Order ID cannot be empty.", nameof(orderId));
+
             try { _tradeClient.CancelOrderAsync(orderId).Wait(); }
             catch (Exception ex) { UtilityService.LogAndWriteLine("CancelOrder error: " + ex.Message); }
         }
@@ -185,6 +196,9 @@ namespace Quant.Infra.Net.Broker.Service
         /// </summary>
         public async Task<IAsset> GetAssetAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol))
+                throw new ArgumentNullException(nameof(symbol), "Symbol cannot be null or empty.");
+
             return await _tradeClient.GetAssetAsync(symbol);
         }
     }

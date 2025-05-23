@@ -21,6 +21,113 @@ namespace Quant.Infra.Net.Shared.Service
 {
     public class UtilityService
     {
+        private const int MessageIndent = 20;
+        private const int MaxLineWidth = 80;
+        private static readonly object _orderLogLock = new();
+        private static string GetLevelString(LogEventLevel level)
+        {
+            return level switch
+            {
+                LogEventLevel.Verbose => "VRB",
+                LogEventLevel.Debug => "DBG",
+                LogEventLevel.Information => "INF",
+                LogEventLevel.Warning => "WRN",
+                LogEventLevel.Error => "ERR",
+                LogEventLevel.Fatal => "FTL",
+                _ => "UNK"
+            };
+        }
+
+        private static string FormatMessage(string message, LogEventLevel level)
+        {
+            var timestamp = DateTime.Now.ToString("HH:mm:ss");
+            var levelString = GetLevelString(level);
+            var sb = new StringBuilder();
+
+            // Header line
+            sb.AppendLine($"[{timestamp} {levelString}] {new string('═', MaxLineWidth - timestamp.Length - levelString.Length - 5)}");
+
+            // Message lines (with word wrapping and indentation)
+            var words = message.Split(' ');
+            var currentLine = new StringBuilder();
+
+            foreach (var word in words)
+            {
+                if (currentLine.Length + word.Length + 1 > MaxLineWidth - MessageIndent)
+                {
+                    sb.AppendLine(new string(' ', MessageIndent) + currentLine);
+                    currentLine.Clear();
+                }
+                currentLine.Append(word + " ");
+            }
+
+            if (currentLine.Length > 0)
+            {
+                sb.AppendLine(new string(' ', MessageIndent) + currentLine);
+            }
+
+            // Footer line
+            sb.AppendLine(new string('═', MaxLineWidth));
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Enhanced logging with structured output to both console and Serilog
+        /// </summary>
+        public static void LogAndWriteLine(string message, LogEventLevel level = LogEventLevel.Information)
+        {
+            var formattedMessage = FormatMessage(message, level);
+
+            // Output to console with color
+            Console.ForegroundColor = GetConsoleColor(level);
+            Console.WriteLine(formattedMessage);
+            Console.ResetColor();
+
+            // Output to Serilog (remove formatting for log files)
+            LogToSerilog(message, level);
+        }
+
+        private static ConsoleColor GetConsoleColor(LogEventLevel level)
+        {
+            return level switch
+            {
+                LogEventLevel.Verbose => ConsoleColor.DarkGray,
+                LogEventLevel.Debug => ConsoleColor.Gray,
+                LogEventLevel.Information => ConsoleColor.Cyan,
+                LogEventLevel.Warning => ConsoleColor.Yellow,
+                LogEventLevel.Error => ConsoleColor.Red,
+                LogEventLevel.Fatal => ConsoleColor.DarkRed,
+                _ => ConsoleColor.White
+            };
+        }
+
+        private static void LogToSerilog(string message, LogEventLevel level)
+        {
+            switch (level)
+            {
+                case LogEventLevel.Verbose:
+                    Log.Verbose(message);
+                    break;
+                case LogEventLevel.Debug:
+                    Log.Debug(message);
+                    break;
+                case LogEventLevel.Information:
+                    Log.Information(message);
+                    break;
+                case LogEventLevel.Warning:
+                    Log.Warning(message);
+                    break;
+                case LogEventLevel.Error:
+                    Log.Error(message);
+                    break;
+                case LogEventLevel.Fatal:
+                    Log.Fatal(message);
+                    break;
+            }
+        }
+
+
 
         public static KlineInterval ConvertToKlineInterval(ResolutionLevel resolutionLevel)
         {

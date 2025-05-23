@@ -6,8 +6,8 @@ namespace Quant.Infra.Net.Shared.Service
 {
     /// <summary>
     /// 用于规律性触发事件，比如：每小时，每天，每分钟等;
-    /// 使用enum StartMode，可以设置从下一个小时/分钟/天开始;
-    /// 可以设置TimeSpan DelayTimeSpan属性，延迟时间可以为正或负
+    /// 支持: NextSecond, NextMinute, NextHour, NextDay, TodayBeforeUSMarketClose
+    /// TodayBeforeUSMarketClose 模式中，DelayTimeSpan 表示相对于美东市场收盘前的提前/延迟时长（正值延后，负值提前）。
     /// </summary>
     public class IntervalTrigger
     {
@@ -19,7 +19,9 @@ namespace Quant.Infra.Net.Shared.Service
         private DateTime _startDateTime;
         private TimeSpan _triggerInterval;
 
-        // 只读属性，用于获取下次触发的时间
+        /// <summary>
+        /// 下次触发的 UTC 时间
+        /// </summary>
         public DateTime NextTriggerTime => _startDateTime;
 
         public IntervalTrigger(StartMode mode, TimeSpan delayTimeSpan)
@@ -29,22 +31,17 @@ namespace Quant.Infra.Net.Shared.Service
             _triggerInterval = GetTriggerInterval(mode);
         }
 
-        // Starts the trigger event at the next whole hour/minute/day/second depending on the mode
         public void Start()
         {
-            _startDateTime = CalculateNextTriggerTime() + DelayTimeSpan;
+            _startDateTime = CalculateNextTriggerTime();
+            var timeUntilNext = _startDateTime - DateTime.UtcNow;
 
-            // 初次定时器的间隔为当前时间到下一个触发时间的差值
-            TimeSpan timeUntilNextTrigger = _startDateTime - DateTime.UtcNow;
-
-            // 设置定时器的间隔
-            _timer = new Timer(timeUntilNextTrigger.TotalMilliseconds);
+            _timer = new Timer(Math.Max(timeUntilNext.TotalMilliseconds, 1));
             _timer.Elapsed += OnIntervalTriggered;
-            _timer.AutoReset = false; // 确保每次触发后重新设置时间间隔
+            _timer.AutoReset = false;
             _timer.Start();
 
-            // Display StartMode in English to prevent user confusion
-            System.Console.WriteLine($"Start(). StartMode: {Mode}; The next trigger Utc time: {this.NextTriggerTime}");
+            LogNextTrigger();
         }
 
         public void Stop()
@@ -55,37 +52,16 @@ namespace Quant.Infra.Net.Shared.Service
 
         private void OnIntervalTriggered(object sender, ElapsedEventArgs e)
         {
-            // 触发事件
             IntervalTriggered?.Invoke(this, EventArgs.Empty);
 
-            // 重新计算下一个触发时间
-            _startDateTime = CalculateNextTriggerTime() + DelayTimeSpan;
-
-            // 再次计算下一次触发时间间隔
-            TimeSpan timeUntilNextTrigger = _startDateTime - DateTime.UtcNow;
-
-            // 更新定时器的间隔，确保每次都精确计算
-            if (timeUntilNextTrigger.TotalMilliseconds > 0)
-            {
-                _timer.Interval = timeUntilNextTrigger.TotalMilliseconds;
-            }
-            else
-            {
-                _timer.Interval = 1; // 立即触发
-            }
-
-            // 重启定时器
+            _startDateTime = CalculateNextTriggerTime();
+            var timeUntilNext = _startDateTime - DateTime.UtcNow;
+            _timer.Interval = Math.Max(timeUntilNext.TotalMilliseconds, 1);
             _timer.Start();
 
-            // Display StartMode in English to prevent user confusion
-            System.Console.WriteLine($"OnIntervalTriggered(). StartMode: {Mode}; The next trigger Utc time: {this.NextTriggerTime}");
+            LogNextTrigger();
         }
 
-        /// <summary>
-        /// 根据当前时间计算并返回下一个整点时间
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
         private DateTime CalculateNextTriggerTime()
         {
             DateTime utcNow = DateTime.UtcNow;
@@ -93,76 +69,47 @@ namespace Quant.Infra.Net.Shared.Service
             switch (Mode)
             {
                 case StartMode.NextSecond:
-                    if (utcNow.Millisecond == 0)
-                    {
-                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second);
-                    }
-                    else
-                    {
-                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second).AddSeconds(1);
-                    }
+                    return utcNow.Millisecond == 0
+                        ? new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second)
+                        : new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second).AddSeconds(1);
 
                 case StartMode.NextMinute:
-                    if (utcNow.Second == 0 && utcNow.Millisecond == 0)
-                    {
-                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0);
-                    }
-                    else
-                    {
-                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0).AddMinutes(1);
-                    }
+                    return (utcNow.Second == 0 && utcNow.Millisecond == 0)
+                        ? new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0)
+                        : new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0).AddMinutes(1);
 
                 case StartMode.NextHour:
-                    if (utcNow.Minute == 0 && utcNow.Second == 0 && utcNow.Millisecond == 0)
-                    {
-                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0);
-                    }
-                    else
-                    {
-                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0).AddHours(1);
-                    }
+                    return (utcNow.Minute == 0 && utcNow.Second == 0 && utcNow.Millisecond == 0)
+                        ? new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0)
+                        : new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0).AddHours(1);
 
                 case StartMode.NextDay:
-                    if (utcNow.Hour == 0 && utcNow.Minute == 0 && utcNow.Second == 0 && utcNow.Millisecond == 0)
-                    {
-                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0);
-                    }
+                    return (utcNow.Hour == 0 && utcNow.Minute == 0 && utcNow.Second == 0 && utcNow.Millisecond == 0)
+                        ? new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0)
+                        : new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0).AddDays(1);
+
+                case StartMode.TodayBeforeUSMarketClose:
+                    // 美东时区自动处理 EST/EDT
+                    var estZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                    var estNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, estZone);
+                    // 当日 16:00 收盘
+                    var estClose = new DateTime(estNow.Year, estNow.Month, estNow.Day, 16, 0, 0);
+                    var utcClose = TimeZoneInfo.ConvertTimeToUtc(estClose, estZone);
+                    // 计算触发目标时刻 = 收盘前 DelayTimeSpan
+                    var target = utcClose + DelayTimeSpan;
+
+                    if (utcNow < target)
+                        return target;
                     else
                     {
-                        return new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0).AddDays(1);
-                    }
-                case StartMode.TodayBeforeUSMarketClose:
-                    {
-                        // 1. 定位到美东时区（含夏令时）
-                        TimeZoneInfo easternZone;
-                        try
-                        {
-                            easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"); // Windows
-                        }
-                        catch (TimeZoneNotFoundException)
-                        {
-                            easternZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York"); // Linux/macOS
-                        }
-
-                        // 2. 将当前 UTC 转为美东时间
-                        DateTime estNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, easternZone);
-
-                        // 3. 当日美东 16:00
-                        DateTime todayCloseEst = new DateTime(
-                            estNow.Year, estNow.Month, estNow.Day,
-                            16, 0, 0, DateTimeKind.Unspecified);
-
-                        // 4. 判断是今天还是明天
-                        DateTime targetCloseEst = estNow < todayCloseEst
-                            ? todayCloseEst
-                            : todayCloseEst.AddDays(1);
-
-                        // 5. **不要在这里加 DelayTimeSpan**，只返回基准关闭时间的 UTC
-                        return TimeZoneInfo.ConvertTimeToUtc(targetCloseEst, easternZone);
+                        // 下一个交易日收盘
+                        var estCloseTomorrow = estClose.AddDays(1);
+                        var utcCloseTomorrow = TimeZoneInfo.ConvertTimeToUtc(estCloseTomorrow, estZone);
+                        return utcCloseTomorrow + DelayTimeSpan;
                     }
 
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(Mode), Mode, null);
             }
         }
 
@@ -175,8 +122,17 @@ namespace Quant.Infra.Net.Shared.Service
                 StartMode.NextHour => TimeSpan.FromHours(1),
                 StartMode.NextDay => TimeSpan.FromDays(1),
                 StartMode.TodayBeforeUSMarketClose => TimeSpan.FromDays(1),
-                _ => throw new ArgumentOutOfRangeException(nameof(mode), "Unsupported mode")
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported mode")
             };
+        }
+
+        private void LogNextTrigger()
+        {
+            var estZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            var estTime = TimeZoneInfo.ConvertTimeFromUtc(_startDateTime, estZone);
+            bool isDst = estZone.IsDaylightSavingTime(estTime);
+            string abbr = isDst ? "EDT" : "EST";
+            Console.WriteLine($"[IntervalTrigger] Mode={Mode}, NextTrigger={estTime:yyyy-MM-dd HH:mm} {abbr}");
         }
     }
 }

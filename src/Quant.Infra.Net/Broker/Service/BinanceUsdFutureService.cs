@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+
 namespace Quant.Infra.Net.Broker.Service
 {
     public class BinanceUsdFutureService : IBinanceUsdFutureService
@@ -187,6 +188,7 @@ namespace Quant.Infra.Net.Broker.Service
                 throw new Exception($"Failed to liquidate position for {symbol}. Error Code: {exitResponse.Error.Code}, Message: {exitResponse.Error.Message}");
             }
         }
+
 
         /// <summary>
         /// 调整持仓为目标百分比; 

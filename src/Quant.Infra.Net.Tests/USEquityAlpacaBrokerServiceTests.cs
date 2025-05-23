@@ -36,8 +36,10 @@ namespace Quant.Infra.Net.Tests
         [TestMethod]
         public async Task SetHoldings_ShouldIncreasePosition()
         {
-            await _broker.SetHoldingsAsync(Symbol, 0.01);
+            await _broker.SetHoldingsAsync(Symbol, 0.05);
+            await Task.Delay(1000); // 等待Alpaca API操作完成
             var hasPosition = await _broker.HasPositionAsync(Symbol);
+            await Task.Delay(1000); // 等待Alpaca API操作完成
             Assert.IsTrue(hasPosition);
 
             await _broker.LiquidateAsync(Symbol);

@@ -85,6 +85,9 @@ namespace Quant.Infra.Net.Broker.Service
         /// <param name="symbol">股票代码，例如 AAPL。</param>
         public async Task<bool> HasPositionAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol))
+                throw new ArgumentNullException(nameof(symbol), "Symbol cannot be null or empty.");
+
             return await _retryPolicy.ExecuteAsync(async () =>
             {
                 var position = await _alpacaClient.GetPositionAsync(symbol);
@@ -99,6 +102,9 @@ namespace Quant.Infra.Net.Broker.Service
         /// <param name="symbol">要平仓的股票代码。</param>
         public async Task LiquidateAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol))
+                throw new ArgumentNullException(nameof(symbol), "Symbol cannot be null or empty.");
+
             await _retryPolicy.ExecuteAsync(async () =>
             {
                 await _alpacaClient.ExitPositionAsync(symbol);
@@ -135,7 +141,7 @@ namespace Quant.Infra.Net.Broker.Service
                     throw new InvalidOperationException($"{symbol} is not shortable but a short position was requested.");
 
                 var accountEquity = await _alpacaClient.GetAccountEquityAsync();
-                var latestPrice = _alpacaClient.GetLatestPrice(symbol);
+                var latestPrice = await _alpacaClient.GetLatestPriceAsync(symbol);
 
                 var targetMarketValue = accountEquity * (decimal)rate;
                 var targetShares = targetMarketValue / latestPrice;

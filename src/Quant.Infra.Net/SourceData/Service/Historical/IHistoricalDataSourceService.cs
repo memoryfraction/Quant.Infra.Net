@@ -45,9 +45,6 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
             int limit,
             ResolutionLevel resolutionLevel = ResolutionLevel.Hourly
             );
-
-
-        
     }
 
 
@@ -60,6 +57,19 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
 
     public interface IHistoricalDataSourceServiceTraditionalFinance : IHistoricalDataSourceService
     {
-
+        /// <summary>
+        /// 从Binance取数据, 定义endDt和limit(数量)和ResolutionLevel
+        /// </summary>
+        /// <param name="underlying"></param>
+        /// <param name="endDt"></param>
+        /// <param name="limit">无上限，可以循环操作</param>
+        /// <param name="resolutionLevel"></param>
+        /// <returns></returns>
+        Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(
+            Underlying underlying,
+            DateTime endDt,
+            int limit,
+            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly
+            );
     }
 }

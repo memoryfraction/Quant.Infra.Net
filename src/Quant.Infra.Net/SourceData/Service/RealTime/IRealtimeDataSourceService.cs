@@ -41,7 +41,7 @@ namespace Quant.Infra.Net.SourceData.Service.RealTime
 
     }
 
-    public interface IRealtimeDataSourceServiceTraditionalFinance
+    public interface IRealtimeDataSourceServiceTraditionalFinance : IRealtimeDataSourceService
     {
 
     }

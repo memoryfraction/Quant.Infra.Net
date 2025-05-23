@@ -1,11 +1,19 @@
 ﻿// 以下为 Alpaca 美股经纪服务类的带注释实现（中英文 XML 注释）
+using Alpaca.Markets;
+using Microsoft.Data.Analysis;
 using Microsoft.Extensions.Configuration;
 using Polly;
 using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Model;
 using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.SourceData.Model;
+using Quant.Infra.Net.SourceData.Service.Historical;
+using Quant.Infra.Net.SourceData.Service.RealTime;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reactive;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Service
@@ -14,7 +22,7 @@ namespace Quant.Infra.Net.Broker.Service
     /// 美股 Alpaca 经纪服务实现类。
     /// Broker service implementation for U.S. equities using Alpaca API.
     /// </summary>
-    public class USEquityAlpacaBrokerService : IUSEquityBrokerService
+    public class USEquityAlpacaBrokerService : IUSEquityBrokerService, IHistoricalDataSourceServiceTraditionalFinance, IRealtimeDataSourceServiceTraditionalFinance
     {
         private readonly AsyncRetryPolicy _retryPolicy;
         private readonly string _apiKey, _apiSecret;
@@ -24,6 +32,7 @@ namespace Quant.Infra.Net.Broker.Service
         /// Current exchange environment (e.g., Live or Paper).
         /// </summary>
         public ExchangeEnvironment ExchangeEnvironment { get; set; }
+        public Currency BaseCurrency { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         /// <summary>
         /// 构造函数，初始化 API 密钥与重试策略。
@@ -158,6 +167,292 @@ namespace Quant.Infra.Net.Broker.Service
 
 
 
+        }
+
+
+        public async Task<string> GetFormattedAccountSummaryAsync()
+        {
+            return await _retryPolicy.ExecuteAsync(async () =>
+            {
+                return await _alpacaClient.GetFormattedAccountSummaryAsync();
+            });
+        }
+
+
+
+        /// <summary>
+        /// 拉取指定时间区间内的 OHLCV 数据，并返回一个 DataFrame。
+        /// Retrieve OHLCV data in the [startDate, endDate] interval and return as a DataFrame.
+        /// </summary>
+        /// <param name="underlying">标的资产信息，包括 Symbol 和 AssetType。  
+        /// Underlying asset info, including Symbol and AssetType.</param>
+        /// <param name="startDate">时间区间开始（包含）。  
+        /// Interval start date (inclusive).</param>
+        /// <param name="endDate">时间区间结束（包含）。  
+        /// Interval end date (inclusive).</param>
+        /// <param name="resolutionLevel">数据分辨率。  
+        /// Desired data resolution.</param>
+        /// <returns>包含 DateTime、Open、High、Low、Close、Volume、AdjustedClose 列的 DataFrame。  
+        /// A DataFrame with columns: DateTime, Open, High, Low, Close, Volume, AdjustedClose.</returns>
+        /// <exception cref="ArgumentNullException">当 underlying 为 null 时抛出。  
+        /// Thrown if underlying is null.</exception>
+        /// <exception cref="ArgumentException">当 endDate <= startDate 时抛出。  
+        /// Thrown if endDate is before or equal to startDate.</exception>
+        public async Task<DataFrame> GetHistoricalDataFrameAsync(
+            Underlying underlying,
+            DateTime startDate,
+            DateTime endDate,
+            ResolutionLevel resolutionLevel)
+        {
+            if (underlying == null)
+                throw new ArgumentNullException(nameof(underlying));
+            if (endDate <= startDate)
+                throw new ArgumentException("endDate must be after startDate", nameof(endDate));
+
+            var ohlcvs = await GetOhlcvListAsync(underlying, startDate, endDate, resolutionLevel);
+
+            var times = ohlcvs.Select(x => x.OpenDateTime);
+            var opens = ohlcvs.Select(x => x.Open);
+            var highs = ohlcvs.Select(x => x.High);
+            var lows = ohlcvs.Select(x => x.Low);
+            var closes = ohlcvs.Select(x => x.Close);
+            var vols = ohlcvs.Select(x => x.Volume);
+            var adjCloses = ohlcvs.Select(x => x.AdjustedClose);
+
+            var df = new DataFrame();
+            df.Columns.Add(new PrimitiveDataFrameColumn<DateTime>("DateTime", times));
+            df.Columns.Add(new PrimitiveDataFrameColumn<decimal>("Open", opens));
+            df.Columns.Add(new PrimitiveDataFrameColumn<decimal>("High", highs));
+            df.Columns.Add(new PrimitiveDataFrameColumn<decimal>("Low", lows));
+            df.Columns.Add(new PrimitiveDataFrameColumn<decimal>("Close", closes));
+            df.Columns.Add(new PrimitiveDataFrameColumn<decimal>("Volume", vols));
+            df.Columns.Add(new PrimitiveDataFrameColumn<decimal>("AdjustedClose", adjCloses));
+
+            return df;
+        }
+
+
+        /// <summary>
+        /// 获取给定标的的最新成交价格。
+        /// Get the latest trade price for the specified underlying asset.
+        /// </summary>
+        /// <param name="underlying">
+        /// 标的资产信息，包括 Symbol 和 AssetType。  
+        /// Underlying asset info, including Symbol and AssetType.
+        /// </param>
+        /// <returns>
+        /// 最新价格（以 decimal 表示）。  
+        /// The latest price as a decimal.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// 当 underlying 为 null 时抛出。  
+        /// Thrown if the underlying argument is null.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// 当不支持该 AssetType 时抛出。  
+        /// Thrown if the asset type is not supported by Alpaca.
+        /// </exception>
+        public async Task<decimal> GetLatestPriceAsync(Underlying underlying)
+        {
+            if (underlying == null)
+                throw new ArgumentNullException(nameof(underlying));
+
+            // Alpaca 目前仅支持传统美股（Stock）和加密现货（CryptoSpot）
+            switch (underlying.AssetType)
+            {
+                case AssetType.UsEquity:
+                    // 通过 AlpacaClient 获取最新成交价
+                    return await _alpacaClient.GetLatestPriceAsync(underlying.Symbol);
+
+                case AssetType.CryptoSpot:
+                    // 如果 Alpaca 开通了加密现货接口，也可走同一方法
+                    return await _alpacaClient.GetLatestPriceAsync(underlying.Symbol);
+
+                default:
+                    throw new InvalidOperationException(
+                        $"AssetType '{underlying.AssetType}' is not supported for price retrieval.");
+            }
+        }
+
+
+
+        /// <summary>
+        /// 获取给定交易对的最新 OHLCV 数据，从 <paramref name="endDt"/> 向前拉取 <paramref name="limit"/> 条记录。
+        /// Retrieve the most recent <paramref name="limit"/> OHLCV bars ending at <paramref name="endDt"/>.
+        /// </summary>
+        /// <param name="underlying">标的资产信息，包括 Symbol 和 AssetType。  
+        /// Underlying asset info, including Symbol and AssetType.</param>
+        /// <param name="endDt">拉取截止时间（包含）。  
+        /// End datetime (inclusive) for retrieval.</param>
+        /// <param name="limit">需要返回的 K 线条数。  
+        /// Number of bars to retrieve.</param>
+        /// <param name="resolutionLevel">数据分辨率（分钟/小时/日）。  
+        /// Desired data resolution (e.g., Minute, Hourly, Daily).</param>
+        /// <returns>按时间正序排列的 <paramref name="limit"/> 条 OHLCV 数据。  
+        /// An ordered sequence of the most recent <paramref name="limit"/> OHLCV bars.</returns>
+        /// <exception cref="ArgumentNullException">当 <paramref name="underlying"/> 为 null 时抛出。  
+        /// Thrown if <paramref name="underlying"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="limit"/> ≤ 0 时抛出。  
+        /// Thrown if <paramref name="limit"/> is not positive.</exception>
+        public Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(
+            Underlying underlying,
+            DateTime endDt,
+            int limit,
+            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
+        {
+            // endDt 向前拉 limit 条
+            return FetchOhlcvAsync(
+                underlying,
+                startUtc: DateTime.MinValue.ToUniversalTime(),
+                endUtc: endDt.ToUniversalTime(),
+                limit: limit,
+                resolutionLevel);
+        }
+
+        /// <summary>
+        /// 获取给定交易对在指定时间区间 [<paramref name="startDt"/>, <paramref name="endDt"/>] 内的全部 OHLCV 数据。
+        /// Retrieve all OHLCV bars between <paramref name="startDt"/> and <paramref name="endDt"/> inclusive.
+        /// </summary>
+        /// <param name="underlying">标的资产信息，包括 Symbol 和 AssetType。  
+        /// Underlying asset info, including Symbol and AssetType.</param>
+        /// <param name="startDt">时间区间开始（包含）。  
+        /// Start datetime (inclusive) for retrieval.</param>
+        /// <param name="endDt">时间区间结束（包含）。  
+        /// End datetime (inclusive) for retrieval.</param>
+        /// <param name="resolutionLevel">数据分辨率（分钟/小时/日）。  
+        /// Desired data resolution (e.g., Minute, Hourly, Daily).</param>
+        /// <returns>按时间正序排列的 OHLCV 数据序列，覆盖整个指定区间。  
+        /// An ordered sequence of OHLCV bars covering the specified interval.</returns>
+        /// <exception cref="ArgumentNullException">当 <paramref name="underlying"/> 为 null 时抛出。  
+        /// Thrown if <paramref name="underlying"/> is null.</exception>
+        /// <exception cref="ArgumentException">当 <paramref name="endDt"/> ≤ <paramref name="startDt"/> 时抛出。  
+        /// Thrown if <paramref name="endDt"/> is before or equal to <paramref name="startDt"/>.</exception>
+        public Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(
+            Underlying underlying,
+            DateTime startDt,
+            DateTime endDt,
+            ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
+        {
+            // 在 [startDt, endDt] 范围内拉全量
+            return FetchOhlcvAsync(
+                underlying,
+                startUtc: startDt.ToUniversalTime(),
+                endUtc: endDt.ToUniversalTime(),
+                limit: null,
+                resolutionLevel);
+        }
+
+
+
+
+        /// <summary>
+        /// 核心拉取、映射并（可选）聚合 OHLCV 数据的方法。
+        /// </summary>
+        private async Task<IEnumerable<Ohlcv>> FetchOhlcvAsync(
+            Underlying underlying,
+            DateTime startUtc,
+            DateTime endUtc,
+            int? limit,
+            ResolutionLevel resolutionLevel)
+        {
+            // 1) 校验
+            if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+            if (endUtc <= startUtc && limit == null)
+                throw new ArgumentException("endUtc must be after startUtc when limit is not specified");
+
+            // 2) 确定分页参数
+            var tf = resolutionLevel == ResolutionLevel.Daily ? BarTimeFrame.Day : BarTimeFrame.Minute;
+            var aggregateHr = resolutionLevel == ResolutionLevel.Hourly;
+            var needed = limit.HasValue
+                                 ? (aggregateHr ? limit.Value * 60 : limit.Value)
+                                 : int.MaxValue;  // 如果不按 limit 拉，就用时间窗口决定何时停
+
+            var rawBars = new List<IBar>();
+            var cursor = endUtc;
+            const int pageSize = 1000;
+
+            // 3) 分页拉取
+            while (rawBars.Count < needed)
+            {
+                var take = limit.HasValue
+                    ? Math.Min(pageSize, needed - rawBars.Count)
+                    : pageSize;
+
+                var req = new HistoricalBarsRequest(
+                    underlying.Symbol,
+                    startUtc,
+                    cursor,
+                    tf
+                ).WithPageSize((uint)take);
+
+                var page = await _alpacaClient.ListHistoricalBarsAsync(req);
+                if (page == null || page.Count == 0) break;
+
+                rawBars.InsertRange(0, page);
+                cursor = page.Min(b => b.TimeUtc).AddSeconds(-1);
+
+                // 如果是按时间窗口拉，当已跑过 startUtc，就停
+                if (!limit.HasValue && cursor <= startUtc) break;
+            }
+
+            // 4) 映射到 Ohlcv，并按时间正序
+            var mapped = rawBars
+                .Select(b => new Ohlcv
+                {
+                    Symbol = underlying.Symbol,
+                    OpenDateTime = b.TimeUtc,
+                    CloseDateTime = b.TimeUtc,
+                    Open = b.Open,
+                    High = b.High,
+                    Low = b.Low,
+                    Close = b.Close,
+                    Volume = b.Volume,
+                    AdjustedClose = b.Close
+                })
+                .OrderBy(o => o.OpenDateTime)
+                .ToList();
+
+            // 5) 如果是按小时聚合
+            if (aggregateHr)
+            {
+                mapped = mapped
+                    .GroupBy(o => new DateTime(
+                        o.OpenDateTime.Year,
+                        o.OpenDateTime.Month,
+                        o.OpenDateTime.Day,
+                        o.OpenDateTime.Hour, 0, 0, DateTimeKind.Utc))
+                    .Select(g =>
+                    {
+                        var first = g.First();
+                        var last = g.Last();
+                        return new Ohlcv
+                        {
+                            Symbol = first.Symbol,
+                            OpenDateTime = g.Key,
+                            CloseDateTime = g.Key.AddHours(1).AddSeconds(-1),
+                            Open = first.Open,
+                            High = g.Max(x => x.High),
+                            Low = g.Min(x => x.Low),
+                            Close = last.Close,
+                            Volume = g.Sum(x => x.Volume),
+                            AdjustedClose = last.Close
+                        };
+                    })
+                    .OrderBy(o => o.OpenDateTime)
+                    .ToList();
+            }
+
+            // 6) 如果指定了 limit，则取最后 limit 条
+            if (limit.HasValue && mapped.Count > limit.Value)
+                return mapped.Skip(mapped.Count - limit.Value);
+
+            // 否则，返回整个时间窗口的数据
+            return mapped;
+        }
+
+        public async Task<bool> IsMarketOpeningAsync()
+        {
+            return await _alpacaClient.IsMarketOpenNowAsync();
         }
     }
 }

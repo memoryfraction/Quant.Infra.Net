@@ -1,4 +1,6 @@
-﻿using Quant.Infra.Net.Shared.Model;
+﻿using Alpaca.Markets;
+using Quant.Infra.Net.Shared.Model;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Interfaces
@@ -63,5 +65,10 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// <returns>A task representing the asynchronous operation.  
         /// 表示设置持仓的异步任务。</returns>
         Task SetHoldingsAsync(string symbol, double rate);
+
+
+        Task<string> GetFormattedAccountSummaryAsync();
+
+        Task<bool> IsMarketOpeningAsync();
     }
 }

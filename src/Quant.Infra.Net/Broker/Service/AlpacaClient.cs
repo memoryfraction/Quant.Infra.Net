@@ -1,6 +1,4 @@
 ﻿using Alpaca.Markets;
-using InterReact;
-using NodaTime;
 using Quant.Infra.Net.Broker.Model;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
@@ -171,9 +169,12 @@ namespace Quant.Infra.Net.Broker.Service
         /// 当前市场是否开盘。
         /// Is the market currently open?
         /// </summary>
-        public bool IsMarketOpenNow()
+        public async Task<bool> IsMarketOpenNowAsync()
         {
-            try { return _tradeClient.GetClockAsync().Result.IsOpen; }
+            try {
+                var clock = await _tradeClient.GetClockAsync();
+                return clock.IsOpen; 
+            }
             catch (Exception ex) { UtilityService.LogAndWriteLine(ex.ToString()); return false; }
         }
 
@@ -201,5 +202,43 @@ namespace Quant.Infra.Net.Broker.Service
 
             return await _tradeClient.GetAssetAsync(symbol);
         }
+
+
+        /// <summary>
+        /// Get a formatted account summary string (in English).
+        /// Includes equity, cash, and current positions.
+        /// </summary>
+        public async Task<string> GetFormattedAccountSummaryAsync()
+        {
+            var cash = await GetCashValueAsync();
+            var equity = await GetAccountEquityAsync();
+            var positions = await GetAllPositionsAsync();
+
+            var lines = new List<string>
+            {
+                $"[Account Summary]",
+                $"Total Equity     : {equity:C2}",
+                $"Available Cash   : {cash:C2}",
+                $"Open Positions   : {positions.Count}"
+            };
+
+            foreach (var pos in positions)
+            {
+                lines.Add($"- {pos.Symbol} | Qty: {pos.Quantity} | Entry Avg: {pos.AverageEntryPrice:C2} | Market Value: {pos.MarketValue:C2} | Unrealized PnL: {pos.UnrealizedProfitLoss:C2}");
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+
+        /// <summary>
+        /// 薄封装：拉取历史 K 线（Bars），返回 Items 列表
+        /// </summary>
+        public async Task<IReadOnlyList<IBar>> ListHistoricalBarsAsync(HistoricalBarsRequest req)
+        {
+            return (await _dataClient.ListHistoricalBarsAsync(req)).Items;
+        }
+          
+
     }
 }

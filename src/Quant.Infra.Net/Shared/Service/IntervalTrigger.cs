@@ -90,7 +90,7 @@ namespace Quant.Infra.Net.Shared.Service
 
                 case StartMode.TodayBeforeUSMarketClose:
                     // 美东时区自动处理 EST/EDT
-                    var estZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                    var estZone = GetEasternTimeZone();
                     var estNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, estZone);
                     // 当日 16:00 收盘
                     var estClose = new DateTime(estNow.Year, estNow.Month, estNow.Day, 16, 0, 0);
@@ -132,7 +132,19 @@ namespace Quant.Infra.Net.Shared.Service
             var estTime = TimeZoneInfo.ConvertTimeFromUtc(_startDateTime, estZone);
             bool isDst = estZone.IsDaylightSavingTime(estTime);
             string abbr = isDst ? "EDT" : "EST";
-            Console.WriteLine($"[IntervalTrigger] Mode={Mode}, NextTrigger={estTime:yyyy-MM-dd HH:mm} {abbr}");
+            Console.WriteLine($"[IntervalTrigger] Mode={Mode}, NextTrigger (EST/EDT)={estTime:yyyy-MM-dd HH:mm} {abbr}, UTC={_startDateTime:HH:mm:ss} ");
+        }
+
+        private static TimeZoneInfo GetEasternTimeZone()
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"); // Windows
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("America/New_York"); // Linux/macOS
+            }
         }
     }
 }

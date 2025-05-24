@@ -1,4 +1,5 @@
 ﻿using Alpaca.Markets;
+using NodaTime;
 using Quant.Infra.Net.Broker.Model;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
@@ -28,6 +29,7 @@ namespace Quant.Infra.Net.Broker.Service
             var env = mode == ExchangeEnvironment.Paper ? Environments.Paper : Environments.Live;
             _tradeClient = env.GetAlpacaTradingClient(new SecretKey(creds.ApiKey, creds.Secret));
             _dataClient = env.GetAlpacaDataClient(new SecretKey(creds.ApiKey, creds.Secret));
+
         }
 
         /// <summary>
@@ -171,9 +173,10 @@ namespace Quant.Infra.Net.Broker.Service
         /// </summary>
         public async Task<bool> IsMarketOpenNowAsync()
         {
-            try {
+            try
+            {
                 var clock = await _tradeClient.GetClockAsync();
-                return clock.IsOpen; 
+                return clock.IsOpen;
             }
             catch (Exception ex) { UtilityService.LogAndWriteLine(ex.ToString()); return false; }
         }
@@ -236,9 +239,92 @@ namespace Quant.Infra.Net.Broker.Service
         /// </summary>
         public async Task<IReadOnlyList<IBar>> ListHistoricalBarsAsync(HistoricalBarsRequest req)
         {
-            return (await _dataClient.ListHistoricalBarsAsync(req)).Items;
+            // 指定只从 IEX 拉取数据
+            req.Feed = MarketDataFeed.Iex;
+            var response = await _dataClient.ListHistoricalBarsAsync(req);        
+            return response.Items;
         }
-          
+
+
+
+        /// <summary>
+        /// 根据 分辨率 + 条数，计算回溯的 startUtc
+        /// – Tick/Second/Minute/Hourly/Monthly：直接按时间偏移
+        /// – Daily：按交易日数回溯（避免周末/节假日）
+        /// – Weekly：按交易周数回溯（每周取周一开盘）
+        /// </summary>
+        public async Task<DateTime> CalculateStartUtcAsync(
+            DateTime endUtc,
+            int count,
+            ResolutionLevel resolutionLevel)
+        {
+            switch (resolutionLevel)
+            {
+                case ResolutionLevel.Tick:
+                case ResolutionLevel.Second:
+                    return endUtc.AddSeconds(-count);
+
+                case ResolutionLevel.Minute:
+                    return endUtc.AddMinutes(-count);
+
+                case ResolutionLevel.Hourly:
+                    return endUtc.AddHours(-count);
+
+                case ResolutionLevel.Monthly:
+                    return endUtc.AddMonths(-count);
+
+                case ResolutionLevel.Daily:
+                    return await CalculateByTradingDaysAsync(endUtc, count);
+
+                case ResolutionLevel.Weekly:
+                    // 这里把 “1 周” 当作 5 个交易日
+                    return await CalculateByTradingDaysAsync(endUtc, count * 5);
+
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(resolutionLevel), resolutionLevel,
+                        "Unsupported resolution for startUtc calc");
+            }
+        }
+
+
+        /// <summary>
+        /// 核心：按交易日数回溯，返回startDateUtc;
+        /// Core: Calculate the UTC start time by looking back a given number of trading days.
+        /// </summary>
+        /// <param name="endUtc">
+        /// 结束时间（UTC）  
+        /// End UTC datetime.
+        /// </param>
+        /// <param name="tradingDaysBack">
+        /// 回溯的交易日天数  
+        /// Number of trading days to look back.
+        /// </param>
+        /// <returns>
+        /// 起始时间（UTC）  
+        /// Start UTC datetime.
+        /// </returns>
+        private async Task<DateTime> CalculateByTradingDaysAsync(
+            DateTime endUtc,
+            int tradingDaysBack)
+        {
+            // 1. 按比例估算需要回溯的日历天数，并加上 buffer
+            const double tradingDaysPerYear = 252.0;
+            const double calendarDaysPerYear = 365.0;
+            const int bufferDays = 10;
+
+            int estimatedCalendarDays = (int)Math.Ceiling(
+                    tradingDaysBack * (calendarDaysPerYear / tradingDaysPerYear))
+                + bufferDays;
+
+            // 2. 直接用一次请求拉取这段区间的交易日历
+            var lookbackStart = 
+                endUtc.AddDays(-estimatedCalendarDays);
+
+            return lookbackStart;
+        }
+
+
 
     }
 }

@@ -294,16 +294,21 @@ namespace Quant.Infra.Net.Broker.Service
         /// Thrown if <paramref name="underlying"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="limit"/> ≤ 0 时抛出。  
         /// Thrown if <paramref name="limit"/> is not positive.</exception>
-        public Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(
+        public async Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(
             Underlying underlying,
             DateTime endDt,
             int limit,
             ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
         {
-            // endDt 向前拉 limit 条
-            return FetchOhlcvAsync(
+            //  根据endDt + limit + resolutionLevel，计算startUtc   
+            var startUtcDate = await _alpacaClient.CalculateStartUtcAsync(
+                endDt.ToUniversalTime(),
+                limit,
+                resolutionLevel);
+
+            return await FetchOhlcvAsync(
                 underlying,
-                startUtc: DateTime.MinValue.ToUniversalTime(),
+                startUtc: startUtcDate,
                 endUtc: endDt.ToUniversalTime(),
                 limit: limit,
                 resolutionLevel);

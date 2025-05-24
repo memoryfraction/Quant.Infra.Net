@@ -5,6 +5,7 @@ using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -217,12 +218,16 @@ namespace Quant.Infra.Net.Broker.Service
             var equity = await GetAccountEquityAsync();
             var positions = await GetAllPositionsAsync();
 
+            // force U.S. dollar formatting
+            var us = CultureInfo.GetCultureInfo("en-US");
+
+            // build lines
             var lines = new List<string>
             {
-                $"[Account Summary]",
-                $"Total Equity     : {equity:C2}",
-                $"Available Cash   : {cash:C2}",
-                $"Open Positions   : {positions.Count}"
+                "[Account Summary]",
+                $"Total Equity     : {equity.ToString("C2", us)}",
+                $"Available Cash   : {cash.ToString("C2", us)}",
+                $"Open Positions count   : {positions.Count}"
             };
 
             foreach (var pos in positions)

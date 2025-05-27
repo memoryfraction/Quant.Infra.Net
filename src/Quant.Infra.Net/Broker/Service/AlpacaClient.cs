@@ -97,7 +97,7 @@ namespace Quant.Infra.Net.Broker.Service
         /// Submit a market or limit order with side and extended-hours support.
         /// </summary>
         /// <param name="symbol">标的代码 / Symbol</param>
-        /// <param name="quantity">数量，正为买入，负为卖出 / Quantity (positive = buy, negative = sell)</param>
+        /// <param name="quantity">数量,小数会被处理为整数，正为买入，负为卖出 / Quantity (positive = buy, negative = sell)</param>
         /// <param name="orderType">订单类型（市价、限价等）/ Order type</param>
         /// <param name="timeInForce">订单有效时间（Day, GTC）/ Time in force</param>
         /// <param name="afterHours">是否盘后交易 / Allow extended hours</param>
@@ -107,17 +107,20 @@ namespace Quant.Infra.Net.Broker.Service
                 throw new ArgumentNullException(nameof(symbol), "Symbol cannot be null or empty.");
             if (quantity == 0)
                 throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity cannot be 0.");
-            if (quantity % 1 != 0) // 2.9 -> 2; -2.9 -> -2
-                quantity = (int)quantity;
 
-            var side = quantity > 0 ? Alpaca.Markets.OrderSide.Buy : Alpaca.Markets.OrderSide.Sell;
+            var side = quantity > 0 ? OrderSide.Buy : OrderSide.Sell;
             var qty = Math.Abs(quantity);
-            var request = new NewOrderRequest(symbol, OrderQuantity.Fractional(qty), side, orderType, timeInForce)
+
+            OrderQuantity qtyValue = OrderQuantity.FromInt64((int)qty);
+
+            var request = new NewOrderRequest(symbol, qtyValue, side, orderType, timeInForce)
             {
                 ExtendedHours = afterHours
             };
+
             await _tradeClient.PostOrderAsync(request);
         }
+
 
 
         /// <summary>

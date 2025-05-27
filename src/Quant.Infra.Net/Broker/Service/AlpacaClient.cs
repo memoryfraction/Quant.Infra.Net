@@ -107,6 +107,8 @@ namespace Quant.Infra.Net.Broker.Service
                 throw new ArgumentNullException(nameof(symbol), "Symbol cannot be null or empty.");
             if (quantity == 0)
                 throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity cannot be 0.");
+            if (quantity % 1 != 0) // 2.9 -> 2; -2.9 -> -2
+                quantity = (int)quantity;
 
             var side = quantity > 0 ? Alpaca.Markets.OrderSide.Buy : Alpaca.Markets.OrderSide.Sell;
             var qty = Math.Abs(quantity);

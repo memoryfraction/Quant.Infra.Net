@@ -188,6 +188,7 @@ namespace Quant.Infra.Net.Tests
             Assert.IsTrue(list.All(o => o.Symbol == Symbol), "Each Ohlcv.Symbol should match.");
         }
 
+
         /// <summary>
         /// 测试：GetOhlcvListAsync(startDt, endDt) 应返回按时间排序的非空序列。
         /// </summary>
@@ -210,6 +211,59 @@ namespace Quant.Infra.Net.Tests
                     "Bars should be in ascending time order.");
             }
         }
+
+
+        /// <summary>
+        /// 测试：PlaceOrderAsync 应能正确处理负的小数股数量（即卖出 fractional share），并成功建立空头仓位。
+        /// Test: PlaceOrderAsync should correctly handle negative fractional quantity (i.e., shorting fractional share),
+        /// and successfully establish a short position.
+        /// </summary>
+        /// <remarks>
+        /// 注意：此测试依赖 Alpaca 模拟账户是否允许卖空 fractional shares（大多数标的默认不支持）。
+        /// 如果失败，请确认 symbol 是否可交易且市场已开盘。
+        /// Note: This test depends on Alpaca's simulated account allowing fractional shorting (which is restricted for most symbols).
+        /// If it fails, check whether the symbol is tradable and the market is open.
+        /// </remarks>
+        [TestMethod]
+        public async Task PlaceOrderAsync_ShouldSupportNegativeFractionalQuantity()
+        {
+            // 检查是否开盘时间，如果不开盘，则跳过测试
+            // Skip the test if market is closed
+            //var isMarketOpen = await _brokerService.IsMarketOpeningAsync();
+            //if (!isMarketOpen)
+            //{
+            //    Assert.Inconclusive("Market is closed, skipping test.");
+            //    return;
+            //}
+
+            // 下单：尝试设置 -0.05 百分比的仓位，打印结果;
+            // Attempt to short 0.01 fractional share
+            try
+            {
+                //await _brokerService.LiquidateAsync(Symbol); // 确保没有持仓
+                await Task.Delay(1500);
+                await _brokerService.SetHoldingsAsync(Symbol, -0.05);
+                await Task.Delay(1500); // 等待订单处理 / Wait for order execution
+
+                var hasPosition = await _brokerService.HasPositionAsync(Symbol);
+                Console.WriteLine($"Has short fractional position: {hasPosition}");
+
+                // 如果实际账户不支持 fractional short，可能 hasPosition 为 false
+                // May fail if Alpaca account doesn't support fractional shorting
+                Assert.IsTrue(hasPosition, "Expected to have short fractional position, but none found.");
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail($"PlaceOrderAsync failed with exception: {ex.Message}");
+            }
+            finally
+            {
+                // 清仓 / Ensure position is cleared
+                await _brokerService.LiquidateAsync(Symbol);
+                await Task.Delay(1000);
+            }
+        }
+
     }
 
 }

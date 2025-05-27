@@ -234,11 +234,18 @@ namespace Quant.Infra.Net.Broker.Service
 
             foreach (var pos in positions)
             {
-                lines.Add($"- {pos.Symbol} | Qty: {pos.Quantity} | Entry Avg: {pos.AverageEntryPrice:C2} | Market Value: {pos.MarketValue:C2} | Unrealized PnL: {pos.UnrealizedProfitLoss:C2}");
+                lines.Add(string.Format(us,
+                    "- {0} | Qty: {1} | Entry Avg: {2:C2} | Market Value: {3:C2} | Unrealized PnL: {4:C2}",
+                    pos.Symbol,
+                    pos.Quantity,
+                    pos.AverageEntryPrice,
+                    pos.MarketValue,
+                    pos.UnrealizedProfitLoss));
             }
 
             return string.Join(Environment.NewLine, lines);
         }
+
 
 
         /// <summary>

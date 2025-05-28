@@ -229,18 +229,18 @@ namespace Quant.Infra.Net.Tests
         {
             // 检查是否开盘时间，如果不开盘，则跳过测试
             // Skip the test if market is closed
-            //var isMarketOpen = await _brokerService.IsMarketOpeningAsync();
-            //if (!isMarketOpen)
-            //{
-            //    Assert.Inconclusive("Market is closed, skipping test.");
-            //    return;
-            //}
+            var isMarketOpen = await _brokerService.IsMarketOpeningAsync();
+            if (!isMarketOpen)
+            {
+                Assert.Inconclusive("Market is closed, skipping test.");
+                return;
+            }
 
             // 下单：尝试设置 -0.05 百分比的仓位，打印结果;
             // Attempt to short 0.01 fractional share
             try
             {
-                //await _brokerService.LiquidateAsync(Symbol); // 确保没有持仓
+                await _brokerService.LiquidateAsync(Symbol); // 确保没有持仓
                 await Task.Delay(1500);
                 await _brokerService.SetHoldingsAsync(Symbol, -0.05);
                 await Task.Delay(1500); // 等待订单处理 / Wait for order execution

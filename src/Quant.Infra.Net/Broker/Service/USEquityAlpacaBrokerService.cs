@@ -6,6 +6,7 @@ using Polly;
 using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Model;
+using Quant.Infra.Net.Shared.Extension;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service.Historical;
@@ -300,19 +301,138 @@ namespace Quant.Infra.Net.Broker.Service
             int limit,
             ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
         {
-            //  根据endDt + limit + resolutionLevel，计算startUtc   
-            var startUtcDate = await _alpacaClient.CalculateStartUtcAsync(
-                endDt.ToUniversalTime(),
-                limit,
-                resolutionLevel);
+            if (underlying == null)
+                throw new ArgumentNullException(nameof(underlying));
+            if (limit <= 0)
+                throw new ArgumentOutOfRangeException(nameof(limit), "limit must be positive");
+            if (resolutionLevel == ResolutionLevel.Daily)
+            {
+                var historicalOhlcvsBeforeToday = await GetHistoricalBarsAsync(
+                    underlying,
+                    endUtc: endDt,
+                    limit: limit,
+                    resolutionLevel);
 
-            return await FetchOhlcvAsync(
-                underlying,
-                startUtc: startUtcDate,
-                endUtc: endDt.ToUniversalTime(),
-                limit: limit,
-                resolutionLevel);
+                // Get today's ohlcv instance
+                var todayOhlcv = await GetTodayOhlcvAsync(underlying);
+
+                // 合并，用倒叙方式，只保留正确的limit个ohlcv; 作为res
+                var ohlcvs = await MergeAsync(historicalOhlcvsBeforeToday, todayOhlcv, limit);
+
+                // 返回;
+                return ohlcvs;
+
+            }
+            else
+            {
+                return await GetHistoricalBarsAsync(
+                    underlying,
+                    endUtc: endDt,
+                    limit: limit,
+                    resolutionLevel);
+            }
+
         }
+
+        /// <summary>
+        /// 分钟级获取今天的 OHLCV 数据，最终合并为一个 Ohlcv 实例。如果今天不是交易日或市场未开盘，则返回 null。  
+        /// Retrieve today’s in-progress OHLCV by fetching minute bars since market open and aggregating.  
+        /// Returns null if today is not a trading day or market is not open yet.
+        /// </summary>
+        public async Task<Ohlcv> GetTodayOhlcvAsync(Underlying underlying)
+        {
+            if (underlying == null)
+                throw new ArgumentNullException(nameof(underlying));
+
+            bool isMarketOpening = await _alpacaClient.IsMarketOpenNowAsync();
+            if (isMarketOpening == false)
+                return null;
+
+
+            // 1) 当前 UTC 时间
+            var nowUtc = DateTime.UtcNow;
+
+            // 2) 计算今天美东开盘时间对应的 UTC：09:30 ET = 13:30 UTC
+            var marketOpenUtc = new DateTime(
+                nowUtc.Year, nowUtc.Month, nowUtc.Day,
+                13, 30, 0, DateTimeKind.Utc);
+
+            // 如果未到开盘，返回 null
+            if (nowUtc < marketOpenUtc)
+                return null;
+
+            // 3) 计算已过去的分钟数 + 1
+            int minutesSinceOpen = (int)Math.Ceiling((nowUtc - marketOpenUtc).TotalMinutes) + 1;
+
+            // 4) 拉取从开盘到现在的分钟级数据
+            var bars = (await GetOhlcvListAsync(
+                underlying,
+                endDt: nowUtc,
+                limit: minutesSinceOpen,
+                resolutionLevel: ResolutionLevel.Minute))
+                .Where(b => b.OpenDateTime.Date == nowUtc.Date)
+                .ToList();
+
+            if (!bars.Any())
+                return null;
+
+            // 5) 聚合为单个 Ohlcv
+            var first = bars.First();
+            var last = bars.Last();
+            return new Ohlcv
+            {
+                Symbol = underlying.Symbol,
+                OpenDateTime = first.OpenDateTime,
+                CloseDateTime = nowUtc,
+                Open = first.Open,
+                High = bars.Max(b => b.High),
+                Low = bars.Min(b => b.Low),
+                Close = last.Close,
+                Volume = bars.Sum(b => b.Volume),
+                AdjustedClose = last.Close
+            };
+        }
+
+
+       
+
+        /// <summary>
+        /// 合并历史 OHLCV 列表与今天的未完成 Ohlcv，倒序保留最新 limit 条后再升序返回。  
+        /// If today's ohlcv is null, returns up to the last limit historical bars.
+        /// </summary>
+        public async Task<IEnumerable<Ohlcv>> MergeAsync(IEnumerable<Ohlcv> historical, Ohlcv todayOhlcv, int limit)
+        {
+            if (todayOhlcv == null)
+                return historical
+                    .Reverse()
+                    .Take(limit)
+                    .Reverse()
+                    .ToList();
+
+            var list = new List<Ohlcv>(historical ?? Enumerable.Empty<Ohlcv>());
+
+            // If the last historical bar is from today, replace it with the up-to-date todayOhlcv
+            if (list.Any() && list.Last().OpenDateTime.Date == todayOhlcv.OpenDateTime.Date)
+            {
+                list[list.Count - 1] = todayOhlcv;
+            }
+            else
+            {
+                // Otherwise append today's bar
+                list.Add(todayOhlcv);
+            }
+
+            // 倒序取最新 limit 条，再升序
+            var result = list
+                .AsEnumerable()
+                .Reverse()
+                .Take(limit)
+                .Reverse()
+                .ToList();
+
+            return result;
+        }
+
 
         /// <summary>
         /// 获取给定交易对在指定时间区间 [<paramref name="startDt"/>, <paramref name="endDt"/>] 内的全部 OHLCV 数据。
@@ -455,9 +575,33 @@ namespace Quant.Infra.Net.Broker.Service
             return mapped;
         }
 
+
+        /// <summary>
+        /// 从 endUtc 向前取 limit 条 OHLCV 数据。
+        /// </summary>
+        private async Task<IEnumerable<Ohlcv>> GetHistoricalBarsAsync(
+            Underlying underlying,
+            DateTime endUtc,
+            int limit,
+            ResolutionLevel resolutionLevel)
+        {
+            // 1) 校验
+            if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+            if (limit <= 0) throw new ArgumentException("limit must be > 0", nameof(limit));
+
+
+            // 只保留最后 limit 根，按时间升序
+            var rawBars = await _alpacaClient.GetHistoricalBarsAsync(underlying,endUtc,limit,resolutionLevel);
+
+            return rawBars;
+        }
+
+
         public async Task<bool> IsMarketOpeningAsync()
         {
             return await _alpacaClient.IsMarketOpenNowAsync();
         }
+
+        
     }
 }

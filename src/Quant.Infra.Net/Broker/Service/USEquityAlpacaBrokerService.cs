@@ -6,7 +6,6 @@ using Polly;
 using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Model;
-using Quant.Infra.Net.Shared.Extension;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service.Historical;
@@ -14,7 +13,7 @@ using Quant.Infra.Net.SourceData.Service.RealTime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Service
@@ -28,6 +27,10 @@ namespace Quant.Infra.Net.Broker.Service
         private readonly AsyncRetryPolicy _retryPolicy;
         private readonly string _apiKey, _apiSecret;
         private readonly AlpacaClient _alpacaClient;
+        IAlpacaTradingClient _alpacaTradingClient;
+
+
+
         /// <summary>
         /// 当前交易环境（实盘 / 模拟盘）。
         /// Current exchange environment (e.g., Live or Paper).
@@ -47,6 +50,11 @@ namespace Quant.Infra.Net.Broker.Service
             ExchangeEnvironment = (ExchangeEnvironment)Enum.Parse(typeof(ExchangeEnvironment), configuration["Exchange:Environment"].ToString());
 
             _alpacaClient = new AlpacaClient(new BrokerCredentials { ApiKey = _apiKey, Secret = _apiSecret }, ExchangeEnvironment);
+            // 初始化_tradingClient
+            var credentials = new SecretKey(_apiKey, _apiSecret);
+            _alpacaTradingClient = ExchangeEnvironment == ExchangeEnvironment.Live
+                ? Environments.Live.GetAlpacaTradingClient(credentials)
+                : Environments.Paper.GetAlpacaTradingClient(credentials);
 
             _retryPolicy = Policy
                 .Handle<Exception>()
@@ -602,6 +610,12 @@ namespace Quant.Infra.Net.Broker.Service
             return await _alpacaClient.IsMarketOpenNowAsync();
         }
 
-        
+        public async Task<IAccount> GetAccountAsync()
+        {
+            // 直接调用 Alpaca SDK
+            var account = await _alpacaTradingClient.GetAccountAsync(); 
+            return account;
+        }
+
     }
 }

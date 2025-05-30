@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Alpaca.Markets;
+using Microsoft.Extensions.Configuration;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Service;
 using Quant.Infra.Net.Shared.Model;
@@ -327,15 +328,31 @@ namespace Quant.Infra.Net.Tests
             Assert.IsTrue(list.Last().OpenDateTime <= end, $"Last  bar time {list.Last().OpenDateTime:O} should be <= {end:O}");
         }
 
-
-        /// <summary>
-        /// 获取截至目前的最新数据;包括当前交易日的数据，比如：美东时间15：58调取，需要获得当前的Ohlcv
-        /// </summary>
-        /// <returns></returns>
-        public async Task GetTaskOhlcvListAsync_OneYearDaily_ShouldCoverToday()
+        [TestMethod]
+        public async Task GetAccountAsync_Should_Work()
         {
-            
+            // 调用 GetAccountAsync
+            var account = await _brokerService.GetAccountAsync();
+
+            // 基本校验
+            Assert.IsNotNull(account, "Account object should not be null.");
+            Console.WriteLine($"Account Status       : {account.Status}");
+            Console.WriteLine($"TradableCash         : {account.TradableCash}");
+            Console.WriteLine($"Buying Power         : {account.BuyingPower}");
+            Console.WriteLine($"Regt. Buying Power   : {account.BuyingPower}");
+
+            // 断言：账户状态为 ACTIVE
+            Assert.AreEqual(AccountStatus.Active, account.Status, "Account status should be Active.");
+
+            // 断言：现金和组合市值应当大于等于 0
+            Assert.IsTrue(account.TradableCash >= 0m, "Cash should be non-negative.");
+
+            //（可选）断言：日内交易购买力不小于现金
+            Assert.IsTrue(account.BuyingPower >= account.TradableCash,
+                "BuyingPower should be at least as large as Cash.");
+
         }
+
 
     }
 

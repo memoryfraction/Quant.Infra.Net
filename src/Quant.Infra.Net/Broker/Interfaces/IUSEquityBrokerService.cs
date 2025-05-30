@@ -1,4 +1,5 @@
-﻿using Quant.Infra.Net.Shared.Model;
+﻿using Alpaca.Markets;
+using Quant.Infra.Net.Shared.Model;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Interfaces
@@ -68,6 +69,9 @@ namespace Quant.Infra.Net.Broker.Interfaces
         Task<string> GetFormattedAccountSummaryAsync();
 
         Task<bool> IsMarketOpeningAsync();
+
+        // 新增：获取账户信息
+        Task<IAccount> GetAccountAsync();
 
 
     }

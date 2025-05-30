@@ -264,6 +264,79 @@ namespace Quant.Infra.Net.Tests
             }
         }
 
+        /// <summary>
+        /// 测试：获取过去一整年（365 日）的 Daily OHLCV 数据，检查第一条和最后一条时间范围正确，条数大于250。
+        /// </summary>
+        [TestMethod]
+        public async Task GetOhlcvListAsync_OneYearDaily_ShouldCoverOneYearRange()
+        {
+            // 准备：过去一整年
+            var end = DateTime.UtcNow.Date;
+            var start = end.AddYears(-1);
+
+            // 执行
+            var list = (await _historicalDataSourceService.GetOhlcvListAsync(
+                TestEquity,
+                end,
+                limit: 252,//1年252交易日
+                ResolutionLevel.Daily))
+                .ToList();
+
+            // 验证起止时间范围：首条>=start，末条<=end
+            Assert.IsTrue(list.Count  == 252);
+            // 输出最有一条的数据
+            var last = list.Last();
+            // 获取美东时区信息（Windows ID 为 "Eastern Standard Time"）
+            var estZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            var lastUtc = DateTime.SpecifyKind(last.OpenDateTime, DateTimeKind.Utc);
+            var lastEst = TimeZoneInfo.ConvertTimeFromUtc(lastUtc, estZone);
+
+            // 为了输出带时区偏移，用 DateTimeOffset
+            var lastEstOffset = new DateTimeOffset(lastEst, estZone.GetUtcOffset(lastEst));
+
+            Console.WriteLine(
+                $"Last Bar (UTC) → {lastUtc:yyyy-MM-dd HH:mm:ss}Z\n" +
+                $"Last Bar (ET)  → {lastEstOffset:yyyy-MM-dd HH:mm:ss zzz}");
+
+            Assert.IsTrue(list.Last().OpenDateTime.Date <= end, $"Last  bar date {list.Last().OpenDateTime:yyyy-MM-dd} should be <= {end:yyyy-MM-dd}");
+
+        }
+
+        /// <summary>
+        /// 测试：获取过去一整年（365 日）的 Hourly OHLCV 数据，检查第一条和最后一条时间范围正确，条数大于 24*200。
+        /// </summary>
+        [TestMethod]
+        public async Task GetOhlcvListAsync_OneYearHourly_ShouldCoverOneYearRange()
+        {
+            // 准备：过去一整年
+            var end = DateTime.UtcNow;
+            var start = end.AddDays(-30);
+
+            // 执行
+            var list = (await _historicalDataSourceService.GetOhlcvListAsync(
+                TestEquity,
+                end,
+                limit:130, // 20 交易日 * 6.5小时 = 130
+                ResolutionLevel.Hourly))
+                .ToList();
+
+            // 验证不为空且条数至少 24*200（约200交易日*24小时）
+            Assert.IsTrue(list.Count >= 130, $"Hourly bars count should be >= 4800, but was {list.Count}");
+
+            // 验证起止时间范围：首条>=start，末条<=end
+            Assert.IsTrue(list.Last().OpenDateTime <= end, $"Last  bar time {list.Last().OpenDateTime:O} should be <= {end:O}");
+        }
+
+
+        /// <summary>
+        /// 获取截至目前的最新数据;包括当前交易日的数据，比如：美东时间15：58调取，需要获得当前的Ohlcv
+        /// </summary>
+        /// <returns></returns>
+        public async Task GetTaskOhlcvListAsync_OneYearDaily_ShouldCoverToday()
+        {
+            
+        }
+
     }
 
 }

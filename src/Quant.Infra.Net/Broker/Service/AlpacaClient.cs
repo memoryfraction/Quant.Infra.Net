@@ -92,32 +92,71 @@ namespace Quant.Infra.Net.Broker.Service
             return quote.Price;
         }
 
+
         /// <summary>
-        /// 提交一个市价/限价单，可设定买卖方向、盘后交易等。
-        /// Submit a market or limit order with side and extended-hours support.
+        /// 提交一个市价/限价单，可设定买卖方向、盘后交易，并自动跳过重复挂单。
+        /// Submit a market or limit order with side, extended-hours support, and duplicate-order prevention.
         /// </summary>
-        /// <param name="symbol">标的代码 / Symbol</param>
-        /// <param name="quantity">数量,小数会被处理为整数，正为买入，负为卖出 / Quantity (positive = buy, negative = sell)</param>
-        /// <param name="orderType">订单类型（市价、限价等）/ Order type</param>
-        /// <param name="timeInForce">订单有效时间（Day, GTC）/ Time in force</param>
-        /// <param name="afterHours">是否盘后交易 / Allow extended hours</param>
-        public async Task PlaceOrderAsync(string symbol, decimal quantity, OrderType orderType = OrderType.Market, Alpaca.Markets.TimeInForce timeInForce = Alpaca.Markets.TimeInForce.Day, bool afterHours = false)
+        /// <param name="symbol">
+        /// 标的代码 / Symbol. 
+        /// Cannot be null or whitespace.
+        /// </param>
+        /// <param name="quantity">
+        /// 数量, 小数会被向下取整为整数；
+        /// positive = buy, negative = sell. 
+        /// Cannot be 0.
+        /// </param>
+        /// <param name="orderType">
+        /// 订单类型（市价/限价等）/ Order type. Default is Market.
+        /// </param>
+        /// <param name="timeInForce">
+        /// 订单有效时间（Day, GTC）/ Time in force. Default is Day.
+        /// </param>
+        /// <param name="afterHours">
+        /// 是否允许盘后交易 / Allow extended-hours. Default is false.
+        /// </param>
+        public async Task PlaceOrderAsync(
+            string symbol,
+            decimal quantity,
+            OrderType orderType = OrderType.Market,
+            Alpaca.Markets.TimeInForce timeInForce = Alpaca.Markets.TimeInForce.Day,
+            bool afterHours = false)
         {
             if (string.IsNullOrWhiteSpace(symbol))
                 throw new ArgumentNullException(nameof(symbol), "Symbol cannot be null or empty.");
             if (quantity == 0)
                 throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity cannot be 0.");
 
+            // Determine side and absolute quantity
             var side = quantity > 0 ? OrderSide.Buy : OrderSide.Sell;
             var qty = Math.Abs(quantity);
+            var qtyValue = OrderQuantity.FromInt64((int)qty);
 
-            OrderQuantity qtyValue = OrderQuantity.FromInt64((int)qty);
+            // —— 修改点：使用 StatusFilter = OrderStatusFilter.Open 来获取所有挂单（包括 New 和 PartiallyFilled） —— 
+            var listRequest = new ListOrdersRequest
+            {
+                LimitOrderNumber = 100,
+                OrderStatusFilter = Alpaca.Markets.OrderStatusFilter.Open
+            };
+            var pending = await _tradeClient.ListOrdersAsync(listRequest);
 
+            // 如果已存在相同 symbol、方向、数量的挂单，则跳过
+            if (pending.Any(x =>
+                    x.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase) &&
+                    x.OrderSide == side &&
+                    x.IntegerQuantity == qtyValue))
+            {
+                Console.WriteLine($"[{DateTime.UtcNow:O}] Skipping duplicate order: {symbol} {side} {qty}");
+                return;
+            }
+
+            // 构造下单请求 / build new order request
             var request = new NewOrderRequest(symbol, qtyValue, side, orderType, timeInForce)
             {
                 ExtendedHours = afterHours
             };
 
+            // 发送至 Alpaca / submit to broker
             await _tradeClient.PostOrderAsync(request);
         }
 

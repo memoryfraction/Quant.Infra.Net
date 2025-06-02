@@ -6,6 +6,7 @@ using Polly;
 using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Model;
+using Quant.Infra.Net.Portfolio.Models;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service.Historical;
@@ -615,6 +616,35 @@ namespace Quant.Infra.Net.Broker.Service
             // 直接调用 Alpaca SDK
             var account = await _alpacaTradingClient.GetAccountAsync(); 
             return account;
+        }
+
+        public async Task<Position> GetPositionAsync(string symbol)
+        {
+            try
+            {
+                // 1) 从 Alpaca SDK 拉取该标的的持仓信息
+                var alpacaPos = await _alpacaTradingClient.GetPositionAsync(symbol);
+
+                // 2) 将返回的 IPosition 映射到我们自己的 Position 类型
+                return new Position
+                {
+                    Symbol = alpacaPos.Symbol,
+                    Quantity = alpacaPos.Quantity,                      // 持仓数量
+                    CostPrice = alpacaPos.AverageEntryPrice,             // 平均建仓成本
+                    UnrealizedProfitLoss = alpacaPos.UnrealizedProfitLoss          // 未实现盈亏
+                };
+            }
+            catch (RestClientErrorException e) when (e.ErrorCode == (int)HttpStatusCode.NotFound)
+            {
+                // 如果 Alpaca 返回 404，说明该标的没有持仓，返回一个空仓位
+                return new Position
+                {
+                    Symbol = symbol,
+                    Quantity = 0m,
+                    CostPrice = 0m,
+                    UnrealizedProfitLoss = 0m
+                };
+            }
         }
 
     }

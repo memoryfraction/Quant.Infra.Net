@@ -1,4 +1,5 @@
 ﻿using Alpaca.Markets;
+using Quant.Infra.Net.Portfolio.Models;
 using Quant.Infra.Net.Shared.Model;
 using System.Threading.Tasks;
 
@@ -72,6 +73,8 @@ namespace Quant.Infra.Net.Broker.Interfaces
 
         // 新增：获取账户信息
         Task<IAccount> GetAccountAsync();
+
+        Task<Position> GetPositionAsync(string symbol);
 
 
     }

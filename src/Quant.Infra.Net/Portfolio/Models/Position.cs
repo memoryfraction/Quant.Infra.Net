@@ -9,12 +9,12 @@ namespace Quant.Infra.Net.Portfolio.Models
     /// </summary>
     public class Position
     {
-        public DateTime DateTime { get; set; }
+        public DateTime EntryDateTime { get; set; }
         public string Symbol { get; set; }
         public decimal Quantity { get; set; }
         public decimal CostPrice { get; set; }
         public AssetType AssetType { get; set; }
-
+        public decimal? UnrealizedProfitLoss { get; set; }
         public decimal GetUnrealizedPnL(decimal latestPrice)
         {
             return GetMarketValue(latestPrice) - Quantity * CostPrice;

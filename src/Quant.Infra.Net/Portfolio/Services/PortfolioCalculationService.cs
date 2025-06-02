@@ -81,7 +81,7 @@ namespace Quant.Infra.Net.Portfolio.Services
                 // 如果当前没有该股票的持仓，则创建新持仓
                 currentPositions.Add(new Position
                 {
-                    DateTime = filledOrder.DateTimeUtc,  // 使用订单的 UTC 时间
+                    EntryDateTime = filledOrder.DateTimeUtc,  // 使用订单的 UTC 时间
                     Symbol = filledOrder.Symbol,
                     Quantity = orderQuantity,
                     CostPrice = orderPrice

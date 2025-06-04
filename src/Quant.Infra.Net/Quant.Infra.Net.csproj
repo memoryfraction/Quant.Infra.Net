@@ -3,7 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
 	<LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
-	<Version>1.0.3</Version>   <!-- NuGet 包版本 -->
+	<Version>1.1.0</Version>   <!-- NuGet 包版本 -->
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Analysis\Model\**" />

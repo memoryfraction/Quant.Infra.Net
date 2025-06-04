@@ -342,9 +342,9 @@ namespace Quant.Infra.Net.Analysis
             row.Slope = slope;
             row.Intercept = intercept;
 
-            // 计算spread,注意：此时SeriesA和SeriesB为DateTime倒序;
-            var lastElmInSeriesA = seriesA.FirstOrDefault();
-            var lastElmInSeriesB = seriesB.FirstOrDefault();
+            // 计算spread,注意：此时SeriesA和SeriesB为DateTime正序;
+            var lastElmInSeriesA = seriesA.LastOrDefault();
+            var lastElmInSeriesB = seriesB.LastOrDefault();
             var spread = lastElmInSeriesB - slope * lastElmInSeriesA - intercept;
             var equation = $"spread = {symbol2} -  {slope} * {symbol1} - {intercept}";
             row.Spread = spread;

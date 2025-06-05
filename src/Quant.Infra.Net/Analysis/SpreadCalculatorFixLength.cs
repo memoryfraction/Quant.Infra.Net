@@ -175,7 +175,7 @@ namespace Quant.Infra.Net.Analysis
 
             var (seriesA, seriesB) = GetSeries(endDateTime.Value);
 
-            // 计算spread,注意：此时SeriesA和SeriesB为DateTime倒序;
+            // 计算spread
             var row = CalculateSpreadAndEquation(Symbol1, Symbol2, seriesA, seriesB);
 
             return row.Spread;
@@ -292,8 +292,11 @@ namespace Quant.Infra.Net.Analysis
         /// </summary>
         /// <param name="endDateTime"></param>
         /// <returns></returns>
-        private (List<double>, List<double>) GetSeries(DateTime endDateTime)
+        private (List<Element>, List<Element>) GetSeries(DateTime endDateTime)
         {
+            var listA = new List<Element>();
+            var listB = new List<Element>();
+
             // 找到 endDateTime 所在行的索引
             var dateTimeColumnData = _dataFrame.Columns["DateTime"];
             int endIndex = -1;
@@ -315,17 +318,19 @@ namespace Quant.Infra.Net.Analysis
             int startIndex = Math.Max(endIndex - FixedWindowLength + 1, 0);
 
             // 根据[startDateTime, endDateTime]范围提取数据
-            var seriesA = new List<double>();
-            var seriesB = new List<double>();
-
             for (int i = startIndex; i <= endIndex; i++)
             {
                 var row = _dataFrame.Rows[i];
-                seriesA.Add(Convert.ToDouble(row[$"{Symbol1}Close"]));
-                seriesB.Add(Convert.ToDouble(row[$"{Symbol2}Close"]));
+                var dateTime = (DateTime)row["DateTime"];
+                var elmA = new Element(Symbol1,dateTime, Convert.ToDouble(row[$"{Symbol1}Close"]));
+                listA.Add(elmA);
+
+                var elmB = new Element(Symbol2,dateTime, Convert.ToDouble(row[$"{Symbol2}Close"]));
+                listB.Add(elmB);
             }
 
-            return (seriesA, seriesB);
+
+            return (listA, listB);
         }
 
         /// <summary>
@@ -334,17 +339,20 @@ namespace Quant.Infra.Net.Analysis
         /// <param name="seriesA"></param>
         /// <param name="seriesB"></param>
         /// <returns></returns>
-        private SpreadCalculatorRow CalculateSpreadAndEquation(string symbol1, string symbol2, IEnumerable<double> seriesA, IEnumerable<double> seriesB)
+        private SpreadCalculatorRow CalculateSpreadAndEquation(string symbol1, string symbol2, IEnumerable<Element> seriesA, IEnumerable<Element> seriesB)
         {
+            var sortedSeriesValueA = seriesA.OrderBy(x => x.DateTime).Select(x => x.Value).ToList(); // 确保SeriesA按DateTime正序排列
+            var sortedSeriesValueB = seriesB.OrderBy(x => x.DateTime).Select(x => x.Value).ToList(); // 确保SeriesB按DateTime正序排列
+
             var row = new SpreadCalculatorRow();
             // 执行线性回归，获取slope和interception
-            var (slope, intercept) = (new Analysis.Service.AnalysisService()).PerformOLSRegression(seriesA, seriesB);
+            var (slope, intercept) = (new Analysis.Service.AnalysisService()).PerformOLSRegression(sortedSeriesValueA, sortedSeriesValueB);
             row.Slope = slope;
             row.Intercept = intercept;
 
             // 计算spread,注意：此时SeriesA和SeriesB为DateTime正序;
-            var lastElmInSeriesA = seriesA.LastOrDefault();
-            var lastElmInSeriesB = seriesB.LastOrDefault();
+            var lastElmInSeriesA = sortedSeriesValueA.LastOrDefault();
+            var lastElmInSeriesB = sortedSeriesValueB.LastOrDefault();
             var spread = lastElmInSeriesB - slope * lastElmInSeriesA - intercept;
             var equation = $"spread = {symbol2} -  {slope} * {symbol1} - {intercept}";
             row.Spread = spread;

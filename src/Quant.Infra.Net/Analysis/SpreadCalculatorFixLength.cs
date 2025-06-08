@@ -413,7 +413,7 @@ namespace Quant.Infra.Net.Analysis
             // 检查 _dataFrame 是否为空
             if (_dataFrame == null || _dataFrame.Rows.Count == 0)
             {
-                throw new InvalidOperationException("数据框为空或没有数据");
+                throw new InvalidOperationException("Empty database");
             }
 
             // 定义需要检查的列名
@@ -423,14 +423,14 @@ namespace Quant.Infra.Net.Analysis
             {
                 if (!_dataFrame.Columns.Any(x => x.Name == column))
                 {
-                    throw new InvalidOperationException($"列名 {column} 不存在");
+                    throw new InvalidOperationException($"column: {column} does not exist.");
                 }
             }
 
             // 检查 _dataFrame 元素个数是否超过 FixedWindowLength
             if (_dataFrame.Rows.Count <= FixedWindowLength)
             {
-                throw new InvalidOperationException("元素个数不符合要求");
+                throw new InvalidOperationException("element number is not verified.");
             }
         }
 

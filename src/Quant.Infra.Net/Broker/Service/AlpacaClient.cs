@@ -345,7 +345,7 @@ namespace Quant.Infra.Net.Broker.Service
                 _ => throw new NotSupportedException($"Unsupported resolutionLevel: {resolutionLevel}")
             };
 
-            const int MaxPageSize = 300;
+            const int MaxPageSize = 1000;
             int pageSize = Math.Min(limit, MaxPageSize);
 
             var allBars = new List<IBar>();
@@ -366,6 +366,7 @@ namespace Quant.Infra.Net.Broker.Service
             // 翻页
             while (allBars.Count < limit && !string.IsNullOrEmpty(page.NextPageToken))
             {
+                await Task.Delay(200);  // 降低每秒调用频率
                 req = req.WithPageToken(page.NextPageToken);
                 page = await _rateLimitRetryPolicy.ExecuteAsync(() => _dataClient.ListHistoricalBarsAsync(req));
                 allBars.AddRange(page.Items);

@@ -647,5 +647,12 @@ namespace Quant.Infra.Net.Broker.Service
             }
         }
 
+        public async Task<IAccount> GetAlpacaAccountAsync()
+        {
+            // 通过 _alpacaTradingClient 获取账户信息并返回 RegtBuyingPower 字段
+            var account = await _alpacaTradingClient.GetAccountAsync();
+            return account;
+        }
+
     }
 }

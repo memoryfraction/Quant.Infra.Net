@@ -76,6 +76,8 @@ namespace Quant.Infra.Net.Broker.Interfaces
 
         Task<Position> GetPositionAsync(string symbol);
 
+        Task<IAccount> GetAlpacaAccountAsync();
+
 
     }
 }

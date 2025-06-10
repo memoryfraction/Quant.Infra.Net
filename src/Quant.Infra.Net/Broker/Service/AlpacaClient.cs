@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Service
@@ -25,6 +26,8 @@ namespace Quant.Infra.Net.Broker.Service
         // 限流重试策略：捕获 RestClientErrorException 内部的 429 状态，最多重试 3 次，指数退避
         private static readonly AsyncRetryPolicy _rateLimitRetryPolicy = Policy
             .Handle<RestClientErrorException>(ex => ex.HttpStatusCode == HttpStatusCode.TooManyRequests)
+            .Or<TimeoutException>()
+            .Or<TaskCanceledException>()
             .WaitAndRetryAsync(
                 retryCount: 3,
                 sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
@@ -302,11 +305,17 @@ namespace Quant.Infra.Net.Broker.Service
         /// </summary>
         public async Task<IReadOnlyList<IBar>> ListHistoricalBarsAsync(HistoricalBarsRequest req)
         {
-            // 指定只从 IEX 拉取数据
             req.Feed = MarketDataFeed.Iex;
 
-            // 针对单页调用添加限流重试
-            var page = await _rateLimitRetryPolicy.ExecuteAsync(() => _dataClient.ListHistoricalBarsAsync(req));
+            // ① 为本次请求创建一个 60 秒超时的 CancellationTokenSource
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+
+            // ② 在 Polly 执行中，把 cts.Token 传给 SDK 方法
+            var page = await _rateLimitRetryPolicy.ExecuteAsync(
+                ct => _dataClient.ListHistoricalBarsAsync(req, ct),
+                cts.Token  // 这里是 Polly 整体的 CancellationToken
+            );
+
             return page.Items;
         }
 
@@ -336,7 +345,7 @@ namespace Quant.Infra.Net.Broker.Service
                 _ => throw new NotSupportedException($"Unsupported resolutionLevel: {resolutionLevel}")
             };
 
-            const int MaxPageSize = 500;
+            const int MaxPageSize = 300;
             int pageSize = Math.Min(limit, MaxPageSize);
 
             var allBars = new List<IBar>();

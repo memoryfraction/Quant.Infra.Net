@@ -1,5 +1,6 @@
 ﻿using Alpaca.Markets;
-using NodaTime;
+using Polly;
+using Polly.Retry;
 using Quant.Infra.Net.Broker.Model;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
@@ -8,30 +9,37 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
-
 
 namespace Quant.Infra.Net.Broker.Service
 {
     /// <summary>
-    /// Alpaca 客户端封装类，封装交易和市场数据 API。
-    /// Encapsulates Alpaca trading and data client functionality.
+    /// Alpaca 客户端封装类，封装交易和市场数据 API，并增加限流重试策略。
     /// </summary>
     public class AlpacaClient
     {
         private readonly IAlpacaTradingClient _tradeClient;
         private readonly IAlpacaDataClient _dataClient;
 
-        /// <summary>
-        /// 构造函数，基于实盘或模拟盘创建 Alpaca 客户端。
-        /// Constructor: initialize Alpaca clients using paper or live environment.
-        /// </summary>
+        // 限流重试策略：捕获 RestClientErrorException 内部的 429 状态，最多重试 3 次，指数退避
+        private static readonly AsyncRetryPolicy _rateLimitRetryPolicy = Policy
+            .Handle<RestClientErrorException>(ex => ex.HttpStatusCode == HttpStatusCode.TooManyRequests)
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                onRetry: (exception, timeSpan, retryCount, context) =>
+                {
+                    UtilityService.LogAndWriteLine(
+                        $"[WARN] Rate limit hit, retry {retryCount} after {timeSpan.TotalSeconds}s: {exception.Message}");
+                });
+
+
         public AlpacaClient(BrokerCredentials creds, ExchangeEnvironment mode)
         {
             var env = mode == ExchangeEnvironment.Paper ? Environments.Paper : Environments.Live;
             _tradeClient = env.GetAlpacaTradingClient(new SecretKey(creds.ApiKey, creds.Secret));
             _dataClient = env.GetAlpacaDataClient(new SecretKey(creds.ApiKey, creds.Secret));
-
         }
 
         /// <summary>
@@ -289,63 +297,37 @@ namespace Quant.Infra.Net.Broker.Service
             return string.Join(Environment.NewLine, lines);
         }
 
-
-
         /// <summary>
-        /// 薄封装：拉取历史 K 线（Bars），返回 Items 列表
+        /// 薄封装：拉取历史 K 线（Bars），返回 Items 列表，自动处理限流重试。
         /// </summary>
         public async Task<IReadOnlyList<IBar>> ListHistoricalBarsAsync(HistoricalBarsRequest req)
         {
             // 指定只从 IEX 拉取数据
             req.Feed = MarketDataFeed.Iex;
-            var response = await _dataClient.ListHistoricalBarsAsync(req);        
-            return response.Items;
+
+            // 针对单页调用添加限流重试
+            var page = await _rateLimitRetryPolicy.ExecuteAsync(() => _dataClient.ListHistoricalBarsAsync(req));
+            return page.Items;
         }
 
-
         /// <summary>
-        /// 【中】使用 Alpaca 数据客户端，从 endUtc 向前获取至多 limit 条 OHLCV 数据，自动处理服务端分页。  
+        /// 【中】使用 Alpaca 数据客户端，从 endUtc 向前获取至多 limit 条 OHLCV 数据，自动处理服务端分页及限流重试。  
         /// 【EN】Use the Alpaca data client to retrieve up to <paramref name="limit"/> OHLCV bars ending at <paramref name="endUtc"/>,
-        /// with built-in paging support.
+        /// with built-in paging support and rate‐limit retry.
         /// </summary>
-        /// <param name="underlying">
-        /// 【中】要获取数据的标的，不能为空。  
-        /// 【EN】The underlying asset for which to retrieve bars. Must not be null.
-        /// </param>
-        /// <param name="endUtc">
-        /// 【中】结束时间（UTC），决定最后一根 K 线的时间戳，Kind 必须为 UTC。  
-        /// 【EN】The UTC timestamp marking the end of the requested range; identifies the end of the last bar. Must be UTC.
-        /// </param>
-        /// <param name="limit">
-        /// 【中】最大返回条数，须大于零。  
-        /// 【EN】The maximum number of bars to return. Must be greater than zero.
-        /// </param>
-        /// <param name="resolutionLevel">
-        /// 【中】K 线分辨率，仅支持 Minute、Hourly、Daily。  
-        /// 【EN】The bar resolution (Minute, Hourly, or Daily).
-        /// </param>
-        /// <returns>
-        /// 【中】按时间升序排列的 <see cref="Ohlcv"/> 集合，最多包含 <paramref name="limit"/> 条记录。  
-        /// 【EN】An ascending-ordered sequence of <see cref="Ohlcv"/> objects, containing at most <paramref name="limit"/> bars.
-        /// </returns>
         public async Task<IEnumerable<Ohlcv>> GetHistoricalBarsAsync(
             Underlying underlying,
             DateTime endUtc,
             int limit,
             ResolutionLevel resolutionLevel)
         {
-            // 1) 参数校验
-            if (underlying == null)
-                throw new ArgumentNullException(nameof(underlying));
-            if (limit <= 0)
-                throw new ArgumentException("limit must be > 0", nameof(limit));
+            if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+            if (limit <= 0) throw new ArgumentException("limit must be > 0", nameof(limit));
 
-            // 2) 计算业务上的起始时间（考虑交易日、周末及节假日）
             var startUtc = await CalculateUSEquityStartUtcAsync(endUtc, limit, resolutionLevel);
             startUtc = DateTime.SpecifyKind(startUtc, DateTimeKind.Utc);
             endUtc = DateTime.SpecifyKind(endUtc, DateTimeKind.Utc);
 
-            // 3) 分辨率映射到 Alpaca 的 BarTimeFrame
             BarTimeFrame tf = resolutionLevel switch
             {
                 ResolutionLevel.Minute => BarTimeFrame.Minute,
@@ -354,11 +336,9 @@ namespace Quant.Infra.Net.Broker.Service
                 _ => throw new NotSupportedException($"Unsupported resolutionLevel: {resolutionLevel}")
             };
 
-            // 4) 每页最大 500 条
             const int MaxPageSize = 500;
             int pageSize = Math.Min(limit, MaxPageSize);
 
-            // 5) 构造首次请求
             var allBars = new List<IBar>();
             var req = new HistoricalBarsRequest(
                     underlying.Symbol,
@@ -368,28 +348,25 @@ namespace Quant.Infra.Net.Broker.Service
                 )
                 .WithPageSize((uint)pageSize);
 
-            // 6) 使用数据客户端 GetHistoricalBarsAsync 拉取
+            // 首次请求（带重试）
             req.Feed = MarketDataFeed.Iex;
             req.SortDirection = SortDirection.Descending;
-            var page = await _dataClient.ListHistoricalBarsAsync(req);
+            var page = await _rateLimitRetryPolicy.ExecuteAsync(() => _dataClient.ListHistoricalBarsAsync(req));
             allBars.AddRange(page.Items);
 
-            // 7) 如果未达到 limit，按 NextPageToken 翻页
-            while (allBars.Count < limit
-                   && !string.IsNullOrEmpty(page.NextPageToken))
+            // 翻页
+            while (allBars.Count < limit && !string.IsNullOrEmpty(page.NextPageToken))
             {
                 req = req.WithPageToken(page.NextPageToken);
-                page = await _dataClient.ListHistoricalBarsAsync(req);
+                page = await _rateLimitRetryPolicy.ExecuteAsync(() => _dataClient.ListHistoricalBarsAsync(req));
                 allBars.AddRange(page.Items);
             }
 
-            // 8) 按时间升序取最后 limit 条
             var rawBars = allBars
                 .OrderBy(b => b.TimeUtc)
                 .TakeLast(limit)
                 .ToList();
 
-            // 9) 映射到 Ohlcv 并升序
             var mapped = rawBars
                 .Select(b => new Ohlcv
                 {
@@ -406,16 +383,10 @@ namespace Quant.Infra.Net.Broker.Service
                 .OrderBy(o => o.OpenDateTime)
                 .ToList();
 
-            // 10) 按小时分辨率再聚合（可选）
             if (resolutionLevel == ResolutionLevel.Hourly)
             {
                 mapped = mapped
-                    .GroupBy(o => new DateTime(
-                        o.OpenDateTime.Year,
-                        o.OpenDateTime.Month,
-                        o.OpenDateTime.Day,
-                        o.OpenDateTime.Hour, 0, 0,
-                        DateTimeKind.Utc))
+                    .GroupBy(o => new DateTime(o.OpenDateTime.Year, o.OpenDateTime.Month, o.OpenDateTime.Day, o.OpenDateTime.Hour, 0, 0, DateTimeKind.Utc))
                     .Select(g =>
                     {
                         var first = g.First();
@@ -439,8 +410,6 @@ namespace Quant.Infra.Net.Broker.Service
 
             return mapped;
         }
-
-
 
         /// <summary>
         /// 【中】根据分辨率和条数，计算美国股票市场的回溯起始 UTC 时间：
@@ -540,13 +509,10 @@ namespace Quant.Infra.Net.Broker.Service
                 + bufferDays;
 
             // 2. 直接用一次请求拉取这段区间的交易日历
-            var lookbackStart = 
+            var lookbackStart =
                 endUtc.AddDays(-estimatedCalendarDays);
 
             return lookbackStart;
         }
-
-
-
     }
 }

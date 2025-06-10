@@ -37,7 +37,7 @@ namespace Quant.Infra.Net.Broker.Service
         /// Current exchange environment (e.g., Live or Paper).
         /// </summary>
         public ExchangeEnvironment ExchangeEnvironment { get; set; }
-        public Currency BaseCurrency { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public Currency BaseCurrency { get; set; }
 
         /// <summary>
         /// 构造函数，初始化 API 密钥与重试策略。

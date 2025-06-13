@@ -6,6 +6,7 @@ using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
 using Quant.Infra.Net.SourceData.Model;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -15,28 +16,27 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Service
 {
-    /// <summary>
-    /// Alpaca 客户端封装类，封装交易和市场数据 API，并增加限流重试策略。
-    /// </summary>
     public class AlpacaClient
     {
         private readonly IAlpacaTradingClient _tradeClient;
         private readonly IAlpacaDataClient _dataClient;
 
-        // 限流重试策略：捕获 RestClientErrorException 内部的 429 状态，最多重试 3 次，指数退避
+        // 增强的限流重试策略
         private static readonly AsyncRetryPolicy _rateLimitRetryPolicy = Policy
             .Handle<RestClientErrorException>(ex => ex.HttpStatusCode == HttpStatusCode.TooManyRequests)
             .Or<TimeoutException>()
             .Or<TaskCanceledException>()
             .WaitAndRetryAsync(
-                retryCount: 3,
-                sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                retryCount: 5,
+                sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(3, attempt)),
                 onRetry: (exception, timeSpan, retryCount, context) =>
                 {
                     UtilityService.LogAndWriteLine(
-                        $"[WARN] Rate limit hit, retry {retryCount} after {timeSpan.TotalSeconds}s: {exception.Message}");
+                        $"[WARN] 达到速率限制，将在{timeSpan.TotalSeconds}秒后重试(第{retryCount}次): {exception.Message}");
                 });
 
+        // 历史数据缓存
+        private static readonly ConcurrentDictionary<string, (DateTime expiry, IReadOnlyList<IBar> data)> _barCache = new();
 
         public AlpacaClient(BrokerCredentials creds, ExchangeEnvironment mode)
         {
@@ -301,28 +301,37 @@ namespace Quant.Infra.Net.Broker.Service
         }
 
         /// <summary>
-        /// 薄封装：拉取历史 K 线（Bars），返回 Items 列表，自动处理限流重试。
+        /// 带缓存的历史K线数据获取
         /// </summary>
         public async Task<IReadOnlyList<IBar>> ListHistoricalBarsAsync(HistoricalBarsRequest req)
         {
             req.Feed = MarketDataFeed.Iex;
 
-            // ① 为本次请求创建一个 60 秒超时的 CancellationTokenSource
+            // 生成缓存键
+            var cacheKey = $"{req.Symbols}-{req.TimeFrame}-{req.TimeInterval.From}-{req.TimeInterval.Into}";
+
+            // 检查缓存
+            if (_barCache.TryGetValue(cacheKey, out var cached) && cached.expiry > DateTime.UtcNow)
+            {
+                return cached.data;
+            }
+
+            // 没有缓存或已过期，从API获取
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
-            // ② 在 Polly 执行中，把 cts.Token 传给 SDK 方法
             var page = await _rateLimitRetryPolicy.ExecuteAsync(
                 ct => _dataClient.ListHistoricalBarsAsync(req, ct),
-                cts.Token  // 这里是 Polly 整体的 CancellationToken
+                cts.Token
             );
+
+            // 存入缓存(5分钟有效期)
+            _barCache[cacheKey] = (DateTime.UtcNow.AddMinutes(5), page.Items);
 
             return page.Items;
         }
 
         /// <summary>
-        /// 【中】使用 Alpaca 数据客户端，从 endUtc 向前获取至多 limit 条 OHLCV 数据，自动处理服务端分页及限流重试。  
-        /// 【EN】Use the Alpaca data client to retrieve up to <paramref name="limit"/> OHLCV bars ending at <paramref name="endUtc"/>,
-        /// with built-in paging support and rate‐limit retry.
+        /// 优化的历史数据获取方法
         /// </summary>
         public async Task<IEnumerable<Ohlcv>> GetHistoricalBarsAsync(
             Underlying underlying,
@@ -331,7 +340,7 @@ namespace Quant.Infra.Net.Broker.Service
             ResolutionLevel resolutionLevel)
         {
             if (underlying == null) throw new ArgumentNullException(nameof(underlying));
-            if (limit <= 0) throw new ArgumentException("limit must be > 0", nameof(limit));
+            if (limit <= 0) throw new ArgumentException("limit必须大于0", nameof(limit));
 
             var startUtc = await CalculateUSEquityStartUtcAsync(endUtc, limit, resolutionLevel);
             startUtc = DateTime.SpecifyKind(startUtc, DateTimeKind.Utc);
@@ -342,7 +351,7 @@ namespace Quant.Infra.Net.Broker.Service
                 ResolutionLevel.Minute => BarTimeFrame.Minute,
                 ResolutionLevel.Hourly => BarTimeFrame.Hour,
                 ResolutionLevel.Daily => BarTimeFrame.Day,
-                _ => throw new NotSupportedException($"Unsupported resolutionLevel: {resolutionLevel}")
+                _ => throw new NotSupportedException($"不支持的时间级别: {resolutionLevel}")
             };
 
             const int MaxPageSize = 1000;
@@ -357,16 +366,16 @@ namespace Quant.Infra.Net.Broker.Service
                 )
                 .WithPageSize((uint)pageSize);
 
-            // 首次请求（带重试）
+            // 首次请求
             req.Feed = MarketDataFeed.Iex;
             req.SortDirection = SortDirection.Descending;
             var page = await _rateLimitRetryPolicy.ExecuteAsync(() => _dataClient.ListHistoricalBarsAsync(req));
             allBars.AddRange(page.Items);
 
-            // 翻页
+            // 翻页请求
             while (allBars.Count < limit && !string.IsNullOrEmpty(page.NextPageToken))
             {
-                await Task.Delay(200);  // 降低每秒调用频率
+                await Task.Delay(1000);  // 增加请求间隔
                 req = req.WithPageToken(page.NextPageToken);
                 page = await _rateLimitRetryPolicy.ExecuteAsync(() => _dataClient.ListHistoricalBarsAsync(req));
                 allBars.AddRange(page.Items);
@@ -419,6 +428,46 @@ namespace Quant.Infra.Net.Broker.Service
             }
 
             return mapped;
+        }
+
+        /// <summary>
+        /// 分批获取历史数据
+        /// </summary>
+        public async Task<IEnumerable<Ohlcv>> GetHistoricalBarsBatchAsync(
+            Underlying underlying,
+            DateTime startUtc,
+            DateTime endUtc,
+            ResolutionLevel resolutionLevel,
+            int batchSize = 500)
+        {
+            var result = new List<Ohlcv>();
+            var currentEnd = endUtc;
+
+            while (currentEnd > startUtc)
+            {
+                var batch = await GetHistoricalBarsAsync(
+                    underlying,
+                    currentEnd,
+                    batchSize,
+                    resolutionLevel);
+
+                if (!batch.Any())
+                    break;
+
+                result.AddRange(batch);
+                currentEnd = batch.Min(x => x.OpenDateTime) - TimeSpan.FromSeconds(1);
+
+                // 如果不是最后一次迭代，添加延迟
+                if (currentEnd > startUtc)
+                {
+                    await Task.Delay(2000); // 批次间延迟2秒
+                }
+            }
+
+            return result
+                .Where(x => x.OpenDateTime >= startUtc)
+                .OrderBy(x => x.OpenDateTime)
+                .ToList();
         }
 
         /// <summary>

@@ -82,7 +82,7 @@ namespace Quant.Infra.Net.Tests
                         Symbol = "AAPL",
                         Quantity = 50,
                         CostPrice = 140m,
-                        DateTime = new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc)
+                        EntryDateTime = new DateTime(2023, 6, 14, 14, 30, 0, DateTimeKind.Utc)
                     }
                 }
             };
@@ -307,7 +307,7 @@ namespace Quant.Infra.Net.Tests
                         Symbol = "AAPL",
                         Quantity = 50,
                         CostPrice = 140m,
-                        DateTime = timePoints[0]
+                        EntryDateTime = timePoints[0]
                     }
                 }
             };

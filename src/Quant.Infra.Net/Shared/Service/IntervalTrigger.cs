@@ -5,63 +5,172 @@ using System.Timers;
 namespace Quant.Infra.Net.Shared.Service
 {
     /// <summary>
-    /// 用于规律性触发事件，比如：每小时，每天，每分钟等;
-    /// 支持: NextSecond, NextMinute, NextHour, NextDay, TodayBeforeUSMarketClose
-    /// TodayBeforeUSMarketClose 模式中，DelayTimeSpan 表示相对于美东市场收盘前的提前/延迟时长（正值延后，负值提前）。
+    /// 用于规律性触发事件的定时触发器
+    /// 支持模式：NextSecond, NextMinute, NextHour, NextDay, TodayBeforeUSMarketClose
+    /// TodayBeforeUSMarketClose 模式中，DelayTimeSpan 表示相对于美东市场收盘时间(16:00)的偏移量（正数延后，负数提前）
     /// </summary>
-    public class IntervalTrigger
+    public class IntervalTrigger : IDisposable
     {
-        public StartMode Mode { get; set; }
-        public TimeSpan DelayTimeSpan { get; set; } = TimeSpan.Zero;
-        public event EventHandler IntervalTriggered;
-
-        private Timer _timer;
-        private DateTime _startDateTime;
-        private TimeSpan _triggerInterval;
+        /// <summary>
+        /// 触发模式
+        /// </summary>
+        public StartMode Mode { get; }
 
         /// <summary>
-        /// 下次触发的 UTC 时间
+        /// 时间偏移量（正数延后，负数提前）
         /// </summary>
-        public DateTime NextTriggerTime => _startDateTime;
+        public TimeSpan DelayTimeSpan { get; }
 
+        /// <summary>
+        /// 定时触发事件
+        /// </summary>
+        public event EventHandler IntervalTriggered;
+
+        /// <summary>
+        /// 下次触发时间(UTC)
+        /// </summary>
+        public DateTime NextTriggerTime => _nextTriggerTime;
+
+        private Timer _timer;
+        private DateTime _nextTriggerTime;
+        private readonly TimeSpan _triggerInterval;
+        private readonly object _syncLock = new object();
+        private bool _isDisposed;
+
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="mode">触发模式</param>
+        /// <param name="delayTimeSpan">时间偏移量</param>
+        /// <exception cref="ArgumentOutOfRangeException">当mode不是有效值时抛出</exception>
         public IntervalTrigger(StartMode mode, TimeSpan delayTimeSpan)
         {
+            // 参数校验
+            if (!Enum.IsDefined(typeof(StartMode), mode))
+            {
+                throw new ArgumentOutOfRangeException(nameof(mode), "Invalid trigger mode");
+            }
+
             Mode = mode;
             DelayTimeSpan = delayTimeSpan;
             _triggerInterval = GetTriggerInterval(mode);
         }
 
+        /// <summary>
+        /// 启动定时触发器
+        /// </summary>
+        /// <exception cref="ObjectDisposedException">对象已释放时抛出</exception>
         public void Start()
         {
-            _startDateTime = CalculateNextTriggerTime();
-            var timeUntilNext = _startDateTime - DateTime.UtcNow;
+            lock (_syncLock)
+            {
+                ThrowIfDisposed();
+                StopInternal(); // 确保先停止并清理旧的 Timer
 
-            _timer = new Timer(Math.Max(timeUntilNext.TotalMilliseconds, 1));
-            _timer.Elapsed += OnIntervalTriggered;
-            _timer.AutoReset = false;
-            _timer.Start();
+                _nextTriggerTime = CalculateNextTriggerTime();
+                var timeUntilNext = _nextTriggerTime - DateTime.UtcNow;
 
-            LogNextTrigger();
+                _timer = new Timer(Math.Max(timeUntilNext.TotalMilliseconds, 100));
+                _timer.Elapsed += OnTimerElapsed;
+                _timer.AutoReset = false; // 手动重置模式
+                _timer.Start();
+
+                LogNextTrigger();
+            }
         }
 
+        /// <summary>
+        /// 停止定时触发器
+        /// </summary>
         public void Stop()
         {
-            _timer?.Stop();
-            _timer?.Dispose();
+            lock (_syncLock)
+            {
+                if (_isDisposed) return;
+                StopInternal();
+            }
         }
 
-        private void OnIntervalTriggered(object sender, ElapsedEventArgs e)
+        /// <summary>
+        /// 释放资源
+        /// </summary>
+        public void Dispose()
         {
-            IntervalTriggered?.Invoke(this, EventArgs.Empty);
+            lock (_syncLock)
+            {
+                if (_isDisposed) return;
 
-            _startDateTime = CalculateNextTriggerTime();
-            var timeUntilNext = _startDateTime - DateTime.UtcNow;
-            _timer.Interval = Math.Max(timeUntilNext.TotalMilliseconds, 1);
-            _timer.Start();
-
-            LogNextTrigger();
+                StopInternal();
+                _isDisposed = true;
+                GC.SuppressFinalize(this);
+            }
         }
 
+        // ========== 私有方法 ==========
+
+        /// <summary>
+        /// 内部停止方法，不检查释放状态
+        /// </summary>
+        private void StopInternal()
+        {
+            if (_timer != null)
+            {
+                _timer.Stop();
+                _timer.Elapsed -= OnTimerElapsed;
+                _timer.Dispose();
+                _timer = null;
+            }
+        }
+
+        /// <summary>
+        /// 定时器触发回调
+        /// </summary>
+        private void OnTimerElapsed(object sender, ElapsedEventArgs e)
+        {
+            // 1. 检查是否已释放（加锁）
+            bool shouldProceed;
+            lock (_syncLock)
+            {
+                shouldProceed = !_isDisposed && _timer != null;
+            }
+
+            // 2. 如果已释放，直接返回（不在 finally 里）
+            if (!shouldProceed) return;
+
+            // 3. 触发事件（不加锁，避免死锁）
+            try
+            {
+                IntervalTriggered?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[IntervalTrigger] Event handler exception: {ex.Message}");
+            }
+
+            // 4. 计算下次触发时间（加锁）
+            lock (_syncLock)
+            {
+                if (_isDisposed || _timer == null) return;
+
+                try
+                {
+                    _nextTriggerTime = CalculateNextTriggerTime();
+                    var timeUntilNext = _nextTriggerTime - DateTime.UtcNow;
+                    _timer.Interval = Math.Max(timeUntilNext.TotalMilliseconds, 100);
+                    _timer.Start();
+                    LogNextTrigger();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[IntervalTrigger] Timer reset failed: {ex.Message}");
+                    StopInternal(); // 发生错误时停止定时器
+                }
+            }
+        }
+
+        /// <summary>
+        /// 计算下次触发时间
+        /// </summary>
         private DateTime CalculateNextTriggerTime()
         {
             DateTime utcNow = DateTime.UtcNow;
@@ -70,65 +179,58 @@ namespace Quant.Infra.Net.Shared.Service
             switch (Mode)
             {
                 case StartMode.NextSecond:
-                    // 基础触发：下一个整秒
-                    baseNext = utcNow.Millisecond == 0
-                        ? new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second, DateTimeKind.Utc)
-                        : new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, utcNow.Second, DateTimeKind.Utc).AddSeconds(1);
+                    baseNext = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day,
+                        utcNow.Hour, utcNow.Minute, utcNow.Second, DateTimeKind.Utc)
+                        .AddSeconds(1);
                     break;
 
                 case StartMode.NextMinute:
-                    // 基础触发：下一个整分
-                    baseNext = (utcNow.Second == 0 && utcNow.Millisecond == 0)
-                        ? new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0, DateTimeKind.Utc)
-                        : new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, utcNow.Minute, 0, DateTimeKind.Utc).AddMinutes(1);
+                    baseNext = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day,
+                        utcNow.Hour, utcNow.Minute, 0, DateTimeKind.Utc)
+                        .AddMinutes(1);
                     break;
 
                 case StartMode.NextHour:
-                    // 基础触发：下一个整点
-                    baseNext = (utcNow.Minute == 0 && utcNow.Second == 0 && utcNow.Millisecond == 0)
-                        ? new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0, DateTimeKind.Utc)
-                        : new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, utcNow.Hour, 0, 0, DateTimeKind.Utc).AddHours(1);
+                    baseNext = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day,
+                        utcNow.Hour, 0, 0, DateTimeKind.Utc)
+                        .AddHours(1);
                     break;
 
                 case StartMode.NextDay:
-                    // 基础触发：下一个零点
-                    baseNext = (utcNow.Hour == 0 && utcNow.Minute == 0 && utcNow.Second == 0 && utcNow.Millisecond == 0)
-                        ? new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0, DateTimeKind.Utc)
-                        : new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, 0, 0, 0, DateTimeKind.Utc).AddDays(1);
+                    baseNext = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day,
+                        0, 0, 0, DateTimeKind.Utc)
+                        .AddDays(1);
                     break;
 
                 case StartMode.TodayBeforeUSMarketClose:
-                    // 美东时区自动处理 EST/EDT
                     var estZone = GetEasternTimeZone();
                     var estNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, estZone);
-                    // 当日 16:00 收盘（美东时间）
                     var estClose = new DateTime(estNow.Year, estNow.Month, estNow.Day, 16, 0, 0, DateTimeKind.Unspecified);
                     var utcClose = TimeZoneInfo.ConvertTimeToUtc(estClose, estZone);
-                    // 基础触发 = 收盘前 DelayTimeSpan
                     var target = utcClose + DelayTimeSpan;
 
-                    if (utcNow < target)
-                    {
-                        baseNext = target;
-                    }
-                    else
-                    {
-                        // 下一个交易日收盘
-                        var estCloseTomorrow = estClose.AddDays(1);
-                        var utcCloseTomorrow = TimeZoneInfo.ConvertTimeToUtc(estCloseTomorrow, estZone);
-                        baseNext = utcCloseTomorrow + DelayTimeSpan;
-                    }
-                    // 由于已经在这里加了 DelayTimeSpan，所以跳过后续统一加延迟
+                    baseNext = utcNow < target
+                        ? target
+                        : TimeZoneInfo.ConvertTimeToUtc(estClose.AddDays(1), estZone) + DelayTimeSpan;
+
                     return baseNext;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(Mode), Mode, null);
             }
 
-            // 对于 NextSecond/NextMinute/NextHour/NextDay，一律加上统一的 DelayTimeSpan
+            // 对于常规间隔，确保不会返回过去的时间
+            while (baseNext + DelayTimeSpan <= utcNow)
+            {
+                baseNext += _triggerInterval;
+            }
+
             return baseNext + DelayTimeSpan;
         }
 
+        /// <summary>
+        /// 获取触发间隔
+        /// </summary>
         private TimeSpan GetTriggerInterval(StartMode mode)
         {
             return mode switch
@@ -138,19 +240,25 @@ namespace Quant.Infra.Net.Shared.Service
                 StartMode.NextHour => TimeSpan.FromHours(1),
                 StartMode.NextDay => TimeSpan.FromDays(1),
                 StartMode.TodayBeforeUSMarketClose => TimeSpan.FromDays(1),
-                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported mode")
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported trigger mode")
             };
         }
 
+        /// <summary>
+        /// 记录下次触发时间（用于调试）
+        /// </summary>
         private void LogNextTrigger()
         {
             var estZone = GetEasternTimeZone();
-            var estTime = TimeZoneInfo.ConvertTimeFromUtc(_startDateTime, estZone);
+            var estTime = TimeZoneInfo.ConvertTimeFromUtc(_nextTriggerTime, estZone);
             bool isDst = estZone.IsDaylightSavingTime(estTime);
             string abbr = isDst ? "EDT" : "EST";
-            Console.WriteLine($"[IntervalTrigger] Mode={Mode}, NextTrigger (EST/EDT)={estTime:yyyy-MM-dd HH:mm} {abbr}, UTC={_startDateTime:HH:mm:ss}");
+            Console.WriteLine($"[IntervalTrigger] Mode={Mode}, Next trigger (ET)={estTime:yyyy-MM-dd HH:mm} {abbr}, UTC={_nextTriggerTime:HH:mm:ss}");
         }
 
+        /// <summary>
+        /// 获取美东时区
+        /// </summary>
         private static TimeZoneInfo GetEasternTimeZone()
         {
             try
@@ -161,6 +269,26 @@ namespace Quant.Infra.Net.Shared.Service
             {
                 return TimeZoneInfo.FindSystemTimeZoneById("America/New_York"); // Linux/macOS
             }
+        }
+
+        /// <summary>
+        /// 检查对象是否已释放
+        /// </summary>
+        /// <exception cref="ObjectDisposedException">对象已释放时抛出</exception>
+        private void ThrowIfDisposed()
+        {
+            if (_isDisposed)
+            {
+                throw new ObjectDisposedException(GetType().Name);
+            }
+        }
+
+        /// <summary>
+        /// 析构函数（安全备份）
+        /// </summary>
+        ~IntervalTrigger()
+        {
+            Dispose();
         }
     }
 }

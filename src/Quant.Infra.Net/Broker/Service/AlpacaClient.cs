@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,9 +22,13 @@ namespace Quant.Infra.Net.Broker.Service
         private readonly IAlpacaTradingClient _tradeClient;
         private readonly IAlpacaDataClient _dataClient;
 
-        // 增强的限流重试策略
+        // 在类顶端添加这个静态节流控制器（例如每秒最多 5 个请求）
+        private static readonly SemaphoreSlim _rateLimiter = new SemaphoreSlim(5);
+
+        // SSL异常+限流重试策略增强版（添加 HttpRequestException + inner SSL 检查）
         private static readonly AsyncRetryPolicy _rateLimitRetryPolicy = Policy
             .Handle<RestClientErrorException>(ex => ex.HttpStatusCode == HttpStatusCode.TooManyRequests)
+            .Or<HttpRequestException>(ex => ex.InnerException?.Message?.Contains("SSL") == true)
             .Or<TimeoutException>()
             .Or<TaskCanceledException>()
             .WaitAndRetryAsync(
@@ -31,8 +36,9 @@ namespace Quant.Infra.Net.Broker.Service
                 sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(3, attempt)),
                 onRetry: (exception, timeSpan, retryCount, context) =>
                 {
+                    var inner = exception.InnerException?.Message ?? "";
                     UtilityService.LogAndWriteLine(
-                        $"[WARN] 达到速率限制，将在{timeSpan.TotalSeconds}秒后重试(第{retryCount}次): {exception.Message}");
+                        $"[WARN] 请求失败（{exception.Message} | Inner: {inner}），将在{timeSpan.TotalSeconds}秒后重试(第{retryCount}次)。");
                 });
 
         // 历史数据缓存
@@ -329,10 +335,7 @@ namespace Quant.Infra.Net.Broker.Service
 
             return page.Items;
         }
-
-        /// <summary>
-        /// 优化的历史数据获取方法
-        /// </summary>
+    
         public async Task<IEnumerable<Ohlcv>> GetHistoricalBarsAsync(
             Underlying underlying,
             DateTime endUtc,
@@ -365,19 +368,44 @@ namespace Quant.Infra.Net.Broker.Service
                     tf
                 )
                 .WithPageSize((uint)pageSize);
+            req.SortDirection = SortDirection.Descending; // 降序获取最新数据
+            req.Feed = MarketDataFeed.Iex; // 使用 IEX 数据源
 
-            // 首次请求
-            req.Feed = MarketDataFeed.Iex;
-            req.SortDirection = SortDirection.Descending;
-            var page = await _rateLimitRetryPolicy.ExecuteAsync(() => _dataClient.ListHistoricalBarsAsync(req));
+            // 第一次请求
+            var page = await _rateLimitRetryPolicy.ExecuteAsync(async () =>
+            {
+                await _rateLimiter.WaitAsync();
+                try
+                {
+                    return await _dataClient.ListHistoricalBarsAsync(req);
+                }
+                finally
+                {
+                    _rateLimiter.Release();
+                }
+            });
             allBars.AddRange(page.Items);
 
-            // 翻页请求
+            // 后续翻页请求
             while (allBars.Count < limit && !string.IsNullOrEmpty(page.NextPageToken))
             {
-                await Task.Delay(1000);  // 增加请求间隔
+                await Task.Delay(100); // 延迟（避免重试和连接复用问题）
+
                 req = req.WithPageToken(page.NextPageToken);
-                page = await _rateLimitRetryPolicy.ExecuteAsync(() => _dataClient.ListHistoricalBarsAsync(req));
+
+                page = await _rateLimitRetryPolicy.ExecuteAsync(async () =>
+                {
+                    await _rateLimiter.WaitAsync();
+                    try
+                    {
+                        return await _dataClient.ListHistoricalBarsAsync(req);
+                    }
+                    finally
+                    {
+                        _rateLimiter.Release();
+                    }
+                });
+
                 allBars.AddRange(page.Items);
             }
 

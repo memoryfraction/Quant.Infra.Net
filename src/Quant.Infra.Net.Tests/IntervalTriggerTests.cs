@@ -1,6 +1,5 @@
 ﻿using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
-using System.Reflection;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -25,7 +24,7 @@ namespace Quant.Infra.Net.Tests
         [TestMethod]
         public void TestNextHourTriggerWithDelay()
         {
-            IntervalTrigger trigger = new IntervalTrigger(StartMode.NextHour, TimeSpan.FromMinutes(1));
+            IntervalTrigger trigger = new IntervalTrigger(StartMode.NextHour, TimeSpan.FromMinutes(-1));
             trigger.IntervalTriggered += OnIntervalTriggered;
             trigger.Start();
 

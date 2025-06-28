@@ -7,6 +7,7 @@ using Polly.Retry;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Model;
 using Quant.Infra.Net.Portfolio.Models;
+using Quant.Infra.Net.Shared.Extension;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service.Historical;
@@ -16,6 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+
 
 namespace Quant.Infra.Net.Broker.Service
 {
@@ -31,12 +33,12 @@ namespace Quant.Infra.Net.Broker.Service
         IAlpacaTradingClient _alpacaTradingClient;
 
 
-
         /// <summary>
         /// 当前交易环境（实盘 / 模拟盘）。
         /// Current exchange environment (e.g., Live or Paper).
         /// </summary>
         public ExchangeEnvironment ExchangeEnvironment { get; set; }
+
         public Currency BaseCurrency { get; set; }
 
         /// <summary>
@@ -66,7 +68,7 @@ namespace Quant.Infra.Net.Broker.Service
         /// 获取当前投资组合的市值（USD）。
         /// Get the total market value of the current portfolio.
         /// </summary>
-        public async Task<decimal> GetPortfolioMarketValueAsync()
+        public async Task<decimal> GetAccountEquityAsync()
         {
             return await _retryPolicy.ExecuteAsync(async () => await _alpacaClient.GetAccountEquityAsync());
         }
@@ -654,5 +656,17 @@ namespace Quant.Infra.Net.Broker.Service
             return account;
         }
 
+        public async Task PlaceOrderAsync(
+            Underlying underlying, 
+            int quality,
+            OrderExecutionType orderType = OrderExecutionType.Market,
+            TimeInForce timeInForce = TimeInForce.GoodTillCanceled,
+            bool afterHours = false
+            )
+        {
+            var timeInForceAlpaca = AlpacaMarketsExtension.ToAlpacaTimeInForce(timeInForce);
+            var orderTypeAlpaca = AlpacaMarketsExtension.ToAlpacaOrderType(orderType);
+            await _alpacaClient.PlaceOrderAsync(underlying.Symbol, quality, orderTypeAlpaca, timeInForceAlpaca, afterHours);
+        }
     }
 }

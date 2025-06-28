@@ -32,8 +32,7 @@ namespace Quant.Infra.Net.SourceData.Service
         }
 
         public async Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Shared.Model.ResolutionLevel period = Shared.Model.ResolutionLevel.Daily, DataSource dataSource = DataSource.MongoDBWebApi)
-        {
-            var ohlcvs = new Ohlcvs();
+        {            var ohlcvs = new Ohlcvs();
             
             if(dataSource == DataSource.MongoDBWebApi)
             { 

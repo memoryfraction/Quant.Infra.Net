@@ -24,7 +24,7 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// </summary>
         /// <returns>The market value as a decimal.  
         /// 返回市值（decimal 类型）。</returns>
-        Task<decimal> GetPortfolioMarketValueAsync();
+        Task<decimal> GetAccountEquityAsync();
 
         /// <summary>
         /// Check if the given symbol has an open position.  
@@ -65,6 +65,44 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// <returns>A task representing the asynchronous operation.  
         /// 表示设置持仓的异步任务。</returns>
         Task SetHoldingsAsync(string symbol, double rate);
+
+
+        /// <summary>
+        /// Places an order for the specified underlying asset with the given quantity and execution parameters.
+        /// 下单接口：根据指定的标的、数量和执行参数进行下单。
+        /// </summary>
+        /// <param name="underlying">
+        /// The underlying asset to trade.
+        /// 交易的标的资产。
+        /// </param>
+        /// <param name="quality">
+        /// The number of shares/contracts to buy or sell. Positive for buy, negative for sell.
+        /// 下单数量，正数表示买入，负数表示卖出。
+        /// </param>
+        /// <param name="orderType">
+        /// The type of order to place (e.g., Market, Limit, StopLoss). Default is Market.
+        /// 订单类型（如市价、限价、止损等），默认是市价单。
+        /// </param>
+        /// <param name="timeInForce">
+        /// Specifies how long the order remains active (e.g., GoodTillCanceled, ImmediateOrCancel).
+        /// 订单的有效时间（如长期有效、立即成交或取消等）。
+        /// </param>
+        /// <param name="afterHours">
+        /// Indicates whether the order is allowed to be placed during extended trading hours.
+        /// 是否允许盘前盘后交易。
+        /// </param>
+        /// <returns>
+        /// A task that represents the asynchronous operation.
+        /// 表示异步操作的任务对象。
+        /// </returns>
+        Task PlaceOrderAsync(
+            Underlying underlying,
+            int quality,
+            OrderExecutionType orderType = OrderExecutionType.Market,
+            TimeInForce timeInForce = TimeInForce.GoodTillCanceled,
+            bool afterHours = true
+        );
+
 
 
         Task<string> GetFormattedAccountSummaryAsync();

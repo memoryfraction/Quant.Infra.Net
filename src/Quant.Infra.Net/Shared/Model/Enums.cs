@@ -172,6 +172,12 @@ namespace Quant.Infra.Net.Shared.Model
         Short = 1  // 做空
     }
 
+    public enum BrokerAccountType
+    {
+        Cash = 0,
+        Margin = 1
+    }
+
     public enum OrderActionType
     {
         Buy = 0,

@@ -141,10 +141,14 @@ namespace Quant.Infra.Net.Shared.Service
             try
             {
                 IntervalTriggered?.Invoke(this, EventArgs.Empty);
+                // Serilog记录：触发时间和触发的事件,方便调试问题出在哪
+                var debugMessage = $"[IntervalTrigger] Event triggered at {DateTime.UtcNow:HH:mm:ss} UTC in the IntervalTrigger instance";
+                UtilityService.LogAndWriteLine(debugMessage, Serilog.Events.LogEventLevel.Debug);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[IntervalTrigger] Event handler exception: {ex.Message}");
+                var errorMessage = $"[IntervalTrigger] Event handler exception: {ex.Message}";
+                UtilityService.LogAndWriteLine(errorMessage, Serilog.Events.LogEventLevel.Error);
             }
 
             // 4. 计算下次触发时间（加锁）
@@ -162,7 +166,8 @@ namespace Quant.Infra.Net.Shared.Service
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[IntervalTrigger] Timer reset failed: {ex.Message}");
+                    var errorMessage = $"[IntervalTrigger] Timer reset failed: {ex.Message}";
+                    UtilityService.LogAndWriteLine(errorMessage, Serilog.Events.LogEventLevel.Error);
                     StopInternal(); // 发生错误时停止定时器
                 }
             }
@@ -253,7 +258,9 @@ namespace Quant.Infra.Net.Shared.Service
             var estTime = TimeZoneInfo.ConvertTimeFromUtc(_nextTriggerTime, estZone);
             bool isDst = estZone.IsDaylightSavingTime(estTime);
             string abbr = isDst ? "EDT" : "EST";
-            Console.WriteLine($"[IntervalTrigger] Mode={Mode}, Next trigger (ET)={estTime:yyyy-MM-dd HH:mm} {abbr}, UTC={_nextTriggerTime:HH:mm:ss}");
+            var message = $"[IntervalTrigger] Mode={Mode}, Next trigger (ET)={estTime:yyyy-MM-dd HH:mm} {abbr}, UTC={_nextTriggerTime:HH:mm:ss}";
+            UtilityService.LogAndWriteLine(message, Serilog.Events.LogEventLevel.Debug);
+
         }
 
         /// <summary>

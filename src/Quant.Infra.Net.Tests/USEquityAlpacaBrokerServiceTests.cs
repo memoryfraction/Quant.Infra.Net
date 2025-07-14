@@ -85,17 +85,6 @@ namespace Quant.Infra.Net.Tests
         }
 
 
-        /// <summary>
-        /// 测试：GetPortfolioMarketValue 应返回正值。
-        /// Test: GetPortfolioMarketValue should return a positive number.
-        /// </summary>
-        //[TestMethod]
-        //public async Task GetPortfolioMarketValue_ShouldReturnPositiveValue()
-        //{
-        //    var value = await _brokerService.GetPortfolioMarketValueAsync();
-        //    Console.WriteLine($"Portfolio market value: {value}");
-        //    Assert.IsTrue(value > 0, "Portfolio market value should be greater than 0.");
-        //}
 
         /// <summary>
         /// 测试：未实现盈亏比率应在合理范围内（-100% ~ +100%）。

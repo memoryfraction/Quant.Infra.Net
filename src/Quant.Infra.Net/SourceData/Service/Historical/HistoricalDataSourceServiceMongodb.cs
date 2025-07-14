@@ -76,7 +76,7 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
         {
             var results = new List<Ohlcv>();
             int page = 1;
-            int pageSize = 500;
+            int pageSize = 5000;
             int resolutionCode = (int)ResolutionLevel.Hourly;
 
             while (true)

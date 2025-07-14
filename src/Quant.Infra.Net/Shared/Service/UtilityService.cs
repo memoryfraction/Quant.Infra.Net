@@ -21,7 +21,7 @@ namespace Quant.Infra.Net.Shared.Service
 {
     public class UtilityService
     {
-        private const int MessageIndent = 20;
+        private const int MessageIndent = 15;
         private const int MaxLineWidth = 80;
         private static readonly object _orderLogLock = new();
         private static string GetLevelString(LogEventLevel level)
@@ -38,36 +38,26 @@ namespace Quant.Infra.Net.Shared.Service
             };
         }
 
+        /// <summary>
+        /// Formats a log message with timestamp and level, supports auto-indent for multiline.
+        /// </summary>
         private static string FormatMessage(string message, LogEventLevel level)
         {
             var timestamp = DateTime.Now.ToString("HH:mm:ss");
             var levelString = GetLevelString(level);
+            var prefix = $"[{timestamp} {levelString}] ";
+            var indent = new string(' ', prefix.Length);
+
+            var lines = message.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
             var sb = new StringBuilder();
 
-            // Header line
-            sb.AppendLine($"[{timestamp} {levelString}] {new string('═', MaxLineWidth - timestamp.Length - levelString.Length - 5)}");
-
-            // Message lines (with word wrapping and indentation)
-            var words = message.Split(' ');
-            var currentLine = new StringBuilder();
-
-            foreach (var word in words)
+            for (int i = 0; i < lines.Length; i++)
             {
-                if (currentLine.Length + word.Length + 1 > MaxLineWidth - MessageIndent)
-                {
-                    sb.AppendLine(new string(' ', MessageIndent) + currentLine);
-                    currentLine.Clear();
-                }
-                currentLine.Append(word + " ");
+                if (i == 0)
+                    sb.AppendLine(prefix + lines[i]);
+                else
+                    sb.AppendLine(indent + lines[i]);
             }
-
-            if (currentLine.Length > 0)
-            {
-                sb.AppendLine(new string(' ', MessageIndent) + currentLine);
-            }
-
-            // Footer line
-            sb.AppendLine(new string('═', MaxLineWidth));
 
             return sb.ToString();
         }
@@ -144,43 +134,6 @@ namespace Quant.Infra.Net.Shared.Service
             };
         }
 
-        /// <summary>
-        /// Logs a message at the specified log level and outputs it to the console.
-        /// 在指定的日志级别下记录消息，并将其输出到控制台。
-        /// </summary>
-        /// <param name="message">The message to log. 要记录的消息。</param>
-        /// <param name="logLevel">The log level for the message. 消息的日志级别，默认为 Information。</param>
-        public static void LogAndConsole(string message, LogEventLevel logLevel = LogEventLevel.Information)
-        {
-            // 根据入参，使用不同级别的日志
-            switch (logLevel)
-            {
-                case LogEventLevel.Verbose:
-                    Serilog.Log.Verbose(message);
-                    break;
-                case LogEventLevel.Debug:
-                    Serilog.Log.Debug(message);
-                    break;
-                case LogEventLevel.Information:
-                    Serilog.Log.Information(message);
-                    break;
-                case LogEventLevel.Warning:
-                    Serilog.Log.Warning(message);
-                    break;
-                case LogEventLevel.Error:
-                    Serilog.Log.Error(message);
-                    break;
-                case LogEventLevel.Fatal:
-                    Serilog.Log.Fatal(message);
-                    break;
-                default:
-                    Serilog.Log.Information(message);
-                    break;
-            }
-
-            // 将消息输出到控制台
-            Console.WriteLine(message);
-        }
 
         /// <summary>
         /// 结构化输出

@@ -2,6 +2,7 @@
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearRegression;
 using MathNet.Numerics.Statistics;
+using Quant.Infra.Net.Analysis.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -134,5 +135,8 @@ namespace Quant.Infra.Net.Analysis.Service
         {
             return (value - mean) / stdDev;
         }
+
+
+        
     }
 }

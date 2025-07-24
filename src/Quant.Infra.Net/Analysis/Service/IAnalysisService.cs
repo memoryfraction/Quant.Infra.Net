@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Quant.Infra.Net.Analysis.Models;
+using System.Collections.Generic;
 
 namespace Quant.Infra.Net.Analysis.Service
 {
@@ -27,5 +28,7 @@ namespace Quant.Infra.Net.Analysis.Service
         double CalculateZScores(IEnumerable<double> data, double value);
 
         double CalculateZScores(double mean, double stdDev, double value);
+
+        
     }
 }

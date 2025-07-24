@@ -13,6 +13,8 @@ namespace Quant.Infra.Net.Analysis
 
         public override double BusinessHoursDaily { get; set; } = 24; // 数字货币市场每天24小时交易
 
+        public override int HalfLifeWindowLength { get; set; } = 30;
+
         public SpreadCalculatorPerpetualContract(
             string symbol1,
             string symbol2,

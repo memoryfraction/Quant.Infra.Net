@@ -2,6 +2,7 @@
 using Quant.Infra.Net.Analysis.Models;
 using Quant.Infra.Net.Shared.Extension;
 using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.Shared.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +21,10 @@ namespace Quant.Infra.Net.Analysis
 
         public virtual double BusinessHoursDaily { get; set; } = 24;
 
-        public int FixedWindowLength { get; set; }
+        public virtual int HalfLifeWindowLength { get; set; } = 20; // 计算半衰期的窗口长度，通常用1个月比较合适; 
+
+        public int CointegrationFixedWindowLength { get; set; }
+
         public ResolutionLevel ResolutionLevel { get; set; } = ResolutionLevel.Daily;
         public string Symbol1 { get; set; }
         public string Symbol2 { get; set; }
@@ -38,6 +42,8 @@ namespace Quant.Infra.Net.Analysis
                 _dataFrame = value;
             }
         }
+
+
 
         /// <summary>
         /// 
@@ -69,7 +75,7 @@ namespace Quant.Infra.Net.Analysis
             Symbol2 = symbol2;
 
             ResolutionLevel = resolutionLevel;
-            this.FixedWindowLength = CalcuWindowLength(ResolutionLevel);
+            this.CointegrationFixedWindowLength = CalcuWindowLength(ResolutionLevel);
 
             // Merge DataFrames on DateTime
             _dataFrame = MergeDataFrames(symbol1, symbol2, df1, df2);
@@ -173,7 +179,7 @@ namespace Quant.Infra.Net.Analysis
                 endDateTime = dateTimeColumn.Cast<DateTime>().Max();
             }
 
-            var (seriesA, seriesB) = GetSeries(endDateTime.Value);
+            var (seriesA, seriesB) = GetSpreadAndEquationSeries(endDateTime.Value);
 
             // 计算spread
             var row = CalculateSpreadAndEquation(Symbol1, Symbol2, seriesA, seriesB);
@@ -182,7 +188,7 @@ namespace Quant.Infra.Net.Analysis
         }
 
         /// <summary>
-        /// 根据_dataFrame有三列：DateTime, $"{symbol1}Close", $"{symbol2}Close"和现有记录，添加和更新Spread和Equation列。
+        /// 根据_dataFrame有三列：DateTime, $"{symbol1}Close", $"{symbol2}Close"和现有记录，添加和更新Spread、Equation和HalfLife列。
         /// 已经有值的行会自动跳过，以节约算力;
         /// </summary>
         public void UpsertSpreadAndEquation()
@@ -218,9 +224,17 @@ namespace Quant.Infra.Net.Analysis
                 _dataFrame.Columns.Add(interceptColumn);
             }
 
+            // 如果不存在，增加column: HalfLife
+            if (!_dataFrame.Columns.Any(x => x.Name == "HalfLife"))
+            {
+                // Create the new column for Equation with double type
+                var halfLifeColumn = new DoubleDataFrameColumn("HalfLife", _dataFrame.Rows.Count);
+                _dataFrame.Columns.Add(halfLifeColumn);
+            }
+
             for (int i = 0; i < _dataFrame.Rows.Count; i++)
             {
-                if (i <= FixedWindowLength)
+                if (i <= CointegrationFixedWindowLength)
                     continue;
 
                 // Get the current DateTime value
@@ -233,7 +247,7 @@ namespace Quant.Infra.Net.Analysis
                 if (currentSpread != default && currentEquation != default)
                     continue;
 
-                var (seriesA, seriesB) = GetSeries(currentDateTime);
+                var (seriesA, seriesB) = GetSpreadAndEquationSeries(currentDateTime);
                 var row = CalculateSpreadAndEquation(Symbol1, Symbol2, seriesA, seriesB);
 
                 // Update the DataFrame with calculated Spread and Equation
@@ -242,7 +256,26 @@ namespace Quant.Infra.Net.Analysis
                 _dataFrame.Columns["Slope"][i] = row.Slope;
                 _dataFrame.Columns["Intercept"][i] = row.Intercept;
             }
+
+
+            // 循环行，赋值 HalfLife 列的值;
+            for (int i = 0; i < _dataFrame.Rows.Count; i++)
+            {
+                if (i <= Math.Max(HalfLifeWindowLength, CointegrationFixedWindowLength) + HalfLifeWindowLength)
+                    continue;
+
+                if (i >= _dataFrame.Rows.Count)
+                    break;
+
+                // 从当前日期向前获取HalfLifeWindowLength个Elements, 作为halflife的输入;
+                var spreads = new List<Element>();
+                var currentDateTime = (DateTime)_dataFrame.Columns["DateTime"][i];
+                spreads = GetSpreadSeries(currentDateTime, HalfLifeWindowLength).OrderBy(x => x.DateTime).Select(x => x).ToList(); 
+                var halfLife = UtilityService.CalculateHalfLife(spreads, HalfLifeWindowLength);
+                _dataFrame.Columns["HalfLife"][i] = halfLife;
+            }
         }
+
 
         /// <summary>
         /// 根据DateTime列的排序，从Spread列获得数据， 并返回; 需要在GetSpreadsFromColumn以后调用;
@@ -292,7 +325,7 @@ namespace Quant.Infra.Net.Analysis
         /// </summary>
         /// <param name="endDateTime"></param>
         /// <returns></returns>
-        private (List<Element>, List<Element>) GetSeries(DateTime endDateTime)
+        private (List<Element>, List<Element>) GetSpreadAndEquationSeries(DateTime endDateTime)
         {
             var listA = new List<Element>();
             var listB = new List<Element>();
@@ -315,7 +348,7 @@ namespace Quant.Infra.Net.Analysis
             }
 
             // 计算 startIndex 向前移动 FixedWindowLength 行
-            int startIndex = Math.Max(endIndex - FixedWindowLength + 1, 0);
+            int startIndex = Math.Max(endIndex - CointegrationFixedWindowLength + 1, 0);
 
             // 根据[startDateTime, endDateTime]范围提取数据
             for (int i = startIndex; i <= endIndex; i++)
@@ -329,9 +362,44 @@ namespace Quant.Infra.Net.Analysis
                 listB.Add(elmB);
             }
 
-
             return (listA, listB);
         }
+
+        private List<Element> GetSpreadSeries(DateTime inclusiveEndDateTime, int halfLifeWindowLength)
+        {
+            var list = new List<Element>();
+            // 找到 endDateTime 所在行的索引
+            var dateTimeColumnData = _dataFrame.Columns["DateTime"];
+            int endIndex = -1;
+            for (int i = 0; i < dateTimeColumnData.Length; i++)
+            {
+                if ((DateTime)dateTimeColumnData[i] == inclusiveEndDateTime)
+                {
+                    endIndex = i;
+                    break;
+                }
+            }
+
+            if (endIndex == -1)
+            {
+                throw new ArgumentException($"endDateTime {inclusiveEndDateTime} not found in the DataFrame.");
+            }
+
+            // 计算 startIndex 向前移动 FixedWindowLength 行
+            int startIndex = endIndex - halfLifeWindowLength + 1;
+
+            // 根据[startDateTime, endDateTime]范围提取数据
+            for (int i = startIndex; i <= endIndex; i++)
+            {
+                var row = _dataFrame.Rows[i];
+                var dateTime = (DateTime)row["DateTime"];
+                var elm = new Element("Spread", dateTime, Convert.ToDouble(row["Spread"]));
+                list.Add(elm);
+            }
+
+            return list;
+        }
+
 
         /// <summary>
         /// 计算spread和equation
@@ -404,6 +472,7 @@ namespace Quant.Infra.Net.Analysis
             return equation;
         }
 
+
         /// <summary>
         /// 检验数据源是否合格？
         /// </summary>
@@ -428,11 +497,12 @@ namespace Quant.Infra.Net.Analysis
             }
 
             // 检查 _dataFrame 元素个数是否超过 FixedWindowLength
-            if (_dataFrame.Rows.Count <= FixedWindowLength)
+            if (_dataFrame.Rows.Count <= CointegrationFixedWindowLength)
             {
                 throw new InvalidOperationException("element number is not verified.");
             }
         }
+
 
         /// <summary>
         /// 根据resolutionLevel计算window的长度;
@@ -440,6 +510,7 @@ namespace Quant.Infra.Net.Analysis
         /// <param name="resolutionLevel"></param>
         /// <returns></returns>
         protected abstract int CalcuWindowLength(ResolutionLevel resolutionLevel = ResolutionLevel.Daily);
+
 
         /// <summary>
         /// 删除空置行，类似与Python中的Dropna()
@@ -486,6 +557,7 @@ namespace Quant.Infra.Net.Analysis
             return _dataFrame;
         }
 
+
         /// <summary>
         /// 判断value是否为默认值
         /// </summary>
@@ -524,5 +596,6 @@ namespace Quant.Infra.Net.Analysis
             var defaultValue = Activator.CreateInstance(type);
             return value.Equals(defaultValue);
         }
+
     }
 }

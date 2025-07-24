@@ -6,12 +6,17 @@ namespace Quant.Infra.Net.Analysis
 {
     public class SpreadCalculatorUsEquity : SpreadCalculatorFixLength
     {
+ 
+
         /// <summary>
         /// 美股每年交易日252天，半年为126天
         /// </summary>
         public override int FixedWindowDays { get; set; } = 126;
 
         public override double BusinessHoursDaily { get; set; } = 6.5; // 数字货币市场每天24小时交易
+
+        public override int HalfLifeWindowLength { get; set; } = 20;
+
 
         public SpreadCalculatorUsEquity(
             string symbol1,

@@ -10,6 +10,7 @@ using System.Globalization;
 using Quant.Infra.Net.SourceData.Model;
 using Python.Runtime;
 using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.Analysis.Models;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -354,7 +355,45 @@ namespace Quant.Infra.Net.Tests
             // Assert is handled by ExpectedException
         }
 
+
+        [TestMethod]
+        public void CalculateHalfLife_Should_Work()
+        {
+            // Arrange
+            var spreads = new List<Element>();
+            var startDate = new DateTime(2025, 1, 1);
+            var length = 100; // 模拟100天
+
+            var rand = new Random(42);
+            double previous = 0.0;
+
+            for (int i = 0; i < length; i++)
+            {
+                double noise = rand.NextDouble() * 0.5 - 0.25; // [-0.25, 0.25]
+                double value = 0.9 * previous + noise;
+                spreads.Add(new Element("SPREAD", startDate.AddDays(i), value));
+                previous = value;
+            }
+
+            // Act
+            var halfLife = UtilityService.CalculateHalfLife(spreads, 60); // 使用60-bar窗口
+
+            // 输出 spreads 序列
+            Console.WriteLine("Date\t\tSpread");
+            foreach (var s in spreads)
+            {
+                Console.WriteLine($"{s.DateTime:yyyy-MM-dd}\t{s.Value:F4}");
+            }
+
+            Console.WriteLine($"\nCalculated Half-Life: {halfLife:F4}");
+
+            // Assert
+            Assert.IsTrue(halfLife > 0 && halfLife < 100, $"Half-life result seems incorrect: {halfLife}");
+        }
+
+
+
     }
 
-    
+
 }

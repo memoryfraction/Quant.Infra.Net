@@ -1,4 +1,6 @@
-﻿
+﻿V 1.2.0 - 2025.07.24
+added HalfLife column in DataFrame
+
 V 1.0.3 - 2024.10.15
 Added test cases for BinanceUsdFutureTests using binance testnet
 

@@ -59,11 +59,13 @@ namespace Quant.Infra.Net.Tests
 
             double spread = rowIndex != -1 ? (double)calculator.DataFrame["Spread"][rowIndex] : default(double);
             string equation = rowIndex != -1 ? (string)calculator.DataFrame["Equation"][rowIndex] : default(string);
+            double halfLife = rowIndex != -1 ? (double)calculator.DataFrame["HalfLife"][rowIndex] : default(double);
 
             // Print the results
             Console.WriteLine($"End DateTime: {endDateTime}");
             Console.WriteLine($"Spread: {spread}");
             Console.WriteLine($"Equation: {equation}");
+            Console.WriteLine($"Half Life: {Math.Round(halfLife,2)}");
         }
 
 
@@ -99,6 +101,7 @@ namespace Quant.Infra.Net.Tests
             Assert.IsFalse(string.IsNullOrWhiteSpace(equation), "Equation value should not be null or empty.");
         }
 
+       
     }
 }
 

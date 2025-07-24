@@ -5,6 +5,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Data.Analysis;
 using Python.Runtime;
+using Quant.Infra.Net.Analysis.Models;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using Serilog;
@@ -61,6 +62,71 @@ namespace Quant.Infra.Net.Shared.Service
 
             return sb.ToString();
         }
+
+
+        /// <summary>
+        /// 输入spreads， 返回最新日期的HalfLife, 单位根据输入的spreads对应; e.g. spreads是日级别，返回的半衰期也是日级别;
+        /// </summary>
+        /// <param name="spreads">spreads.count应该>=halfLifeWindowLength</param>
+        /// <param name="halfLifeWindowLength">spreads.count应该>=halfLifeWindowLength</param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public static double CalculateHalfLife(IEnumerable<Element> spreads, int halfLifeWindowLength)
+        {
+            // 检查输入的有效性，如果非法输出，抛出异常和错误
+            if (spreads == null) 
+                throw new ArgumentNullException(nameof(spreads));
+
+            if (halfLifeWindowLength <= 1) 
+                throw new ArgumentException("Window length must be greater than 1.", nameof(halfLifeWindowLength));
+
+            if (spreads.Count() < halfLifeWindowLength)
+                throw new ArgumentException("Not enough data to calculate half-life for the given window length.");
+
+            // 1. 取最新的 halfLifeWindowLength 个数据，按时间升序排序（时间从早到晚）
+            var recent = spreads
+                .OrderBy(e => e.DateTime)
+                .TakeLast(halfLifeWindowLength)
+                .Select(e => e.Value)
+                .ToArray();
+
+            if (recent.Length < 2)
+                throw new ArgumentException("Not enough data points to compute half-life.");
+
+            // 2. 构造 Y = Δspread = spread[t] - spread[t-1]
+            //    X = spread[t-1]
+            int n = recent.Length - 1;
+            var x = new double[n];
+            var y = new double[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                x[i] = recent[i];              // spread[t-1]
+                y[i] = recent[i + 1] - x[i];   // Δspread = spread[t] - spread[t-1]
+            }
+
+            // 3. 对 Y = β * X + ε 进行线性回归，计算 β
+            double meanX = x.Average();
+            double meanY = y.Average();
+
+            double numerator = 0.0;
+            double denominator = 0.0;
+            for (int i = 0; i < n; i++)
+            {
+                numerator += (x[i] - meanX) * (y[i] - meanY);
+                denominator += (x[i] - meanX) * (x[i] - meanX);
+            }
+
+            double beta = denominator == 0 ? 0 : numerator / denominator;
+
+            // 4. Half-Life 计算
+            if (beta >= 0)
+                return double.PositiveInfinity;
+
+            double halfLife = -Math.Log(2) / beta;
+            return Math.Max(1, halfLife); // 至少为 1
+        }
+
 
         /// <summary>
         /// Enhanced logging with structured output to both console and Serilog

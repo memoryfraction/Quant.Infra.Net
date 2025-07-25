@@ -14,16 +14,11 @@ namespace Quant.Infra.Net.Analysis
     /// </summary>
     public abstract class SpreadCalculatorFixLength
     {
-        /// <summary>
-        /// 默认定长183， 默认单位：天
-        /// </summary>
-        public virtual int FixedWindowDays { get; set; } = 183;
-
         public virtual double BusinessHoursDaily { get; set; } = 24;
 
         public virtual int HalfLifeWindowLength { get; set; } = 20; // 计算半衰期的窗口长度，通常用1个月比较合适; 
 
-        public int CointegrationFixedWindowLength { get; set; }
+        public virtual int CointegrationFixedWindowLength { get; set; } = 183;
 
         public ResolutionLevel ResolutionLevel { get; set; } = ResolutionLevel.Daily;
         public string Symbol1 { get; set; }

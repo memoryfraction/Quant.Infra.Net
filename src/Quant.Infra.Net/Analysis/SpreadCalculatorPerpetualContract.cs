@@ -9,7 +9,7 @@ namespace Quant.Infra.Net.Analysis
         /// <summary>
         /// 永续合约全年无休交易，半年为183天
         /// </summary>
-        public override int FixedWindowDays { get; set; } = 183;
+        public override int CointegrationFixedWindowLength { get; set; } = 183;
 
         public override double BusinessHoursDaily { get; set; } = 24; // 数字货币市场每天24小时交易
 
@@ -36,25 +36,25 @@ namespace Quant.Infra.Net.Analysis
             switch (resolutionLevel)
             {
                 case ResolutionLevel.Daily:
-                    return FixedWindowDays;
+                    return CointegrationFixedWindowLength;
 
                 case ResolutionLevel.Weekly:
-                    return FixedWindowDays * 7;
+                    return CointegrationFixedWindowLength * 7;
 
                 case ResolutionLevel.Monthly:
-                    return FixedWindowDays * 30;
+                    return CointegrationFixedWindowLength * 30;
 
                 case ResolutionLevel.Hourly:
                     // 加密货币市场每天24小时交易
-                    return (int)Math.Floor(FixedWindowDays * BusinessHoursDaily);
+                    return (int)Math.Floor(CointegrationFixedWindowLength * BusinessHoursDaily);
 
                 case ResolutionLevel.Minute:
                     // 每天24小时 * 60分钟
-                    return (int)Math.Floor(FixedWindowDays * BusinessHoursDaily * 60);
+                    return (int)Math.Floor(CointegrationFixedWindowLength * BusinessHoursDaily * 60);
 
                 case ResolutionLevel.Second:
                     // 每天24小时 * 3600秒
-                    return (int)Math.Floor(FixedWindowDays * BusinessHoursDaily * 3600);
+                    return (int)Math.Floor(CointegrationFixedWindowLength * BusinessHoursDaily * 3600);
 
                 case ResolutionLevel.Tick:
                     // 每次交易的窗口长度取决于实际的实现需求，这里没有具体实现

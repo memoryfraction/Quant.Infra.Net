@@ -11,7 +11,7 @@ namespace Quant.Infra.Net.Analysis
         /// <summary>
         /// 美股每年交易日252天，半年为126天
         /// </summary>
-        public override int FixedWindowDays { get; set; } = 126;
+        public override int CointegrationFixedWindowLength { get; set; } = 126;
 
         public override double BusinessHoursDaily { get; set; } = 6.5; // 数字货币市场每天24小时交易
 
@@ -39,22 +39,22 @@ namespace Quant.Infra.Net.Analysis
             switch (resolutionLevel)
             {
                 case ResolutionLevel.Daily:
-                    return FixedWindowDays;
+                    return CointegrationFixedWindowLength;
 
                 case ResolutionLevel.Weekly:
-                    return FixedWindowDays * 7;
+                    return CointegrationFixedWindowLength * 7;
 
                 case ResolutionLevel.Monthly:
-                    return FixedWindowDays * 30;
+                    return CointegrationFixedWindowLength * 30;
 
                 case ResolutionLevel.Hourly:
-                    return (int)(FixedWindowDays * BusinessHoursDaily);
+                    return (int)(CointegrationFixedWindowLength * BusinessHoursDaily);
 
                 case ResolutionLevel.Minute:
-                    return (int)(FixedWindowDays * BusinessHoursDaily * 60);
+                    return (int)(CointegrationFixedWindowLength * BusinessHoursDaily * 60);
 
                 case ResolutionLevel.Second:
-                    return (int)(FixedWindowDays * BusinessHoursDaily * 3600);
+                    return (int)(CointegrationFixedWindowLength * BusinessHoursDaily * 3600);
 
                 case ResolutionLevel.Tick:
                     throw new NotImplementedException("Tick resolution is not implemented.");

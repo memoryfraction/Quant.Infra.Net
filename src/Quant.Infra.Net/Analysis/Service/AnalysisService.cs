@@ -50,71 +50,83 @@ namespace Quant.Infra.Net.Analysis.Service
             return adfTestResult.Statistic < adfTestStatisticThreshold;
         }
 
+        /// <summary>
+        /// todo: 这个方法不准确，还是需要通过Python statsmodels.tsa.stattools 做底层实现;
+        /// </summary>
+        /// <param name="timeSeries"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         public AdfTestResult AugmentedDickeyFullerTest(IEnumerable<double> timeSeries)
         {
-            // Ensure the input time series is not null or empty
-            if (timeSeries == null || timeSeries.Count() == 0)
+            int lag = 1;
+            var series = timeSeries.ToArray();
+            int n = series.Length;
+            if (n <= lag + 1)
+                throw new ArgumentException("Time series too short for given lag.");
+
+            // Δy_t
+            double[] diff = new double[n - 1];
+            for (int i = 1; i < n; i++)
+                diff[i - 1] = series[i] - series[i - 1];
+
+            // 构造 y_{t-1}
+            double[] yLag1 = new double[n - 1];
+            for (int i = 1; i < n; i++)
+                yLag1[i - 1] = series[i - 1];
+
+            // 构造回归矩阵 X
+            // 第一列: y_{t-1}
+            // 后面列: Δy_{t-1}, Δy_{t-2}, ... (根据 lag 决定)
+            // 最后一列: 常数项
+            int rows = diff.Length - lag;
+            int cols = 1 + lag + 1; // yLag1 + Δy lags + const
+            var X = Matrix<double>.Build.Dense(rows, cols);
+            var Y = Vector<double>.Build.Dense(rows);
+
+            for (int t = lag; t < diff.Length; t++)
             {
-                throw new ArgumentException("The time series data must not be null or empty.");
+                int row = t - lag;
+                X[row, 0] = yLag1[t]; // y_{t-1}
+
+                for (int j = 1; j <= lag; j++)
+                    X[row, j] = diff[t - j]; // Δy_{t-j}
+
+                X[row, cols - 1] = 1.0; // 常数项
+                Y[row] = diff[t];
             }
 
-            // Calculate the first difference of the time series
-            double[] diffSeries = new double[timeSeries.Count() - 1];
-            for (int i = 1; i < timeSeries.Count(); i++)
+            // OLS 回归
+            var Xt = X.Transpose();
+            var XtX = Xt * X;
+            var XtY = Xt * Y;
+            var betaVec = XtX.Solve(XtY);
+
+            double beta = betaVec[0]; // y_{t-1} 的系数
+
+            // 残差
+            var residuals = Y - X * betaVec;
+            double s2 = residuals.DotProduct(residuals) / (rows - cols);
+
+            // 协方差矩阵
+            var covMatrix = XtX.Inverse() * s2;
+            double seBeta = Math.Sqrt(covMatrix[0, 0]);
+
+            // ADF 统计量
+            double adfStatistic = beta / seBeta;
+
+            // 近似 p-value（建议用 MacKinnon 表或外部插值）
+            double pValue = AdfPValue.ApproximateAdfPValue(adfStatistic);
+
+            return new AdfTestResult
             {
-                diffSeries[i - 1] = timeSeries.ElementAt(i) - timeSeries.ElementAt(i - 1);
-            }
-
-            // Build the regression matrix
-            var matrixBuilder = Matrix<double>.Build;
-            var vectorBuilder = Vector<double>.Build;
-
-            var y = vectorBuilder.DenseOfArray(diffSeries);
-            var x = matrixBuilder.Dense(diffSeries.Length, 2, (i, j) => j == 0 ? timeSeries.ElementAt(i) : 1.0);
-
-            // Perform linear regression
-            var regression = x.QR().Solve(y);
-
-            // Get the regression coefficients
-            double beta = regression[0];
-            double intercept = regression[1];
-
-            // Calculate the ADF statistic
-            double adfStatistic = beta / (y.StandardDeviation() / Math.Sqrt(diffSeries.Length));
-
-            // 参考: MacKinnon (1994) 近似，注意这只是粗略估计
-            var pValue = ApproximateAdfPValue(adfStatistic);
-
-            // Note: You might need to adjust this part based on the critical values for ADF test
-            return new AdfTestResult() 
-            { 
-                PValue = pValue,
-                Statistic = adfStatistic
+                Statistic = adfStatistic,
+                PValue = pValue
             };
         }
 
-        /// <summary>
-        /// 只是模糊准确，e.g. [1,11], 
-        /// python tatsmodels.tsa.stattools pvalue: 0.99
-        /// CSharp pvalue  0.9
-        /// </summary>
-        /// <param name="adfStat"></param>
-        /// <returns></returns>
-        private double ApproximateAdfPValue(double adfStat)
-        {
-            // 这是一个近似函数示例，仅供参考
-            // ADF统计量通常为负，数值越小越显著，p-value越小
-            // 简单做线性映射并限制范围
-            if (adfStat > -1.0) return 0.9;   // 非平稳可能性大
-            if (adfStat < -4.0) return 0.01;  // 非常显著平稳
 
-            // 线性内插
-            double slope = (0.01 - 0.9) / (-4.0 + 1.0); // (p2 - p1)/(x2 - x1)
-            double intercept = 0.9 - slope * (-1.0);
+        
 
-            double p = slope * adfStat + intercept;
-            return Math.Min(Math.Max(p, 0.0), 1.0);
-        }
 
         /// <summary>
         /// 进行最小二乘法(Ordinary Least Squares Regression)回归分析并返回斜率和截距。

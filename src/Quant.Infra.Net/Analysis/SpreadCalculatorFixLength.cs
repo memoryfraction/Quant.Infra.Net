@@ -1,8 +1,10 @@
 ﻿using Microsoft.Data.Analysis;
 using Quant.Infra.Net.Analysis.Models;
+using Quant.Infra.Net.Shared;
 using Quant.Infra.Net.Shared.Extension;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
+using Quant.Infra.Net.SourceData.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +19,7 @@ namespace Quant.Infra.Net.Analysis
         public virtual double BusinessHoursDaily { get; set; } = 24;
 
         public virtual int HalfLifeWindowLength { get; set; } = 20; // 计算半衰期的窗口长度，通常用1个月比较合适; 
+        public virtual int ShortTermAdfTestWindowLength { get; set; } = 20; // 短期ADF检测窗口长度;
 
         public virtual int CointegrationFixedWindowLength { get; set; } = 183;
 
@@ -269,6 +272,32 @@ namespace Quant.Infra.Net.Analysis
                 var halfLife = UtilityService.CalculateHalfLife(spreads, HalfLifeWindowLength);
                 _dataFrame.Columns["HalfLife"][i] = halfLife;
             }
+
+
+            //  赋值column: AdfTestPValue
+            for (int i = 0; i < _dataFrame.Rows.Count; i++)
+            {
+                if (i <= Math.Max(ShortTermAdfTestWindowLength, CointegrationFixedWindowLength) + ShortTermAdfTestWindowLength)
+                    continue;
+
+                if (i >= _dataFrame.Rows.Count)
+                    break;
+
+                var currentDateTime = (DateTime)_dataFrame.Columns["DateTime"][i];
+                var ohlcv1 = new List<Ohlcv>();
+                var ohlcv2 = new List<Ohlcv>();
+                // todo assign ohlcv1, ohlcv2
+
+                var pValue = UtilityService.CalculateAdfTestPValue(ohlcv1, ohlcv2);
+                _dataFrame.Columns[StatisticConstants.AdfTestPValueString][i] = pValue;
+            }
+
+
+        }
+
+        public IEnumerable<double> GetOhlcvSeriesFromColumn()
+        {
+            
         }
 
 

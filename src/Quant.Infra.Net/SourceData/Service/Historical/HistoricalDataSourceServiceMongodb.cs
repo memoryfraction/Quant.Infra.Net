@@ -111,6 +111,7 @@ namespace Quant.Infra.Net.SourceData.Service.Historical
                     {
                         Symbol = underlying.Symbol,
                         OpenDateTime = dt,
+                        CloseDateTime = dt.AddHours(1),
                         Open = item.GetProperty("open").GetDecimal(),
                         High = item.GetProperty("high").GetDecimal(),
                         Low = item.GetProperty("low").GetDecimal(),

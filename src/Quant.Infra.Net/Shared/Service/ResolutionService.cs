@@ -204,7 +204,7 @@ namespace Quant.Infra.Net.Shared.Service
                     {
                         var ohlcv = new Ohlcv
                         {
-                            OpenDateTime = group.Key,
+                            OpenDateTime = group.Key, 
                             Open = group.First().Open,
                             High = group.Max(r => r.High),
                             Low = group.Min(r => r.Low),

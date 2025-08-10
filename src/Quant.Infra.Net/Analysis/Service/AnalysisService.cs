@@ -42,6 +42,22 @@ namespace Quant.Infra.Net.Analysis.Service
                 throw new ArgumentException("The time series data must not be null or empty.");
             }
 
+            // Calculate the ADF statistic
+            double adfStatistic = AugmentedDickeyFullerTest(timeSeries);
+
+            // Compare the ADF statistic with the threshold
+            // Note: You might need to adjust this part based on the critical values for ADF test
+            return adfStatistic < threshold;
+        }
+
+        public double AugmentedDickeyFullerTest(IEnumerable<double> timeSeries)
+        {
+            // Ensure the input time series is not null or empty
+            if (timeSeries == null || timeSeries.Count() == 0)
+            {
+                throw new ArgumentException("The time series data must not be null or empty.");
+            }
+
             // Calculate the first difference of the time series
             double[] diffSeries = new double[timeSeries.Count() - 1];
             for (int i = 1; i < timeSeries.Count(); i++)
@@ -68,7 +84,7 @@ namespace Quant.Infra.Net.Analysis.Service
 
             // Compare the ADF statistic with the threshold
             // Note: You might need to adjust this part based on the critical values for ADF test
-            return adfStatistic < threshold;
+            return adfStatistic;
         }
 
         /// <summary>

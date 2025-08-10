@@ -63,6 +63,20 @@ namespace Quant.Infra.Net.Shared.Service
             return sb.ToString();
         }
 
+        /// <summary>
+        /// 参考AnalysisManager -> StationaryTestAsync
+        /// </summary>
+        /// <param name="symbol1OhlcvList"></param>
+        /// <param name="symbol2OhlcvList"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public static double CalculateAdfTestPValue(
+            IEnumerable<Quant.Infra.Net.SourceData.Model.Ohlcv> symbol1OhlcvList,
+            IEnumerable<Quant.Infra.Net.SourceData.Model.Ohlcv> symbol2OhlcvList)
+        {
+            // Todo 
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// 输入spreads， 返回最新日期的HalfLife, 单位根据输入的spreads对应; e.g. spreads是日级别，返回的半衰期也是日级别;

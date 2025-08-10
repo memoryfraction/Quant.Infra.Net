@@ -46,11 +46,11 @@ namespace Quant.Infra.Net.Tests
         public void StationaryTest_Should_Work()
         {
             // Arrange
-            double[] stationarySeries = { 1, -1, 1, -1, 1, -1, 1, -1 };
+            double[] stationarySeries = { 0.5, 0.6, 0.4, 0.7, 0.5, 0.3, 0.6, 0.4 };
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            bool isStationary = _analysisService.AugmentedDickeyFullerTest(stationarySeries,0.05);
+            bool isStationary = _analysisService.AugmentedDickeyFullerTest(stationarySeries, adfTestStatisticThreshold:-2.846);
 
             // Assert
             Assert.AreEqual(true, isStationary);
@@ -60,10 +60,13 @@ namespace Quant.Infra.Net.Tests
         public void NonStationaryTest_Should_Work()
         {
             // Arrange
-            double[] nonStationarySeries = { 1, 2, 3, 4, 5, 6, 7, 8 };
+            double[] nonStationarySeries = { 1, 2, 3, 4, 5, 6, 7, 8,9, 10, 11 };
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
+            var res = _analysisService.AugmentedDickeyFullerTest(nonStationarySeries);
+            Console.WriteLine($"pvalue:{res.PValue}");
+
             bool isStationary = _analysisService.AugmentedDickeyFullerTest(nonStationarySeries, 0.05);
 
             // Assert

@@ -13,7 +13,9 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <param name="timeSeries"></param>
         /// <param name="threshold"></param>
         /// <returns></returns>
-        bool AugmentedDickeyFullerTest(IEnumerable<double> timeSeries, double threshold = 0.05);
+        bool AugmentedDickeyFullerTest(IEnumerable<double> timeSeries, double adfTestStatisticThreshold = -2.86);
+
+        public AdfTestResult AugmentedDickeyFullerTest(IEnumerable<double> timeSeries);
 
         /// <summary>
         /// 线性回归

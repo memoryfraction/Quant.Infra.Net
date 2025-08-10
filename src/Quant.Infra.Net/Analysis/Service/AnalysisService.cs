@@ -34,7 +34,23 @@ namespace Quant.Infra.Net.Analysis.Service
         /// 0.05 - 显著
         /// 0.1  - 较显著
         /// </remarks>
-        public bool AugmentedDickeyFullerTest(IEnumerable<double> timeSeries, double threshold = 0.05)
+        public bool AugmentedDickeyFullerTest(IEnumerable<double> timeSeries, double adfTestStatisticThreshold = -2.86)
+        {
+            // Ensure the input time series is not null or empty
+            if (timeSeries == null || timeSeries.Count() == 0)
+            {
+                throw new ArgumentException("The time series data must not be null or empty.");
+            }
+
+            // Calculate the ADF statistic
+            var adfTestResult = AugmentedDickeyFullerTest(timeSeries);
+
+            // Compare the ADF statistic with the threshold
+            // Note: You might need to adjust this part based on the critical values for ADF test
+            return adfTestResult.Statistic < adfTestStatisticThreshold;
+        }
+
+        public AdfTestResult AugmentedDickeyFullerTest(IEnumerable<double> timeSeries)
         {
             // Ensure the input time series is not null or empty
             if (timeSeries == null || timeSeries.Count() == 0)
@@ -66,9 +82,38 @@ namespace Quant.Infra.Net.Analysis.Service
             // Calculate the ADF statistic
             double adfStatistic = beta / (y.StandardDeviation() / Math.Sqrt(diffSeries.Length));
 
-            // Compare the ADF statistic with the threshold
+            // 参考: MacKinnon (1994) 近似，注意这只是粗略估计
+            var pValue = ApproximateAdfPValue(adfStatistic);
+
             // Note: You might need to adjust this part based on the critical values for ADF test
-            return adfStatistic < threshold;
+            return new AdfTestResult() 
+            { 
+                PValue = pValue,
+                Statistic = adfStatistic
+            };
+        }
+
+        /// <summary>
+        /// 只是模糊准确，e.g. [1,11], 
+        /// python tatsmodels.tsa.stattools pvalue: 0.99
+        /// CSharp pvalue  0.9
+        /// </summary>
+        /// <param name="adfStat"></param>
+        /// <returns></returns>
+        private double ApproximateAdfPValue(double adfStat)
+        {
+            // 这是一个近似函数示例，仅供参考
+            // ADF统计量通常为负，数值越小越显著，p-value越小
+            // 简单做线性映射并限制范围
+            if (adfStat > -1.0) return 0.9;   // 非平稳可能性大
+            if (adfStat < -4.0) return 0.01;  // 非常显著平稳
+
+            // 线性内插
+            double slope = (0.01 - 0.9) / (-4.0 + 1.0); // (p2 - p1)/(x2 - x1)
+            double intercept = 0.9 - slope * (-1.0);
+
+            double p = slope * adfStat + intercept;
+            return Math.Min(Math.Max(p, 0.0), 1.0);
         }
 
         /// <summary>

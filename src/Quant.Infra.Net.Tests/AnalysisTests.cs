@@ -1,16 +1,17 @@
-﻿using CsvHelper.Configuration;
-using CsvHelper;
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.DependencyInjection;
+using Python.Runtime;
+using Quant.Infra.Net.Analysis.Models;
 using Quant.Infra.Net.Analysis.Service;
+using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
+using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service;
 using ScottPlot;
 using System.Diagnostics;
 using System.Globalization;
-using Quant.Infra.Net.SourceData.Model;
-using Python.Runtime;
-using Quant.Infra.Net.Shared.Model;
-using Quant.Infra.Net.Analysis.Models;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -52,6 +53,10 @@ namespace Quant.Infra.Net.Tests
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
             bool isStationary = _analysisService.AugmentedDickeyFullerTest(stationarySeries, adfTestStatisticThreshold:-2.846);
 
+            var res = _analysisService.AugmentedDickeyFullerTest(stationarySeries);
+            Console.WriteLine($"pvalue:{res.PValue}");
+            Console.WriteLine($"statistic:{res.Statistic}");
+
             // Assert
             Assert.AreEqual(true, isStationary);
         }
@@ -60,12 +65,17 @@ namespace Quant.Infra.Net.Tests
         public void NonStationaryTest_Should_Work()
         {
             // Arrange
-            double[] nonStationarySeries = { 1, 2, 3, 4, 5, 6, 7, 8,9, 10, 11 };
+            double[] nonStationarySeries = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
             var res = _analysisService.AugmentedDickeyFullerTest(nonStationarySeries);
             Console.WriteLine($"pvalue:{res.PValue}");
+            Console.WriteLine($"statistic:{res.Statistic}");
+
+            // 期待输出：
+            // ADF Statistic: 1.0458250331675945
+            // p - value: 0.9947266780527716
 
             bool isStationary = _analysisService.AugmentedDickeyFullerTest(nonStationarySeries, 0.05);
 

@@ -15,7 +15,10 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <returns></returns>
         bool AugmentedDickeyFullerTest(IEnumerable<double> timeSeries, double adfTestStatisticThreshold = -2.86);
 
-        AdfTestResult AugmentedDickeyFullerTestPython(IEnumerable<double> timeSeries, string condaVenvHomePath, string pythonDllFullPathFileName);
+        AdfTestResult AugmentedDickeyFullerTestPython(
+            IEnumerable<double> timeSeries, 
+            string condaVenvHomePath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading", 
+            string pythonDllFullPathFileName = "python39.dll");
 
         public AdfTestResult AugmentedDickeyFullerTest(IEnumerable<double> timeSeries);
 

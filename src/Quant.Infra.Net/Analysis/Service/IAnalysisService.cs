@@ -15,6 +15,8 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <returns></returns>
         bool AugmentedDickeyFullerTest(IEnumerable<double> timeSeries, double adfTestStatisticThreshold = -2.86);
 
+        AdfTestResult AugmentedDickeyFullerTestPython(IEnumerable<double> timeSeries, string condaVenvHomePath, string pythonDllFullPathFileName);
+
         public AdfTestResult AugmentedDickeyFullerTest(IEnumerable<double> timeSeries);
 
         /// <summary>

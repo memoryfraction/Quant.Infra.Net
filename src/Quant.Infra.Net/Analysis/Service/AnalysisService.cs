@@ -2,7 +2,9 @@
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearRegression;
 using MathNet.Numerics.Statistics;
+using Python.Runtime;
 using Quant.Infra.Net.Analysis.Models;
+using Quant.Infra.Net.Shared.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -125,7 +127,36 @@ namespace Quant.Infra.Net.Analysis.Service
         }
 
 
-        
+        public AdfTestResult AugmentedDickeyFullerTestPython(IEnumerable<double> timeSeries, string condaVenvHomePath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading", string pythonDllFullPathFileName = "python39.dll")
+        {
+            // 初始化 Python 环境
+            var infra = PythonNetInfra.GetPythonInfra(condaVenvHomePath, pythonDllFullPathFileName);
+            Runtime.PythonDLL = infra.PythonDLL;
+            PythonEngine.PythonHome = infra.PythonHome;
+            PythonEngine.PythonPath = infra.PythonPath;
+            PythonEngine.Initialize();
+
+            var resultObj = new AdfTestResult();
+
+            using (Py.GIL())
+            {
+                dynamic np = Py.Import("numpy");
+                dynamic sm = Py.Import("statsmodels.tsa.stattools");
+
+                // 转换 C# 数组为 numpy 数组
+                dynamic npArray = np.array(timeSeries.ToArray());
+
+                // 调用 adfuller
+                dynamic result = sm.adfuller(npArray);
+                double adfStat = (double)result[0];
+                double pValue = (double)result[1];
+
+                resultObj.Statistic = adfStat;
+                resultObj.PValue = pValue;
+            }
+
+            return resultObj;
+        }
 
 
         /// <summary>

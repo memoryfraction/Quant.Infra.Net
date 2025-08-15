@@ -62,6 +62,25 @@ namespace Quant.Infra.Net.Tests
         }
 
         [TestMethod]
+        public void StationaryTest_Should_Work1()
+        {
+            // Arrange
+            double[] stationarySeries = { 0.5, 0.6, 0.4, 0.7, 0.5, 0.3, 0.6, 0.4 };
+
+            var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
+            var evenPath = @"D:\\ProgramData\\PythonVirtualEnvs\\pair_trading";
+            var pythonDll = "python39.dll";
+            var adfTestRes = _analysisService.AugmentedDickeyFullerTestPython(stationarySeries, evenPath, pythonDll);
+
+            Console.WriteLine($"pvalue:{adfTestRes.PValue}");
+            Console.WriteLine($"statistic:{adfTestRes.Statistic}");
+
+            // Assert
+            Assert.AreEqual(true, adfTestRes.PValue < 0.05);
+        }
+
+
+        [TestMethod]
         public void NonStationaryTest_Should_Work()
         {
             // Arrange

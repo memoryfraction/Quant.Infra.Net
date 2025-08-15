@@ -126,15 +126,29 @@ namespace Quant.Infra.Net.Analysis.Service
             };
         }
 
-
+        private static bool pythonInitialized = false;
+        private static object pythonInitLock = new object();
         public AdfTestResult AugmentedDickeyFullerTestPython(IEnumerable<double> timeSeries, string condaVenvHomePath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading", string pythonDllFullPathFileName = "python39.dll")
         {
             // 初始化 Python 环境
-            var infra = PythonNetInfra.GetPythonInfra(condaVenvHomePath, pythonDllFullPathFileName);
-            Runtime.PythonDLL = infra.PythonDLL;
-            PythonEngine.PythonHome = infra.PythonHome;
-            PythonEngine.PythonPath = infra.PythonPath;
-            PythonEngine.Initialize();
+            // 初始化 Python 环境（只执行一次）
+            if (!pythonInitialized)
+            {
+                lock (pythonInitLock)
+                {
+                    if (!pythonInitialized)
+                    {
+                        var infra = PythonNetInfra.GetPythonInfra(condaVenvHomePath, pythonDllFullPathFileName);
+
+                        Runtime.PythonDLL = infra.PythonDLL;
+                        PythonEngine.PythonHome = infra.PythonHome;
+                        PythonEngine.PythonPath = infra.PythonPath;
+
+                        PythonEngine.Initialize();
+                        pythonInitialized = true;
+                    }
+                }
+            }
 
             var resultObj = new AdfTestResult();
 

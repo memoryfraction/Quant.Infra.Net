@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.SourceData.Service;
+using Quant.Infra.Net.SourceData.Service.Historical;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -20,6 +21,7 @@ namespace Quant.Infra.Net.Tests
                 });
                 return new Mapper(autoMapperConfiguration);
             });
+            _serviceCollection.AddScoped<IHistoricalDataSourceService, HistoricalDataSourceServiceCsv>();
             _serviceCollection.AddScoped<ITraditionalFinanceSourceDataService, TraditionalFinanceSourceDataService>();
             _serviceProvider = _serviceCollection.BuildServiceProvider();
         }

@@ -1,6 +1,5 @@
 using AutoMapper;
 using Binance.Net.Clients;
-using CryptoExchange.Net;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +13,6 @@ namespace Quant.Infra.Net.Tests
     //[Ignore] // Binance blocks IP from China and US
     public class BinanceTests
     {
-
         // IOC
         private ServiceCollection _services;
         private string _apiKey, _apiSecret;

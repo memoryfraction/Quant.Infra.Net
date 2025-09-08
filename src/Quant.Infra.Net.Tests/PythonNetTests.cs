@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using CryptoExchange.Net.CommonObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Python.Runtime;
 using Quant.Infra.Net.Shared.Service;

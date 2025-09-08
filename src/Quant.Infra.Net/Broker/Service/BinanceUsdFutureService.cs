@@ -380,9 +380,19 @@ namespace Quant.Infra.Net.Broker.Service
 
         public async Task<IEnumerable<string>> GetUsdFutureSymbolsAsync()
         {
-            using var binanceRestClient = InitializeBinanceRestClient();
-            var exchangeInfo = await binanceRestClient.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
-            var symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
+            var symbols = new List<string>();
+            try
+            {
+                using var binanceRestClient = InitializeBinanceRestClient();
+                var exchangeInfo = await binanceRestClient.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
+                symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
+            }
+            catch (Exception ex)
+            {
+                var msg = $"Error in GetUsdFutureSymbolsAsync: {ex.Message}";
+                var message = UtilityService.GenerateMessage(msg);
+                UtilityService.LogAndWriteLine(message);
+            }
             return symbols;
         }
 

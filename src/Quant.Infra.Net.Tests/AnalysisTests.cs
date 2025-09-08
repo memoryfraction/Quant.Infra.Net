@@ -62,7 +62,7 @@ namespace Quant.Infra.Net.Tests
         }
 
         [TestMethod]
-        public void StationaryTest_Should_Work1()
+        public void PythonStationaryTest_Should_Work()
         {
             // Arrange
             double[] stationarySeries = { 0.5, 0.6, 0.4, 0.7, 0.5, 0.3, 0.6, 0.4 };

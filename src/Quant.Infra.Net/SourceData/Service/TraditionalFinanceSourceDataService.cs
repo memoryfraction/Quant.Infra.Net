@@ -73,10 +73,18 @@ namespace Quant.Infra.Net.SourceData.Service
             return ohlcvList;
         }
 
+        /// <summary>
+        /// 获取 S&P500 的成分股 symbol 列表。
+        /// </summary>
         public async Task<IEnumerable<string>> GetSp500SymbolsAsync(int number = 500)
         {
             var url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies";
-            var httpClient = new HttpClient();
+
+            using var httpClient = new HttpClient();
+
+            // 必须设置 User-Agent，否则会 403
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+
             var html = await httpClient.GetStringAsync(url);
 
             var htmlDoc = new HtmlDocument();
@@ -85,12 +93,15 @@ namespace Quant.Infra.Net.SourceData.Service
             var tickers = new List<string>();
             var nodes = htmlDoc.DocumentNode.SelectNodes("//table[contains(@class, 'wikitable')][1]//tr/td[1]/a");
 
+            if (nodes == null || nodes.Count == 0)
+                throw new Exception("Failed to parse Wikipedia table. XPath may have changed.");
+
             foreach (var node in nodes)
             {
-                tickers.Add(node.InnerText);
+                tickers.Add(node.InnerText.Trim());
             }
 
-            return tickers.Take(number).Order();
+            return tickers.Take(number).OrderBy(x => x);
         }
 
         public async Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName)

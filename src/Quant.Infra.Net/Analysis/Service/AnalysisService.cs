@@ -157,11 +157,11 @@ namespace Quant.Infra.Net.Analysis.Service
                 dynamic np = Py.Import("numpy");
                 dynamic sm = Py.Import("statsmodels.tsa.stattools");
 
-                // 转换 C# 数组为 numpy 数组
+                // 转换 C# 数组为 numpy 数组GetSp500SymbolsAsync
                 dynamic npArray = np.array(timeSeries.ToArray());
 
                 // 调用 adfuller
-                dynamic result = sm.adfuller(npArray);
+                dynamic result = sm.adfuller(npArray, regression: "c", autolag: "AIC");      // AIC准则选择滞后);
                 double adfStat = (double)result[0];
                 double pValue = (double)result[1];
 

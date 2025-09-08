@@ -58,9 +58,9 @@ namespace Quant.Infra.Net.Account.Service
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var symbolList = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
-                if (symbolList.Success == true)
-                    return symbolList.Data.Symbols.Select(x => x.Name).ToList();
+                var spotExchangeInfo = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
+                if (spotExchangeInfo.Success == true)
+                    return spotExchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
                 else
                     return new List<string>();
             }

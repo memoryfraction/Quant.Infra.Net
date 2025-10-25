@@ -6,12 +6,24 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.SourceData.Service
 {
-    public class CryptoSourceDataService
+    public interface ICryptoSourceDataService
     {
+        Task DownloadBinanceSpotAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
+
+        Task DownloadBinanceUsdFutureAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
+
+        public Task<List<string>> GetTopMarketCapSymbolsFromCoinMarketCapAsync(string cmcApiKey, string cmcBaseUrl = "https://pro-api.coinmarketcap.com", int count = 50);
+    }
+
+    public class CryptoSourceDataService: ICryptoSourceDataService
+    {
+
         public async Task DownloadBinanceSpotAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour)
         {
             var symbols = new List<string>();
@@ -87,6 +99,69 @@ namespace Quant.Infra.Net.SourceData.Service
             }
             Console.WriteLine($"All done!");
         }
+
+        /// <summary>
+        /// 获取CoinMarketCap 市值前count的symbols
+        /// </summary>
+        /// <param name="count"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        /// <summary>
+        /// 获取CoinMarketCap 市值前count的symbols
+        /// </summary>
+        /// <param name="cmcApiKey">X-CMC_PRO_API_KEY</param>
+        /// <param name="cmcBaseUrl">默认 https://pro-api.coinmarketcap.com，也可传 https://sandbox-api.coinmarketcap.com</param>
+        /// <param name="count">返回前 count 个 symbol</param>
+        /// <returns></returns>
+        public async Task<List<string>> GetTopMarketCapSymbolsFromCoinMarketCapAsync(
+            string cmcApiKey,
+            string cmcBaseUrl = "https://pro-api.coinmarketcap.com",
+            int count = 50)
+        {
+            if (string.IsNullOrWhiteSpace(cmcApiKey))
+                throw new ArgumentException("cmcApiKey 不能为空。", nameof(cmcApiKey));
+            if (string.IsNullOrWhiteSpace(cmcBaseUrl))
+                throw new ArgumentException("cmcBaseUrl 不能为空。", nameof(cmcBaseUrl));
+            if (!Uri.TryCreate(cmcBaseUrl, UriKind.Absolute, out var baseUri))
+                throw new ArgumentException("cmcBaseUrl 不是有效的绝对 URL。", nameof(cmcBaseUrl));
+            if (count <= 0) return new List<string>();
+
+            var limit = Math.Min(count, 5000); // CMC 单次上限足够
+            var url = new Uri(baseUri, $"/v1/cryptocurrency/listings/latest?limit={limit}&convert=USD&sort=market_cap&sort_dir=desc");
+
+            using var http = new HttpClient();
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.Add("X-CMC_PRO_API_KEY", cmcApiKey);
+            req.Headers.TryAddWithoutValidation("Accept", "application/json");
+
+            using var resp = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync();
+                var preview = body.Length > 300 ? body[..300] + "..." : body;
+                throw new HttpRequestException($"CoinMarketCap HTTP {(int)resp.StatusCode} - {resp.ReasonPhrase}; Body Preview: {preview}");
+            }
+
+            await using var stream = await resp.Content.ReadAsStreamAsync();
+            var payload = await JsonSerializer.DeserializeAsync<CmcListingsResponse>(stream, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (payload?.Status is null)
+                throw new InvalidOperationException("CoinMarketCap: 响应缺少 status 字段。");
+
+            if (payload.Status.ErrorCode != 0)
+                throw new InvalidOperationException($"CoinMarketCap 错误 {payload.Status.ErrorCode}: {payload.Status.ErrorMessage ?? "Unknown error"}");
+
+            return payload.Data?
+                .Select(d => d.Symbol)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Take(count)
+                .ToList()
+                ?? new List<string>();
+        }
+
 
         #region private functions
 
@@ -292,6 +367,9 @@ namespace Quant.Infra.Net.SourceData.Service
                 _ => throw new ArgumentException("Unsupported interval.")
             };
         }
+
+       
+
 
         #endregion
     }

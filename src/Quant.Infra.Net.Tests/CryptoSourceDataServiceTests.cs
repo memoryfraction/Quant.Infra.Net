@@ -12,7 +12,7 @@ namespace Quant.Infra.Net.Tests
         private readonly ServiceProvider _serviceProvider;
         private readonly ServiceCollection _serviceCollection;
         private readonly IConfigurationRoot _configuration;
-        private string _cmcApiKey;
+        private string _cmcApiKey,_cmcBaseUrl;
 
         public CryptoSourceDataServiceTests()
         {
@@ -40,6 +40,7 @@ namespace Quant.Infra.Net.Tests
             _serviceProvider = _serviceCollection.BuildServiceProvider();
 
             _cmcApiKey = _configuration["CoinMarketCap:ApiKey"].ToString();
+            _cmcBaseUrl = _configuration["CoinMarketCap:BaseUrl"].ToString();
         }
 
         /// <summary>
@@ -56,9 +57,8 @@ namespace Quant.Infra.Net.Tests
             var svc = _serviceProvider.GetRequiredService<ICryptoSourceDataService>();
 
             const int count = 50;
-            const string baseUrl = "https://pro-api.coinmarketcap.com"; // 如需沙箱可改为 https://sandbox-api.coinmarketcap.com
 
-            var symbols = await svc.GetTopMarketCapSymbolsFromCoinMarketCapAsync(_cmcApiKey, baseUrl, count);
+            var symbols = await svc.GetTopMarketCapSymbolsFromCoinMarketCapAsync(_cmcApiKey, _cmcBaseUrl, count);
 
             // 基本断言
             Assert.IsNotNull(symbols, "返回结果不应为 null。");

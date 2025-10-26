@@ -1,6 +1,7 @@
 ﻿using Binance.Net.Clients;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces;
+using Quant.Infra.Net.Shared.Service;
 using Quant.Infra.Net.SourceData.Model;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.SourceData.Service
@@ -18,14 +20,18 @@ namespace Quant.Infra.Net.SourceData.Service
 
         Task DownloadBinanceAllUsdFutureAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
 
-        Task DownloadBinanceSpotAsync(IEnumerable<string> symbols,  DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
+        Task DownloadBinanceSpotAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
 
         Task DownloadBinanceUsdFutureAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
 
         public Task<List<string>> GetTopMarketCapSymbolsFromCoinMarketCapAsync(string cmcApiKey, string cmcBaseUrl = "https://pro-api.coinmarketcap.com", int count = 50);
+
+        public Task<List<string>> GetAllBinanceSpotSymbolsAsync();
+        public Task<List<string>> GetAllBinanceUsdFutureSymbolsAsync();
+
     }
 
-    public class CryptoSourceDataService: ICryptoSourceDataService
+    public class CryptoSourceDataService : ICryptoSourceDataService
     {
 
         public async Task DownloadBinanceAllSpotAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour)
@@ -211,6 +217,11 @@ namespace Quant.Infra.Net.SourceData.Service
                             return;
                         ohlcvs = UpsertOhlcvs(klinesResult.Data, ohlcvs, startDt, endDt);
                     }
+                    else
+                    {
+                        UtilityService.LogAndWriteLine($"Symbol: {symbol}, error message: {klinesResult.Error.Message}");
+                        return;
+                    }
                     lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 }
 
@@ -275,6 +286,10 @@ namespace Quant.Infra.Net.SourceData.Service
                             return;
                         ohlcvs = UpsertOhlcvs(klinesResult.Data, ohlcvs, startDt, endDt);
                     }
+                    else
+                    {
+                        throw new Exception($"Error fetching klines for {symbol}: {klinesResult.Error.Message}");
+                    }
                     lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 }
 
@@ -330,112 +345,132 @@ namespace Quant.Infra.Net.SourceData.Service
             return ohlcvs;
         }
 
-        public async Task DownloadBinanceSpotAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour)
+        public async Task DownloadBinanceSpotAsync(
+            IEnumerable<string> symbols,
+            DateTime startDt,
+            DateTime endDt,
+            string path = "",
+            KlineInterval klineInterval = KlineInterval.OneHour)
         {
             // 1. 验证和准备
             var symbolList = symbols?.ToList();
-            if (symbolList is null || !symbolList.Any())
+            if (symbolList is null || symbolList.Count == 0)
             {
                 Console.WriteLine("No symbols provided for spot download. Aborting.");
                 return;
             }
 
             // 2. 路径处理
-            if (string.IsNullOrEmpty(path))
+            if (string.IsNullOrWhiteSpace(path))
             {
                 // 默认路径：BaseDirectory/data/spot/
                 path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "spot");
             }
-            if (!Directory.Exists(path))
-            {
-                await Task.Run(() => Directory.CreateDirectory(path));
-            }
+            Directory.CreateDirectory(path); // 幂等，若已存在则无操作
 
             var interval = klineInterval;
 
             Console.WriteLine($"Starting Spot data download for {symbolList.Count} symbols from {startDt:yyyy-MM-dd} to {endDt:yyyy-MM-dd} at {interval} interval.");
 
-            // 3. 并行下载
-            var downloadTasks = symbolList.Select(symbol =>
+            // 3. 顺序下载（普通 foreach）
+            var binanceSymbols = await GetAllBinanceSpotSymbolsAsync();
+            foreach (var symbol in symbolList)
             {
-                return Task.Run(async () =>
+                try
                 {
-                    try
-                    {
-                        Console.WriteLine($"Downloading spot: {symbol}...");
-                        var fileName = $"{symbol}.csv";
-                        var fullPathFileName = Path.Combine(path, fileName);
+                    Console.WriteLine($"Downloading spot: {symbol}...");
+                    var fileName = $"{symbol}.csv";
+                    var fullPathFileName = Path.Combine(path, fileName);
 
-                        await SaveSpotKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
-                        Console.WriteLine($"Successfully saved spot: {symbol}");
-                    }
-                    catch (Exception ex)
-                    {
-                        // 捕获单个 symbol 的下载错误，防止中断所有任务
-                        Console.WriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading spot data for {symbol}: {ex.Message}");
-                    }
-                });
-            }).ToList();
+                    await SaveSpotKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
 
-            await Task.WhenAll(downloadTasks);
+                    Console.WriteLine($"Successfully saved spot: {symbol}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading spot data for {symbol}: {ex.Message}");
+                    // 继续下一个 symbol
+                }
+            }
 
-            Console.WriteLine($"Spot data download for all specified symbols done!");
+            Console.WriteLine("Spot data download for all specified symbols done!");
         }
 
-        public async Task DownloadBinanceUsdFutureAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour)
+        public async Task DownloadBinanceUsdFutureAsync(
+            IEnumerable<string> symbols,
+            DateTime startDt,
+            DateTime endDt,
+            string path = "",
+            KlineInterval klineInterval = KlineInterval.OneHour)
         {
             // 1. 验证和准备
             var symbolList = symbols?.ToList();
-            if (symbolList is null || !symbolList.Any())
+            if (symbolList is null || symbolList.Count == 0)
             {
                 Console.WriteLine("No symbols provided for USD Future download. Aborting.");
                 return;
             }
 
             // 2. 路径处理
-            if (string.IsNullOrEmpty(path))
+            if (string.IsNullOrWhiteSpace(path))
             {
                 // 默认路径：BaseDirectory/data/UsdFuture/
                 path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "UsdFuture");
             }
-            if (!Directory.Exists(path))
-            {
-                await Task.Run(() => Directory.CreateDirectory(path));
-            }
+            Directory.CreateDirectory(path); // 幂等
 
             var interval = klineInterval;
 
             Console.WriteLine($"Starting USD Future data download for {symbolList.Count} symbols from {startDt:yyyy-MM-dd} to {endDt:yyyy-MM-dd} at {interval} interval.");
 
-            // 3. 并行下载
-            var downloadTasks = symbolList.Select(symbol =>
+            // 3. 顺序下载
+            foreach (var symbol in symbolList)
             {
-                return Task.Run(async () =>
+                try
                 {
-                    try
-                    {
-                        // 保持对特定 symbol 的跳过逻辑，如果需要
-                        if (symbol.Equals("BTCSTUSDT", StringComparison.OrdinalIgnoreCase))
-                            return;
+                    // 如需跳过特殊合约，保留你的逻辑
+                    if (symbol.Equals("BTCSTUSDT", StringComparison.OrdinalIgnoreCase))
+                        continue;
 
-                        Console.WriteLine($"Downloading USD Future: {symbol}...");
-                        var fileName = $"{symbol}.csv";
-                        var fullPathFileName = Path.Combine(path, fileName);
+                    Console.WriteLine($"Downloading USD Future: {symbol}...");
+                    var fileName = $"{symbol}.csv";
+                    var fullPathFileName = Path.Combine(path, fileName);
 
-                        await SaveUsdFutureKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
-                        Console.WriteLine($"Successfully saved USD Future: {symbol}");
-                    }
-                    catch (Exception ex)
-                    {
-                        // 捕获单个 symbol 的下载错误，防止中断所有任务
-                        Console.WriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading USD Future data for {symbol}: {ex.Message}");
-                    }
-                });
-            }).ToList();
+                    await SaveUsdFutureKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
 
-            await Task.WhenAll(downloadTasks);
+                    Console.WriteLine($"Successfully saved USD Future: {symbol}");
+                }
+                catch (Exception ex)
+                {
+                    UtilityService.LogAndWriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading USD Future data for {symbol}: {ex.Message}");
+                    Thread.Sleep(200);
+                    continue;
+                }
+            }
 
-            Console.WriteLine($"USD Future data download for all specified symbols done!");
+            Console.WriteLine("USD Future data download are done!");
+        }
+
+
+        public async Task<List<string>> GetAllBinanceSpotSymbolsAsync()
+        {
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                var exchangeInfo = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
+                var symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
+                return symbols;
+            }
+        }
+
+
+        public async Task<List<string>> GetAllBinanceUsdFutureSymbolsAsync()
+        {
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                var exchangeInfo = await client.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
+                var symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
+                return symbols;
+            }
         }
 
 

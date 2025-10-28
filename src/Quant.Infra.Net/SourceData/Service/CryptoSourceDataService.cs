@@ -27,6 +27,7 @@ namespace Quant.Infra.Net.SourceData.Service
         public Task<List<string>> GetTopMarketCapSymbolsFromCoinMarketCapAsync(string cmcApiKey, string cmcBaseUrl = "https://pro-api.coinmarketcap.com", int count = 50);
 
         public Task<List<string>> GetAllBinanceSpotSymbolsAsync();
+
         public Task<List<string>> GetAllBinanceUsdFutureSymbolsAsync();
 
     }

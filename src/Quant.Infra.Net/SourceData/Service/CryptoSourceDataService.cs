@@ -1,8 +1,10 @@
 ﻿using Binance.Net.Clients;
 using Binance.Net.Enums;
 using Binance.Net.Interfaces;
+using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
 using Quant.Infra.Net.SourceData.Model;
+using Serilog.Events;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,10 +18,6 @@ namespace Quant.Infra.Net.SourceData.Service
 {
     public interface ICryptoSourceDataService
     {
-        Task DownloadBinanceAllSpotAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
-
-        Task DownloadBinanceAllUsdFutureAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
-
         Task DownloadBinanceSpotAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
 
         Task DownloadBinanceUsdFutureAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
@@ -30,100 +28,26 @@ namespace Quant.Infra.Net.SourceData.Service
 
         public Task<List<string>> GetAllBinanceUsdFutureSymbolsAsync();
 
+        /// <summary>
+        /// 下载差额数据;
+        /// </summary>
+        public Task DownloadBinanceSpotIncrementalDataAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
+
+        public Task DownloadBinancePerpetualContractIncrementalDataAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
     }
 
     public class CryptoSourceDataService : ICryptoSourceDataService
     {
+        private readonly IOService _ioService;
 
-        public async Task DownloadBinanceAllSpotAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour)
+        public CryptoSourceDataService(IOService ioService)
         {
-            var symbols = new List<string>();
-            //1 GET BINANCE SPOT SYMBOLS
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
-            {
-                var exchangeInfo = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
-                symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
-                Console.WriteLine(symbols.Count);
-            }
-
-            //2 过滤出以稳定币为结尾的symbol否则没有意义
-            // 找出symbols中仅存在于stableCoinSymbols的部分，大小写不敏感
-            var filteredSymbols = new List<string>();
-            filteredSymbols.AddRange(symbols.Where(x => x.ToLower().EndsWith("usdt")).Select(x => x).ToList());
-
-            //3 下载
-            if (string.IsNullOrEmpty(path))
-                path = AppDomain.CurrentDomain.BaseDirectory + "\\data\\spot\\";
-            if (!Directory.Exists(path))
-                await Task.Run(() => Directory.CreateDirectory(path));
-
-            var interval = klineInterval; // 时间间隔默认为1天
-            foreach (var symbol in filteredSymbols)
-            {
-                Console.WriteLine($"Downloading: {symbol}.");
-                var fileName = $"{symbol}.csv";
-                var fullPathFileName = Path.Combine(path, fileName);
-
-                await SaveSpotKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
-            }
-            Console.WriteLine($"All done!");
-        }
-
-        public async Task DownloadBinanceAllUsdFutureAsync(DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour)
-        {
-            //1 GET BINANCE UsdFuture symbols
-            var symbols = new List<string>();
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
-            {
-                var exchangeInfo = await client.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
-                symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
-                Console.WriteLine($"symbols.Count: {symbols.Count}");
-            }
-
-            //2 过滤出以稳定币为结尾的symbol否则没有意义
-            var filteredSymbols = new List<string>();
-            filteredSymbols.AddRange(symbols.Where(x => x.ToLower().EndsWith("usdt")).Select(x => x).ToList());
-
-            //3 下载
-            if (string.IsNullOrEmpty(path))
-                path = AppDomain.CurrentDomain.BaseDirectory + "\\data\\UsdFuture\\";
-            if (!Directory.Exists(path))
-                await Task.Run(() => Directory.CreateDirectory(path));
-
-            var interval = klineInterval; // 时间间隔默认为1天
-            foreach (var symbol in filteredSymbols)
-            {
-                if (symbol == "BTCSTUSDT")
-                    continue;
-                Console.WriteLine($"Downloading: {symbol}.");
-                var fileName = $"{symbol}.csv";
-                var fullPathFileName = Path.Combine(path, fileName);
-                try
-                {
-                    await SaveUsdFutureKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
-                }
-                catch (Exception ex)
-                {
-                    Serilog.Log.Information($"Current utc datetime: + {DateTime.UtcNow}, error: {ex.Message}");
-                    continue;
-                }
-            }
-            Console.WriteLine($"All done!");
+            _ioService = ioService;
         }
 
         /// <summary>
         /// 获取CoinMarketCap 市值前count的symbols
         /// </summary>
-        /// <param name="count"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        /// <summary>
-        /// 获取CoinMarketCap 市值前count的symbols
-        /// </summary>
-        /// <param name="cmcApiKey">X-CMC_PRO_API_KEY</param>
-        /// <param name="cmcBaseUrl">默认 https://pro-api.coinmarketcap.com，也可传 https://sandbox-api.coinmarketcap.com</param>
-        /// <param name="count">返回前 count 个 symbol</param>
-        /// <returns></returns>
         public async Task<List<string>> GetTopMarketCapSymbolsFromCoinMarketCapAsync(
             string cmcApiKey,
             string cmcBaseUrl = "https://pro-api.coinmarketcap.com",
@@ -173,24 +97,216 @@ namespace Quant.Infra.Net.SourceData.Service
                 ?? new List<string>();
         }
 
-
-        #region private functions
+        #region private functions (新增的增量计算与请求函数 + 原有保存函数)
 
         /// <summary>
-        /// 从Binance下载数据， 存到制定的(csv)文件
+        /// floor 到步长边界（以 CloseTime 的“边界时刻”为准，如 1h 则整点、3m 则每 0/3/6... 分的 00 秒）。
         /// </summary>
-        /// <param name="symbol"></param>
-        /// <param name="interval"></param>
-        /// <param name="startDt"></param>
-        /// <param name="endDt"></param>
-        /// <param name="fullPathFileName"></param>
-        /// <returns></returns>
+        private static DateTime AlignFloorToBoundary(DateTime dt, TimeSpan step)
+        {
+            // 不强制转换时区，按 ticks 对齐即可；避免与外部时区混用带来误差
+            long ticks = dt.Ticks - (dt.Ticks % step.Ticks);
+            return new DateTime(ticks, dt.Kind);
+        }
+
+        /// <summary>
+        /// ceil 到步长边界（见上）。若 dt 已在边界上，则返回原值。
+        /// </summary>
+        private static DateTime AlignCeilToBoundary(DateTime dt, TimeSpan step)
+        {
+            var floor = AlignFloorToBoundary(dt, step);
+            if (floor == dt) return dt;
+            return floor.Add(step);
+        }
+
+        /// <summary>
+        /// 依据现有数据（用 CloseTime 为主键）与请求区间 [requestStart, requestEnd] 计算“缺口区间”（均为 CloseTime 闭区间）。
+        /// 返回的 From/To 均已对齐到步长边界。
+        /// </summary>
+        private static IEnumerable<(DateTime From, DateTime To)> ComputeMissingRanges(
+            IEnumerable<Ohlcv> existing,
+            DateTime requestStart,
+            DateTime requestEnd,
+            TimeSpan step)
+        {
+            if (requestStart >= requestEnd)
+                yield break;
+
+            var startClose = AlignCeilToBoundary(requestStart, step);   // 第一个应该存在的 CloseTime
+            var endClose = AlignFloorToBoundary(requestEnd, step);    // 最后一个应该存在的 CloseTime
+
+            if (startClose > endClose)
+                yield break;
+
+            var existTimes = (existing ?? Enumerable.Empty<Ohlcv>())
+                .Select(x => x.OpenDateTime)
+                .Where(t => t >= startClose && t <= endClose)
+                .Distinct()
+                .OrderBy(t => t)
+                .ToList();
+
+            // 完全没有现有数据，整个区间都是缺口
+            if (existTimes.Count == 0)
+            {
+                yield return (startClose, endClose);
+                yield break;
+            }
+
+            // 头部缺口
+            if (existTimes.First() > startClose)
+            {
+                var to = existTimes.First().Add(-step);
+                if (to >= startClose)
+                    yield return (startClose, to);
+            }
+
+            // 中间缺口
+            for (int i = 1; i < existTimes.Count; i++)
+            {
+                var prev = existTimes[i - 1];
+                var curr = existTimes[i];
+                var expectedNext = prev.Add(step);
+                if (curr > expectedNext)
+                {
+                    yield return (expectedNext, curr.Add(-step));
+                }
+            }
+
+            // 尾部缺口
+            if (existTimes.Last() < endClose)
+            {
+                var from = existTimes.Last().Add(step);
+                if (from <= endClose)
+                    yield return (from, endClose);
+            }
+        }
+
+        /// <summary>
+        /// 只获取指定“收盘时间”闭区间 [closeFrom, closeTo] 的 Spot K 线，返回内存 Ohlcv 列表（不落盘）。
+        /// 注意 Binance API 以 openTime 为检索条件，因此内部自动换算 openTime 范围并做分页。
+        /// </summary>
+        private async Task<List<Ohlcv>> FetchSpotKlinesByCloseAsync(
+            BinanceRestClient client,
+            string symbol,
+            KlineInterval interval,
+            DateTime closeFrom,
+            DateTime closeTo,
+            CancellationToken ct = default)
+        {
+            var list = new List<Ohlcv>();
+            var step = KlineIntervalToTimeSpan(interval);
+            var limit = 1000;
+
+            // openTime 范围：包含 closeFrom/closeTo 对应的 openTime
+            var openCursor = closeFrom.Add(-step);
+            var openEnd = closeTo.Add(-step);
+
+            while (openCursor <= openEnd)
+            {
+                var res = await client.SpotApi.ExchangeData
+                    .GetKlinesAsync(symbol, interval, openCursor, openEnd, limit, ct)
+                    .ConfigureAwait(false);
+
+                if (!res.Success)
+                    throw new Exception($"Spot klines failed for {symbol}: {res.Error?.Message}");
+
+                var batch = res.Data?.ToList() ?? new List<IBinanceKline>();
+                if (batch.Count == 0) break;
+
+                foreach (var k in batch)
+                {
+                    // 以 CloseTime 为主键过滤到 [closeFrom, closeTo]
+                    var ts = k.CloseTime;
+                    if (ts < closeFrom || ts > closeTo) continue;
+
+                    list.Add(new Ohlcv
+                    {
+                        OpenDateTime = ts,
+                        Open = k.OpenPrice,
+                        High = k.HighPrice,
+                        Low = k.LowPrice,
+                        Close = k.ClosePrice,
+                        Volume = k.Volume
+                    });
+                }
+
+                // 下一页：下一个 openTime = 当前最后一根的 CloseTime
+                var lastClose = batch.Max(x => x.CloseTime);
+                var nextOpen = lastClose; // 对于固定步长，下一根 openTime == 上一根 closeTime
+                if (nextOpen <= openCursor) break; // 安全保护
+                openCursor = nextOpen;
+
+                await Task.Delay(30, ct).ConfigureAwait(false); // 轻微节流
+            }
+
+            return list;
+        }
+
+        /// <summary>
+        /// 只获取指定“收盘时间”闭区间 [closeFrom, closeTo] 的 USD-M 永续/合约 K 线，返回内存 Ohlcv 列表（不落盘）。
+        /// </summary>
+        private async Task<List<Ohlcv>> FetchUsdFutureKlinesByCloseAsync(
+            BinanceRestClient client,
+            string symbol,
+            KlineInterval interval,
+            DateTime closeFrom,
+            DateTime closeTo,
+            CancellationToken ct = default)
+        {
+            var list = new List<Ohlcv>();
+            var step = KlineIntervalToTimeSpan(interval);
+            var limit = 1000;
+
+            var openCursor = closeFrom.Add(-step);
+            var openEnd = closeTo.Add(-step);
+
+            while (openCursor <= openEnd)
+            {
+                var res = await client.UsdFuturesApi.ExchangeData
+                    .GetKlinesAsync(symbol, interval, openCursor, openEnd, limit, ct)
+                    .ConfigureAwait(false);
+
+                if (!res.Success)
+                    throw new Exception($"USDT-M klines failed for {symbol}: {res.Error?.Message}");
+
+                var batch = res.Data?.ToList() ?? new List<IBinanceKline>();
+                if (batch.Count == 0) break;
+
+                foreach (var k in batch)
+                {
+                    var ts = k.CloseTime;
+                    if (ts < closeFrom || ts > closeTo) continue;
+
+                    list.Add(new Ohlcv
+                    {
+                        OpenDateTime = ts,
+                        Open = k.OpenPrice,
+                        High = k.HighPrice,
+                        Low = k.LowPrice,
+                        Close = k.ClosePrice,
+                        Volume = k.Volume
+                    });
+                }
+
+                var lastClose = batch.Max(x => x.CloseTime);
+                var nextOpen = lastClose;
+                if (nextOpen <= openCursor) break;
+                openCursor = nextOpen;
+
+                await Task.Delay(30, ct).ConfigureAwait(false);
+            }
+
+            return list;
+        }
+
+        /// <summary>
+        /// 从Binance下载数据， 存到制定的(csv)文件（全量落盘；保留原逻辑）
+        /// </summary>
         private async Task SaveSpotKlinesToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName)
         {
             if (endDt > DateTime.Now)
                 throw new ArgumentOutOfRangeException();
 
-            // 确保路径存在
             var directory = Path.GetDirectoryName(fullPathFileName);
             if (!Directory.Exists(directory))
             {
@@ -205,7 +321,7 @@ namespace Quant.Infra.Net.SourceData.Service
                 while (lastDtInOhlcvs < endDt)
                 {
                     // 每次调用默认只能获取500条数据;
-                    if (lastDtInOhlcvs != default(DateTime)) // 此时ohlcvs有值
+                    if (lastDtInOhlcvs != default(DateTime))
                     {
                         paramStartDt = lastDtInOhlcvs;
                     }
@@ -214,52 +330,46 @@ namespace Quant.Infra.Net.SourceData.Service
                     var klinesResult = await client.SpotApi.ExchangeData.GetKlinesAsync(symbol, interval, paramStartDt, endDt);
                     if (klinesResult.Success)
                     {
-                        if (klinesResult.Data.Count() == 0) // 如果取不到数据，跳过该币种
+                        if (klinesResult.Data.Count() == 0)
                             return;
                         ohlcvs = UpsertOhlcvs(klinesResult.Data, ohlcvs, startDt, endDt);
                     }
                     else
                     {
-                        UtilityService.LogAndWriteLine($"Symbol: {symbol}, error message: {klinesResult.Error.Message}");
+                        UtilityService.LogAndWriteLine($"Symbol: {symbol}, error message: {klinesResult.Error.Message}", LogEventLevel.Error);
                         return;
                     }
                     lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 }
 
-                // Save ohlcvs to file: {fullPathFileName} using csvHelper
+                // Save ohlcvs to file
                 lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 var firstDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).FirstOrDefault();
                 if (firstDtInOhlcvs.Date != startDt)
                 {
-                    Console.WriteLine($"firstDtInOhlcvs:{firstDtInOhlcvs} does not match with startDt:{startDt}");
+                    UtilityService.LogAndWriteLine($"firstDtInOhlcvs:{firstDtInOhlcvs} does not match with startDt:{startDt}");
                     return;
                 }
                 if (lastDtInOhlcvs.Date != endDt)
                 {
-                    Console.WriteLine($"lastDtInOhlcvs:{firstDtInOhlcvs} does not match with endDt:{endDt}");
+                    UtilityService.LogAndWriteLine($"lastDtInOhlcvs:{firstDtInOhlcvs} does not match with endDt:{endDt}");
                     return;
                 }
 
-                if (File.Exists(fullPathFileName))
-                    File.Delete(fullPathFileName);
-                using (var writer = new StreamWriter(fullPathFileName))
-                {
-                    writer.WriteLine("DateTime,Open,High,Low,Close,Volume");
-                    foreach (var ohlcv in ohlcvs)
-                    {
-                        writer.WriteLine($"{ohlcv.OpenDateTime},{ohlcv.Open},{ohlcv.High},{ohlcv.Low},{ohlcv.Close},{ohlcv.Volume}");
-                    }
-                }
-                Console.WriteLine($"Klines data saved successfully for {symbol}.");
+                _ioService.WriteCsv(fullPathFileName, ohlcvs);
+
+                UtilityService.LogAndWriteLine($"Klines data saved successfully for {symbol}.");
             }
         }
 
+        /// <summary>
+        /// USD-M 合约全量落盘（保留原逻辑）
+        /// </summary>
         private async Task SaveUsdFutureKlinesToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName)
         {
             if (endDt > DateTime.Now)
                 throw new ArgumentOutOfRangeException();
 
-            // 确保路径存在
             var directory = Path.GetDirectoryName(fullPathFileName);
             if (!Directory.Exists(directory))
             {
@@ -273,17 +383,15 @@ namespace Quant.Infra.Net.SourceData.Service
                 var paramStartDt = startDt;
                 while (lastDtInOhlcvs < endDt)
                 {
-                    // 每次调用默认只能获取500条数据;
-                    if (lastDtInOhlcvs != default(DateTime)) // 此时ohlcvs有值
+                    if (lastDtInOhlcvs != default(DateTime))
                     {
                         paramStartDt = lastDtInOhlcvs;
                     }
 
-                    // 获取历史K线数据
                     var klinesResult = await client.UsdFuturesApi.ExchangeData.GetKlinesAsync(symbol, interval, paramStartDt, endDt);
                     if (klinesResult.Success)
                     {
-                        if (klinesResult.Data.Count() == 0) // 如果取不到数据，跳过该币种
+                        if (klinesResult.Data.Count() == 0)
                             return;
                         ohlcvs = UpsertOhlcvs(klinesResult.Data, ohlcvs, startDt, endDt);
                     }
@@ -294,31 +402,22 @@ namespace Quant.Infra.Net.SourceData.Service
                     lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 }
 
-                // Save ohlcvs to file: {fullPathFileName} using csvHelper
                 lastDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).LastOrDefault();
                 var firstDtInOhlcvs = ohlcvs.Select(x => x.OpenDateTime).FirstOrDefault();
                 if (firstDtInOhlcvs.Date != startDt)
                 {
-                    Console.WriteLine($"firstDtInOhlcvs:{firstDtInOhlcvs} does not match with startDt:{startDt}");
+                    UtilityService.LogAndWriteLine($"firstDtInOhlcvs:{firstDtInOhlcvs} does not match with startDt:{startDt}");
                     return;
                 }
                 if (lastDtInOhlcvs.Date != endDt)
                 {
-                    Console.WriteLine($"lastDtInOhlcvs:{firstDtInOhlcvs} does not match with endDt:{endDt}");
+                    UtilityService.LogAndWriteLine($"lastDtInOhlcvs:{firstDtInOhlcvs} does not match with endDt:{endDt}");
                     return;
                 }
 
-                if (File.Exists(fullPathFileName))
-                    File.Delete(fullPathFileName);
-                using (var writer = new StreamWriter(fullPathFileName))
-                {
-                    writer.WriteLine("DateTime,Open,High,Low,Close,Volume");
-                    foreach (var ohlcv in ohlcvs)
-                    {
-                        writer.WriteLine($"{ohlcv.OpenDateTime},{ohlcv.Open},{ohlcv.High},{ohlcv.Low},{ohlcv.Close},{ohlcv.Volume}");
-                    }
-                }
-                Console.WriteLine($"Klines data saved successfully for {symbol}.");
+                _ioService.WriteCsv(fullPathFileName, ohlcvs);
+
+                UtilityService.LogAndWriteLine($"Klines data saved successfully for {symbol}.");
             }
         }
 
@@ -331,11 +430,13 @@ namespace Quant.Infra.Net.SourceData.Service
 
                 var ohlcv = new Ohlcv()
                 {
-                    OpenDateTime = kline.CloseTime,
+                    OpenDateTime = kline.OpenTime,
+                    CloseDateTime = kline.CloseTime,
                     Open = kline.OpenPrice,
                     High = kline.HighPrice,
                     Low = kline.LowPrice,
                     Close = kline.ClosePrice,
+                    AdjustedClose = kline.ClosePrice,
                     Volume = kline.Volume
                 };
 
@@ -346,6 +447,8 @@ namespace Quant.Infra.Net.SourceData.Service
             return ohlcvs;
         }
 
+        #endregion
+
         public async Task DownloadBinanceSpotAsync(
             IEnumerable<string> symbols,
             DateTime startDt,
@@ -353,48 +456,43 @@ namespace Quant.Infra.Net.SourceData.Service
             string path = "",
             KlineInterval klineInterval = KlineInterval.OneHour)
         {
-            // 1. 验证和准备
             var symbolList = symbols?.ToList();
             if (symbolList is null || symbolList.Count == 0)
             {
-                Console.WriteLine("No symbols provided for spot download. Aborting.");
+                UtilityService.LogAndWriteLine("No symbols provided for spot download. Aborting.");
                 return;
             }
 
-            // 2. 路径处理
             if (string.IsNullOrWhiteSpace(path))
             {
-                // 默认路径：BaseDirectory/data/spot/
                 path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "spot");
             }
-            Directory.CreateDirectory(path); // 幂等，若已存在则无操作
+            Directory.CreateDirectory(path);
 
             var interval = klineInterval;
 
-            Console.WriteLine($"Starting Spot data download for {symbolList.Count} symbols from {startDt:yyyy-MM-dd} to {endDt:yyyy-MM-dd} at {interval} interval.");
+            UtilityService.LogAndWriteLine($"Starting Spot data download for {symbolList.Count} symbols from {startDt:yyyy-MM-dd} to {endDt:yyyy-MM-dd} at {interval} interval.");
 
-            // 3. 顺序下载（普通 foreach）
             var binanceSymbols = await GetAllBinanceSpotSymbolsAsync();
             foreach (var symbol in symbolList)
             {
                 try
                 {
-                    Console.WriteLine($"Downloading spot: {symbol}...");
+                    UtilityService.LogAndWriteLine($"Downloading spot: {symbol}...");
                     var fileName = $"{symbol}.csv";
                     var fullPathFileName = Path.Combine(path, fileName);
 
                     await SaveSpotKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
 
-                    Console.WriteLine($"Successfully saved spot: {symbol}");
+                    UtilityService.LogAndWriteLine($"Successfully saved spot: {symbol}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading spot data for {symbol}: {ex.Message}");
-                    // 继续下一个 symbol
+                    UtilityService.LogAndWriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading spot data for {symbol}: {ex.Message}");
                 }
             }
 
-            Console.WriteLine("Spot data download for all specified symbols done!");
+            UtilityService.LogAndWriteLine("Spot data download for all specified symbols done!");
         }
 
         public async Task DownloadBinanceUsdFutureAsync(
@@ -404,42 +502,37 @@ namespace Quant.Infra.Net.SourceData.Service
             string path = "",
             KlineInterval klineInterval = KlineInterval.OneHour)
         {
-            // 1. 验证和准备
             var symbolList = symbols?.ToList();
             if (symbolList is null || symbolList.Count == 0)
             {
-                Console.WriteLine("No symbols provided for USD Future download. Aborting.");
+                UtilityService.LogAndWriteLine("No symbols provided for USD Future download. Aborting.");
                 return;
             }
 
-            // 2. 路径处理
             if (string.IsNullOrWhiteSpace(path))
             {
-                // 默认路径：BaseDirectory/data/UsdFuture/
                 path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "UsdFuture");
             }
-            Directory.CreateDirectory(path); // 幂等
+            Directory.CreateDirectory(path);
 
             var interval = klineInterval;
 
-            Console.WriteLine($"Starting USD Future data download for {symbolList.Count} symbols from {startDt:yyyy-MM-dd} to {endDt:yyyy-MM-dd} at {interval} interval.");
+            UtilityService.LogAndWriteLine($"Starting USD Future data download for {symbolList.Count} symbols from {startDt:yyyy-MM-dd} to {endDt:yyyy-MM-dd} at {interval} interval.");
 
-            // 3. 顺序下载
             foreach (var symbol in symbolList)
             {
                 try
                 {
-                    // 如需跳过特殊合约，保留你的逻辑
                     if (symbol.Equals("BTCSTUSDT", StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    Console.WriteLine($"Downloading USD Future: {symbol}...");
+                    UtilityService.LogAndWriteLine($"Downloading USD Future: {symbol}...");
                     var fileName = $"{symbol}.csv";
                     var fullPathFileName = Path.Combine(path, fileName);
 
                     await SaveUsdFutureKlinesToCsv(symbol, interval, startDt, endDt, fullPathFileName);
 
-                    Console.WriteLine($"Successfully saved USD Future: {symbol}");
+                    UtilityService.LogAndWriteLine($"Successfully saved USD Future: {symbol}");
                 }
                 catch (Exception ex)
                 {
@@ -449,9 +542,8 @@ namespace Quant.Infra.Net.SourceData.Service
                 }
             }
 
-            Console.WriteLine("USD Future data download are done!");
+            UtilityService.LogAndWriteLine("USD Future data download are done!");
         }
-
 
         public async Task<List<string>> GetAllBinanceSpotSymbolsAsync()
         {
@@ -463,7 +555,6 @@ namespace Quant.Infra.Net.SourceData.Service
             }
         }
 
-
         public async Task<List<string>> GetAllBinanceUsdFutureSymbolsAsync()
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
@@ -474,7 +565,209 @@ namespace Quant.Infra.Net.SourceData.Service
             }
         }
 
+        public async Task DownloadBinanceSpotIncrementalDataAsync(
+            IEnumerable<string> symbols,
+            DateTime startDt,
+            DateTime endDt,
+            string path = "",
+            KlineInterval klineInterval = KlineInterval.OneHour)
+        {
+            // 1) 校验
+            if (symbols == null || !symbols.Any())
+            {
+                UtilityService.LogAndWriteLine("Spot incremental skipped: Symbol list is empty or null.", LogEventLevel.Warning);
+                throw new ArgumentException("Symbol list cannot be null or empty.", nameof(symbols));
+            }
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                UtilityService.LogAndWriteLine("Spot incremental failed: Destination path is null or whitespace.", LogEventLevel.Error);
+                throw new ArgumentNullException(nameof(path), "Destination path cannot be null or empty.");
+            }
+            if (startDt >= endDt)
+            {
+                string msg = $"Spot incremental failed due to invalid date range. StartDt: {startDt:yyyy-MM-dd HH:mm}, EndDt: {endDt:yyyy-MM-dd HH:mm}.";
+                UtilityService.LogAndWriteLine(msg, LogEventLevel.Error);
+                throw new ArgumentException("Start date must be strictly before end date.", nameof(startDt));
+            }
 
-        #endregion
+            // 2) 路径
+            await UtilityService.IsPathExistAsync(path);
+            var step = KlineIntervalToTimeSpan(klineInterval);
+
+            // 3) 统一创建一个 client 复用
+            using var client = new BinanceRestClient();
+
+            foreach (var tmpSymbol in symbols)
+            {
+                try
+                {
+                    var fullPathFileName = Path.Combine(path, $"{tmpSymbol}.csv");
+
+                    // 文件不存在：直接做一次全量
+                    if (!File.Exists(fullPathFileName))
+                    {
+                        await DownloadBinanceSpotAsync(new[] { tmpSymbol }, startDt, endDt, path, klineInterval);
+                        UtilityService.LogAndWriteLine($"Initial full data download completed for Spot {tmpSymbol}.", LogEventLevel.Information);
+                        continue;
+                    }
+
+                    // 文件存在：读取现有数据，计算缺口
+                    var existOhlcvs = _ioService.ReadCsv(fullPathFileName);
+                    var existSet = existOhlcvs?.OhlcvSet ?? new HashSet<Ohlcv>();
+                    var missingRanges = ComputeMissingRanges(existSet, startDt, endDt, step).ToList();
+
+                    if (missingRanges.Count == 0)
+                    {
+                        // 没缺口，仅裁剪到请求区间（包含 endDt 的那根）
+                        var trimmed = existSet
+                            .Where(d => d.OpenDateTime >= startDt && d.OpenDateTime <= endDt)
+                            .OrderBy(d => d.OpenDateTime)
+                            .ToList();
+
+                        _ioService.WriteCsv(fullPathFileName, trimmed);
+                        UtilityService.LogAndWriteLine($"[Spot {tmpSymbol}] already complete; trimmed to [{startDt:yyyy-MM-dd HH:mm}, {endDt:yyyy-MM-dd HH:mm}].", LogEventLevel.Information);
+                        continue;
+                    }
+
+                    // 逐缺口抓取并聚合
+                    var fetchedAll = new List<Ohlcv>();
+                    foreach (var (from, to) in missingRanges)
+                    {
+                        var slice = await FetchSpotKlinesByCloseAsync(client, tmpSymbol, klineInterval, from, to);
+                        fetchedAll.AddRange(slice);
+                    }
+
+                    // 合并去重（以 CloseTime 为键），并裁剪到请求区间
+                    var merged = existSet
+                        .Concat(fetchedAll)
+                        .GroupBy(x => x.OpenDateTime)
+                        .Select(g => g.First())
+                        .Where(x => x.OpenDateTime >= startDt && x.OpenDateTime <= endDt)
+                        .OrderBy(x => x.OpenDateTime)
+                        .ToList();
+
+                    _ioService.WriteCsv(fullPathFileName, merged);
+
+                    UtilityService.LogAndWriteLine(
+                        $"[Spot {tmpSymbol}] incremental merged: +{fetchedAll.Count} bars; total {merged.Count} in [{startDt:yyyy-MM-dd HH:mm}, {endDt:yyyy-MM-dd HH:mm}].",
+                        LogEventLevel.Information);
+                }
+                catch (Exception ex)
+                {
+                    UtilityService.LogAndWriteLine($"Spot incremental error for {tmpSymbol}: {ex.Message}", LogEventLevel.Error);
+                    // 不中断，继续处理其他 symbol
+                }
+            }
+        }
+
+        public async Task DownloadBinancePerpetualContractIncrementalDataAsync(
+            IEnumerable<string> symbols,
+            DateTime startDt,
+            DateTime endDt,
+            string path = "",
+            KlineInterval klineInterval = KlineInterval.OneHour)
+        {
+            // 1) 校验
+            if (symbols == null || !symbols.Any())
+            {
+                UtilityService.LogAndWriteLine("Perpetual contract sync skipped: Symbol list is empty or null.", LogEventLevel.Warning);
+                throw new ArgumentException("Symbol list cannot be null or empty.", nameof(symbols));
+            }
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                UtilityService.LogAndWriteLine("Perpetual contract sync failed: Destination path is null or whitespace.", LogEventLevel.Error);
+                throw new ArgumentNullException(nameof(path), "Destination path cannot be null or empty.");
+            }
+            if (startDt >= endDt)
+            {
+                string msg = $"Perpetual contract sync failed due to invalid date range. StartDt: {startDt:yyyy-MM-dd HH:mm}, EndDt: {endDt:yyyy-MM-dd HH:mm}.";
+                UtilityService.LogAndWriteLine(msg, LogEventLevel.Error);
+                throw new ArgumentException("Start date must be strictly before end date.", nameof(startDt));
+            }
+
+            // 2) 路径
+            await UtilityService.IsPathExistAsync(path);
+            var step = KlineIntervalToTimeSpan(klineInterval);
+
+            // 3) 复用一个 client
+            using var client = new BinanceRestClient();
+
+            foreach (var tmpSymbol in symbols)
+            {
+                try
+                {
+                    var fullPathFileName = Path.Combine(path, $"{tmpSymbol}.csv");
+
+                    if (!File.Exists(fullPathFileName))
+                    {
+                        await DownloadBinanceUsdFutureAsync(new[] { tmpSymbol }, startDt, endDt, path, klineInterval);
+                        UtilityService.LogAndWriteLine($"Initial full data download completed for Perpetual {tmpSymbol}.", LogEventLevel.Information);
+                        continue;
+                    }
+
+                    var existOhlcvs = _ioService.ReadCsv(fullPathFileName);
+                    var existSet = existOhlcvs?.OhlcvSet ?? new HashSet<Ohlcv>();
+
+                    var missingRanges = ComputeMissingRanges(existSet, startDt, endDt, step).ToList();
+
+                    if (missingRanges.Count == 0)
+                    {
+                        var trimmed = existSet
+                            .Where(d => d.OpenDateTime >= startDt && d.OpenDateTime <= endDt)
+                            .OrderBy(d => d.OpenDateTime)
+                            .ToList();
+
+                        _ioService.WriteCsv(fullPathFileName, trimmed);
+                        UtilityService.LogAndWriteLine($"[Perp {tmpSymbol}] already complete; trimmed to [{startDt:yyyy-MM-dd HH:mm}, {endDt:yyyy-MM-dd HH:mm}].", LogEventLevel.Information);
+                        continue;
+                    }
+
+                    var fetchedAll = new List<Ohlcv>();
+                    foreach (var (from, to) in missingRanges)
+                    {
+                        var slice = await FetchUsdFutureKlinesByCloseAsync(client, tmpSymbol, klineInterval, from, to);
+                        fetchedAll.AddRange(slice);
+                    }
+
+                    var merged = existSet
+                        .Concat(fetchedAll)
+                        .GroupBy(x => x.OpenDateTime)
+                        .Select(g => g.First())
+                        .Where(x => x.OpenDateTime >= startDt && x.OpenDateTime <= endDt)
+                        .OrderBy(x => x.OpenDateTime)
+                        .ToList();
+
+                    _ioService.WriteCsv(fullPathFileName, merged);
+
+                    UtilityService.LogAndWriteLine(
+                        $"[Perp {tmpSymbol}] incremental merged: +{fetchedAll.Count} bars; total {merged.Count} in [{startDt:yyyy-MM-dd HH:mm}, {endDt:yyyy-MM-dd HH:mm}].",
+                        LogEventLevel.Information);
+                }
+                catch (Exception ex)
+                {
+                    UtilityService.LogAndWriteLine($"Perpetual incremental error for {tmpSymbol}: {ex.Message}", LogEventLevel.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 将 KlineInterval 枚举转换为 TimeSpan，用于时间计算。
+        /// </summary>
+        private TimeSpan KlineIntervalToTimeSpan(KlineInterval interval)
+        {
+            switch (interval)
+            {
+                case KlineInterval.OneMinute: return TimeSpan.FromMinutes(1);
+                case KlineInterval.ThreeMinutes: return TimeSpan.FromMinutes(3);
+                case KlineInterval.FiveMinutes: return TimeSpan.FromMinutes(5);
+                case KlineInterval.OneHour: return TimeSpan.FromHours(1);
+                case KlineInterval.FourHour: return TimeSpan.FromHours(4);
+                case KlineInterval.OneDay: return TimeSpan.FromDays(1);
+                default:
+                    UtilityService.LogAndWriteLine($"Unsupported KlineInterval: {interval}.", LogEventLevel.Error);
+                    throw new ArgumentOutOfRangeException(nameof(interval), "Unsupported KlineInterval for TimeSpan conversion.");
+            }
+        }
+
     }
 }

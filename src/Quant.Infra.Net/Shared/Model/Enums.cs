@@ -291,6 +291,10 @@ namespace Quant.Infra.Net.Shared.Model
         // 可以根据需要添加更多操作类型
     }
 
-
+    public enum DownloadType
+    {
+        Spot,           // 现货
+        PerpetualContract // 永续合约
+    }
 
 }

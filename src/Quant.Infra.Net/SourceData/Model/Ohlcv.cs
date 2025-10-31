@@ -1,21 +1,32 @@
-﻿using System;
+﻿using CsvHelper.Configuration.Attributes;
+using System;
 
 namespace Quant.Infra.Net.SourceData.Model
 {
     public class BasicOhlcv
     {
+        [Ignore]
         public string Symbol { get; set; }
+        [Name("OpenDateTime")]
+        [Index(0)]
         public DateTime OpenDateTime { get; set; }
+        [Name("CloseDateTime")]
+        [Index(1)]
         public DateTime CloseDateTime { get; set; }
-
+        [Name("Open")]
+        [Index(2)]
         public decimal Open { get; set; }
-
+        [Name("High")]
+        [Index(3)]
         public decimal High { get; set; }
-
+        [Name("Low")]
+        [Index(4)]
         public decimal Low { get; set; }
-
+        [Name("Close")]
+        [Index(5)]
         public decimal Close { get; set; }
-
+        [Name("Volume")]
+        [Index(6)]
         public decimal Volume { get; set; }
 
         public bool IsValid()
@@ -32,6 +43,7 @@ namespace Quant.Infra.Net.SourceData.Model
 
     public class Ohlcv : BasicOhlcv
     {
+        [Ignore]
         public decimal AdjustedClose { get; set; }
 
         // Override Equals method

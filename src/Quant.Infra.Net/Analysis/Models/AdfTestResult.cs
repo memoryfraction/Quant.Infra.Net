@@ -16,4 +16,12 @@
         /// </summary>
         public double PValue { get; set; } 
     }
+
+    public class EngleGrangerResult
+    {
+        public double Statistic { get; set; }
+        public double PValue { get; set; }
+        public double Slope { get; set; }
+        public double Intercept { get; set; }
+    }
 }

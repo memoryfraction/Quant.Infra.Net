@@ -488,7 +488,7 @@ namespace Quant.Infra.Net.SourceData.Service
                 }
                 catch (Exception ex)
                 {
-                    UtilityService.LogAndWriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading spot data for {symbol}: {ex.Message}");
+                    UtilityService.LogAndWriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading spot data for {symbol}: {ex.Message}", LogEventLevel.Error);
                 }
             }
 
@@ -536,7 +536,7 @@ namespace Quant.Infra.Net.SourceData.Service
                 }
                 catch (Exception ex)
                 {
-                    UtilityService.LogAndWriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading USD Future data for {symbol}: {ex.Message}");
+                    UtilityService.LogAndWriteLine($"Current utc datetime: {DateTime.UtcNow}. Error downloading USD Future data for {symbol}: {ex.Message}", LogEventLevel.Error);
                     Thread.Sleep(200);
                     continue;
                 }

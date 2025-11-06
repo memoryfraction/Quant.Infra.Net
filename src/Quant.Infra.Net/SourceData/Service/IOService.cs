@@ -14,6 +14,21 @@ namespace Quant.Infra.Net.SourceData.Service
     public class IOService
     {
         private readonly ResolutionConversionService _resolutionService;
+
+        // ----------------------------------------------------
+        // 关键辅助类：私有嵌套类，用于在运行时配置 CsvHelper 映射
+        // ----------------------------------------------------
+        /// <summary>
+        /// 继承 ClassMap<T>，通过 Action 委托在运行时配置映射
+        /// </summary>
+        private class ActionClassMap<T> : ClassMap<T> where T : new()
+        {
+            public ActionClassMap(Action<ClassMap<T>> mapAction)
+            {
+                mapAction(this);
+            }
+        }
+
         public IOService()
         {
             _resolutionService = new ResolutionConversionService();
@@ -22,8 +37,6 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <summary>
         /// 已知文件名和路径，使用csvHelper获取Ohlcvs
         /// </summary>
-        /// <param name="fullPathFilename"></param>
-        /// <returns></returns>
         public Ohlcvs ReadCsv(string fullPathFileName)
         {
             // 如果文件{fullPathFileName}不存在，则抛出异常；
@@ -35,18 +48,40 @@ namespace Quant.Infra.Net.SourceData.Service
             var config = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 HasHeaderRecord = true,
+                // **核心修改 1: 禁用头部验证，以忽略 CloseDateTime 和旧的 OpenDateTime 列名**
+                HeaderValidated = null
             };
 
             using (var reader = new StreamReader(fullPathFileName))
             using (var csv = new CsvReader(reader, config))
             {
+                // **核心修改 2: 注册运行时映射配置，以覆盖 Ohlcv 类上的 [Name] 属性**
+                csv.Context.RegisterClassMap(new ActionClassMap<Ohlcv>(m =>
+                {
+                    // 1. 映射 OpenDateTime：将 CSV 中的 "DateTime" 列映射到 Ohlcv 的 OpenDateTime 属性
+                    m.Map(x => x.OpenDateTime).Name("DateTime");
+
+                    // 2. 显式忽略 CloseDateTime：覆盖 Ohlcv 类上的 [Name("CloseDateTime")] 注解
+                    m.Map(x => x.CloseDateTime).Ignore();
+
+                    // 3. 映射其他列 (覆盖 [Index] 属性)
+                    m.Map(x => x.Open).Name("Open");
+                    m.Map(x => x.High).Name("High");
+                    m.Map(x => x.Low).Name("Low");
+                    m.Map(x => x.Close).Name("Close");
+                    m.Map(x => x.Volume).Name("Volume");
+
+                    // 忽略 Symbol
+                    m.Map(x => x.Symbol).Ignore();
+                }));
+
                 var records = csv.GetRecords<Ohlcv>().ToList();
                 var ohlcvs = new Ohlcvs
                 {
                     ResolutionLevel = _resolutionService.GetResolutionLevel(records),
                     OhlcvSet = new HashSet<Ohlcv>(records),
                     FullPathFileName = fullPathFileName,
-                    Symbol  = Path.GetFileNameWithoutExtension(fullPathFileName),
+                    Symbol = Path.GetFileNameWithoutExtension(fullPathFileName),
                     StartDateTimeUtc = records.Select(x => x.OpenDateTime).FirstOrDefault(),
                     EndDateTimeUtc = records.Select(x => x.OpenDateTime).LastOrDefault()
                 };
@@ -57,11 +92,6 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <summary>
         /// 根据要求读取给定的csv文件, 如果条件不符合，则返回null
         /// </summary>
-        /// <param name="fullPathFileName">， 包括列：DateTime, Open, High, Low, Close, Volume</param>
-        /// <param name="requiredStartDt"></param>
-        /// <param name="requiredEndDt"></param>
-        /// <param name="requiredResolutionLevel"></param>
-        /// <returns></returns>
         public Ohlcvs ReadCsv(string fullPathFileName, DateTime requiredStartDt, DateTime requiredEndDt, ResolutionLevel requiredResolutionLevel)
         {
             // 如果文件{fullPathFileName}不存在，则抛出异常；
@@ -82,6 +112,7 @@ namespace Quant.Infra.Net.SourceData.Service
             var isEarlistRecordSatisfying = earliestRecord.Date <= requiredStartDt.Date;
             var isLatestRecordSatisfying = latestRecord.Date >= requiredEndDt.Date;
             var isResolutionLevelSatisfying = _resolutionService.CanConvertResolution(ohlcvs.ResolutionLevel, requiredResolutionLevel);
+
             if (isEarlistRecordSatisfying && isLatestRecordSatisfying && isResolutionLevelSatisfying)
             {
                 var filteredRecords = ohlcvs.OhlcvSet.Where(x => x.OpenDateTime >= requiredStartDt && x.OpenDateTime <= requiredEndDt).ToList();
@@ -104,8 +135,6 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <summary>
         /// 读取文件，转化为Date, Value的组合;
         /// </summary>
-        /// <param name="fullPathFileName"></param>
-        /// <returns></returns>
         private TimeSeries GetTimeSeriesFromFullPathFileName(string fullPathFileName, DateTime startDt, DateTime endDt, ResolutionLevel resolution = ResolutionLevel.Hourly)
         {
             List<DateTime> dates = new List<DateTime>();
@@ -126,7 +155,6 @@ namespace Quant.Infra.Net.SourceData.Service
             var timeSeries = new TimeSeries(dates, values);
             return timeSeries;
         }
-
 
 
         /// 读取文件CSV文件，获取TimeSeries
@@ -163,7 +191,26 @@ namespace Quant.Infra.Net.SourceData.Service
             using (var writer = new StreamWriter(fullPathFileName))
             using (var csv = new CsvWriter(writer, config))
             {
-                csv.WriteRecords(ohlcvs);
+                // 手动写入头部记录 (Header)
+                csv.WriteField("DateTime"); // <-- 写入新的列名
+                csv.WriteField("Open");
+                csv.WriteField("High");
+                csv.WriteField("Low");
+                csv.WriteField("Close");
+                csv.WriteField("Volume");
+                csv.NextRecord(); // 结束头部行
+
+                // 手动写入数据记录 (Records)
+                foreach (var record in ohlcvs)
+                {
+                    csv.WriteField(record.OpenDateTime); // <-- 映射到新的 "DateTime"
+                    csv.WriteField(record.Open);
+                    csv.WriteField(record.High);
+                    csv.WriteField(record.Low);
+                    csv.WriteField(record.Close);
+                    csv.WriteField(record.Volume);
+                    csv.NextRecord(); // 结束数据行
+                }
             }
         }
     }

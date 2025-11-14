@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace Quant.Infra.Net.SourceData.Service
 {
@@ -166,5 +167,99 @@ namespace Quant.Infra.Net.SourceData.Service
                 csv.WriteRecords(ohlcvs);
             }
         }
+
+        /// <summary>
+        /// 手动写入 Ohlcv 数据的 CSV 文件，允许自定义字段和标题。
+        /// </summary>
+        /// <param name="fullPathFileName">CSV 文件的完整路径和名称。</param>
+        /// <param name="ohlcvs">要写入的 Ohlcv 记录集合。</param>
+        public void WriteCsvManually(string fullPathFileName, IEnumerable<Ohlcv> ohlcvs)
+        {
+            // 检查参数有效性
+            if(string.IsNullOrEmpty(fullPathFileName))
+            {
+                throw new ArgumentException("The file path cannot be null or empty.", nameof(fullPathFileName));
+            }
+            if(ohlcvs == null)
+            {
+                throw new ArgumentNullException(nameof(ohlcvs), "The Ohlcv collection cannot be null.");
+            }
+
+            // 如果文件夹不存在，则创建
+            var directory = Path.GetDirectoryName(fullPathFileName);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            // --- 定义要输出的字段及其格式 ---
+
+            // 定义要输出的字段，它们的标题和提取函数。
+            const string delimiter = ",";
+            const string dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
+
+            var outputFields = new List<(string Title, Func<Ohlcv, object> Selector)>
+            {
+                // 注意：由于 BasicOhlcv 中是 OpenDateTime 和 CloseDateTime，
+                // 这里我输出了 OpenDateTime，标题为 "DateTime"。
+                ("DateTime", x => x.OpenDateTime.ToString(dateTimeFormat, CultureInfo.InvariantCulture)),
+                ("Open", x => x.Open.ToString(CultureInfo.InvariantCulture)),
+                ("High", x => x.High.ToString(CultureInfo.InvariantCulture)),
+                ("Low", x => x.Low.ToString(CultureInfo.InvariantCulture)),
+                ("Close", x => x.Close.ToString(CultureInfo.InvariantCulture)),
+                ("Volume", x => x.Volume.ToString(CultureInfo.InvariantCulture))
+            };
+
+            // 遍历写入文件内容
+            try
+            {
+                // 使用 StreamWriter 写入文件，覆盖现有内容
+                using (var writer = new StreamWriter(fullPathFileName, false, Encoding.UTF8))
+                {
+                    // 1. 写入头部 (Header)
+                    // 从 outputFields 中获取所有 Title 并用分隔符连接
+                    string header = string.Join(delimiter, outputFields.Select(f => f.Title));
+                    writer.WriteLine(header);
+
+
+                    // 2. 遍历写入数据行 (Data Rows)
+                    foreach (var record in ohlcvs)
+                    {
+                        var lineBuilder = new StringBuilder();
+
+                        for (int i = 0; i < outputFields.Count; i++)
+                        {
+                            // 使用 Selector 提取值，并确保转换为字符串
+                            // 注意：这里假设 numeric/date-time fields produce strings that don't need quoting.
+                            string value = outputFields[i].Selector(record).ToString();
+
+                            // 简单的 CSV 规范化处理 (防止值中包含分隔符)
+                            if (value.Contains(delimiter) || value.Contains("\"") || value.Contains("\n"))
+                            {
+                                // 转义内部的双引号，并用双引号包围
+                                value = "\"" + value.Replace("\"", "\"\"") + "\"";
+                            }
+
+                            lineBuilder.Append(value);
+
+                            // 添加分隔符 (最后一个字段除外)
+                            if (i < outputFields.Count - 1)
+                            {
+                                lineBuilder.Append(delimiter);
+                            }
+                        }
+
+                        writer.WriteLine(lineBuilder.ToString());
+                    }
+                }
+            }
+            catch (IOException ex)
+            {
+                // 捕获和处理文件I/O错误
+                System.Console.WriteLine($"An I/O error occurred while writing to file {fullPathFileName}: {ex.Message}");
+                throw;
+            }
+        }
     }
+
 }

@@ -304,7 +304,7 @@ namespace Quant.Infra.Net.SourceData.Service
         /// </summary>
         private async Task SaveSpotKlinesToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName)
         {
-            if (endDt > DateTime.Now)
+            if (endDt > DateTime.UtcNow)
                 throw new ArgumentOutOfRangeException();
 
             var directory = Path.GetDirectoryName(fullPathFileName);
@@ -356,7 +356,7 @@ namespace Quant.Infra.Net.SourceData.Service
                     return;
                 }
 
-                _ioService.WriteCsv(fullPathFileName, ohlcvs);
+                _ioService.WriteCsvManually(fullPathFileName, ohlcvs);
 
                 UtilityService.LogAndWriteLine($"Klines data saved successfully for {symbol}.");
             }
@@ -367,7 +367,7 @@ namespace Quant.Infra.Net.SourceData.Service
         /// </summary>
         private async Task SaveUsdFutureKlinesToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName)
         {
-            if (endDt > DateTime.Now)
+            if (endDt > DateTime.UtcNow)
                 throw new ArgumentOutOfRangeException();
 
             var directory = Path.GetDirectoryName(fullPathFileName);
@@ -415,7 +415,7 @@ namespace Quant.Infra.Net.SourceData.Service
                     return;
                 }
 
-                _ioService.WriteCsv(fullPathFileName, ohlcvs);
+                _ioService.WriteCsvManually(fullPathFileName, ohlcvs);
 
                 UtilityService.LogAndWriteLine($"Klines data saved successfully for {symbol}.");
             }
@@ -624,7 +624,7 @@ namespace Quant.Infra.Net.SourceData.Service
                             .OrderBy(d => d.OpenDateTime)
                             .ToList();
 
-                        _ioService.WriteCsv(fullPathFileName, trimmed);
+                        _ioService.WriteCsvManually(fullPathFileName, trimmed);
                         UtilityService.LogAndWriteLine($"[Spot {tmpSymbol}] already complete; trimmed to [{startDt:yyyy-MM-dd HH:mm}, {endDt:yyyy-MM-dd HH:mm}].", LogEventLevel.Information);
                         continue;
                     }
@@ -646,7 +646,7 @@ namespace Quant.Infra.Net.SourceData.Service
                         .OrderBy(x => x.OpenDateTime)
                         .ToList();
 
-                    _ioService.WriteCsv(fullPathFileName, merged);
+                    _ioService.WriteCsvManually(fullPathFileName, merged);
 
                     UtilityService.LogAndWriteLine(
                         $"[Spot {tmpSymbol}] incremental merged: +{fetchedAll.Count} bars; total {merged.Count} in [{startDt:yyyy-MM-dd HH:mm}, {endDt:yyyy-MM-dd HH:mm}].",
@@ -717,7 +717,7 @@ namespace Quant.Infra.Net.SourceData.Service
                             .OrderBy(d => d.OpenDateTime)
                             .ToList();
 
-                        _ioService.WriteCsv(fullPathFileName, trimmed);
+                        _ioService.WriteCsvManually(fullPathFileName, trimmed);
                         UtilityService.LogAndWriteLine($"[Perp {tmpSymbol}] already complete; trimmed to [{startDt:yyyy-MM-dd HH:mm}, {endDt:yyyy-MM-dd HH:mm}].", LogEventLevel.Information);
                         continue;
                     }
@@ -737,7 +737,7 @@ namespace Quant.Infra.Net.SourceData.Service
                         .OrderBy(x => x.OpenDateTime)
                         .ToList();
 
-                    _ioService.WriteCsv(fullPathFileName, merged);
+                    _ioService.WriteCsvManually(fullPathFileName, merged);
 
                     UtilityService.LogAndWriteLine(
                         $"[Perp {tmpSymbol}] incremental merged: +{fetchedAll.Count} bars; total {merged.Count} in [{startDt:yyyy-MM-dd HH:mm}, {endDt:yyyy-MM-dd HH:mm}].",

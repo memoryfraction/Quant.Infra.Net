@@ -200,6 +200,59 @@ namespace Quant.Infra.Net.Shared.Service
             };
         }
 
+        /// <summary>
+        /// 将 KlineInterval 枚举转换为 TimeSpan，用于时间计算。
+        /// </summary>
+        public static TimeSpan KlineIntervalToTimeSpan(KlineInterval interval)
+        {
+            switch (interval)
+            {
+                case KlineInterval.OneMinute: return TimeSpan.FromMinutes(1);
+                case KlineInterval.ThreeMinutes: return TimeSpan.FromMinutes(3);
+                case KlineInterval.FiveMinutes: return TimeSpan.FromMinutes(5);
+                case KlineInterval.OneHour: return TimeSpan.FromHours(1);
+                case KlineInterval.FourHour: return TimeSpan.FromHours(4);
+                case KlineInterval.OneDay: return TimeSpan.FromDays(1);
+                default:
+                    UtilityService.LogAndWriteLine($"Unsupported KlineInterval: {interval}.", LogEventLevel.Error);
+                    throw new ArgumentOutOfRangeException(nameof(interval), "Unsupported KlineInterval for TimeSpan conversion.");
+            }
+        }
+
+
+        public static TimeSpan ResolutionLevelToTimeSpan(ResolutionLevel resolutionLevel)
+        {
+            switch (resolutionLevel)
+            {
+                case ResolutionLevel.Second:
+                    return TimeSpan.FromSeconds(1);
+                case ResolutionLevel.Minute:
+                    return TimeSpan.FromMinutes(1);
+                case ResolutionLevel.Hourly:
+                    return TimeSpan.FromHours(1);
+                case ResolutionLevel.Daily:
+                    return TimeSpan.FromDays(1);
+
+                // ⚠️ Weekly 和 Monthly 无法精确表示为固定的 TimeSpan。
+                // 它们通常被视为一个日期的概念，但为了 TimeSpan 计算，我们使用平均或近似值。
+                case ResolutionLevel.Weekly:
+                    // 7天是标准的周时间跨度
+                    return TimeSpan.FromDays(7);
+                case ResolutionLevel.Monthly:
+                    // 30天是常见的月近似值，但用于金融时间序列计算时需谨慎。
+                    // 如果需要精确的月计算，应使用日历日期操作而非 TimeSpan。
+                    return TimeSpan.FromDays(30);
+
+                case ResolutionLevel.Tick:
+                case ResolutionLevel.Other:
+                default:
+                    // 对于 Tick 或 Other 等无法明确时间跨度的级别，抛出异常或返回 TimeSpan.Zero
+                    // UtilityService.LogAndWriteLine($"Unsupported ResolutionLevel: {resolutionLevel} for TimeSpan conversion.", LogEventLevel.Error);
+                    throw new ArgumentOutOfRangeException(
+                        nameof(resolutionLevel),
+                        $"Unsupported or non-fixed ResolutionLevel for TimeSpan conversion: {resolutionLevel}.");
+            }
+        }
 
         /// <summary>
         /// 结构化输出
@@ -516,81 +569,7 @@ namespace Quant.Infra.Net.Shared.Service
             }
         }
 
-        /// <summary>
-        /// 执行Python方法，并返回PyObject。
-        /// Executes a Python method and returns a PyObject.
-        /// </summary>
-        /// <param name="pythonFileName">Python文件名（无扩展名）/ The Python file name (without extension).</param>
-        /// <param name="pythonFunctionName">Python函数名 / The Python function name.</param>
-        /// <param name="pythonParameterObjs">Python参数对象的集合 / The collection of Python parameter objects.</param>
-        /// <param name="pythonDirectories">Python文件所在的路径集合 / The collection of directories where the Python files are located.</param>
-        /// <param name="venvPath">虚拟环境的路径 / The path to the virtual environment.</param>
-        /// <param name="pythonDll">Python DLL文件名 / The Python DLL file name.</param>
-        /// <returns>返回的PyObject / The returned PyObject.</returns>
-        public static PyObject ExecutePython(
-            string pythonFileName,
-            string pythonFunctionName,
-            IEnumerable<Object> pythonParameterObjs,
-            IEnumerable<string> pythonDirectories,
-            string venvPath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading",
-            string pythonDll = "python39.dll")
-        {
-            // 初始化变量 / Initialize variables
-            var condaVenvHomePath = venvPath; // @"D:\ProgramData\PythonVirtualEnvs\pair_trading"
-            var pythonDllFileName = pythonDll; // "python39.dll";
-            var pythonFullPathFileName = Path.Combine(condaVenvHomePath, pythonDllFileName);
-            PythonInfraModel infra = PythonNetInfra.GetPythonInfra(condaVenvHomePath, pythonDllFileName);
-            if (Runtime.PythonDLL == null || Runtime.PythonDLL != pythonFullPathFileName)
-            {
-                Runtime.PythonDLL = infra.PythonDLL;
-            }
-            PythonEngine.PythonHome = infra.PythonHome;
-            PythonEngine.PythonPath = infra.PythonPath;
-            PythonEngine.Initialize();
-
-            // 使用Python GIL / Use Python GIL
-            using (Py.GIL())
-            {
-                try
-                {
-                    var code = "import sys;";
-                    if (pythonDirectories != null)
-                    {
-                        var codeStringBuilder = new StringBuilder();
-                        codeStringBuilder.Append(code);
-                        foreach (var directory in pythonDirectories)
-                        {
-                            // e.g. directory is Path.Combine(pythonDirectory, "Backtest_Sp500");
-                            var str = $"sys.path.append(r'{directory}');";
-                            codeStringBuilder.Append(str);
-                        }
-                        code = codeStringBuilder.ToString();
-                    }
-
-                    PythonEngine.Exec(code); // 执行代码 / Execute code
-
-                    // 执行指定的 Python 函数并获取结果 / Execute the specified Python function and get the result
-                    var pyParams = new PyList();
-                    foreach (var param in pythonParameterObjs)
-                    {
-                        pyParams.Append(param.ToPython());
-                    }
-
-                    var pyResult = PythonEngine.RunString($"{pythonFunctionName}(*{pyParams})"); // 运行Python函数 / Run the Python function
-                    return pyResult; // 返回结果 / Return the result
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception($"An error occurred while executing Python: {ex.Message}", ex);
-                }
-                finally
-                {
-                    // 清理环境 / Clean up the environment
-                    PythonEngine.Shutdown();
-                }
-            }
-        }
-
+       
         /// <summary>
         /// 读取CSV文件，返回DataFrame
         /// Title Row: DateTime, Open, High, Low, Close, Volume

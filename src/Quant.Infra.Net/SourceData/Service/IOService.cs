@@ -38,21 +38,114 @@ namespace Quant.Infra.Net.SourceData.Service
                 HasHeaderRecord = true,
             };
 
-            using (var reader = new StreamReader(fullPathFileName))
-            using (var csv = new CsvReader(reader, config))
+            var records = GetOhlcvs(fullPathFileName); // todo 把这一行手动读取， 不要用csvHelper的自动映射功能， 因为列名不匹配; csv数据是DateTime, Open, High, Low, Close, Volume
+                                                       // Ohlcv是OpenDateTime, CloseDateTime, Open, High, Low, Close, Volume
+            var ohlcvs = new Ohlcvs
             {
-                var records = csv.GetRecords<Ohlcv>().ToList();
-                var ohlcvs = new Ohlcvs
-                {
-                    ResolutionLevel = _resolutionService.GetResolutionLevel(records),
-                    OhlcvSet = new HashSet<Ohlcv>(records),
-                    FullPathFileName = fullPathFileName,
-                    Symbol  = Path.GetFileNameWithoutExtension(fullPathFileName),
-                    StartDateTimeUtc = records.Select(x => x.OpenDateTime).FirstOrDefault(),
-                    EndDateTimeUtc = records.Select(x => x.OpenDateTime).LastOrDefault()
-                };
-                return ohlcvs;
+                ResolutionLevel = _resolutionService.GetResolutionLevel(records),
+                OhlcvSet = new HashSet<Ohlcv>(records),
+                FullPathFileName = fullPathFileName,
+                Symbol  = Path.GetFileNameWithoutExtension(fullPathFileName),
+                StartDateTimeUtc = records.Select(x => x.OpenDateTime).FirstOrDefault(),
+                EndDateTimeUtc = records.Select(x => x.OpenDateTime).LastOrDefault()
+            };
+            return ohlcvs;
+            
+        }
+
+        /// <summary>
+        /// 读取文件，获取Ohlcv集合, 手动解析csv文件，更加灵活
+        /// </summary>
+        /// <param name="fullPathFileName"></param>
+        /// <returns></returns>
+        private IEnumerable<Ohlcv> GetOhlcvs(string fullPathFileName)
+        {
+            if (!File.Exists(fullPathFileName))
+            {
+                throw new FileNotFoundException($"The file {fullPathFileName} does not exist.");
             }
+            var records = new List<Ohlcv>();
+            using (var reader = new StreamReader(fullPathFileName))
+            {
+                // 1. 跳过Header行：DateTime,Open,High,Low,Close,Volume
+                if (reader.Peek() >= 0)
+                {
+                    reader.ReadLine();
+                }
+
+                string line;
+                var Separator = ',';
+                // 1. 读取所有行，DateTime赋值给OpenDateTime
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    string[] fields = line.Split(Separator);
+
+                    // 确保字段数量足够 (至少6个)
+                    if (fields.Length < 6) continue;
+
+                    // 尝试解析日期时间 (索引 0)
+                    if (!DateTime.TryParseExact(
+                        fields[0].Trim(),
+                        "yyyy-MM-dd HH:mm:ss",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AdjustToUniversal,
+                        out DateTime openDateTime))
+                    {
+                        continue;
+                    }
+
+                    // 尝试解析 OHLCV (索引 1 到 5)
+                    if (!TryParseDecimal(fields[1], out decimal open) ||
+                        !TryParseDecimal(fields[2], out decimal high) ||
+                        !TryParseDecimal(fields[3], out decimal low) ||
+                        !TryParseDecimal(fields[4], out decimal close) ||
+                        !TryParseDecimal(fields[5], out decimal volume))
+                    {
+                        continue;
+                    }
+
+                    var ohlcv = new Ohlcv
+                    {
+                        // 赋值 OpenDateTime
+                        OpenDateTime = openDateTime,
+                        // CloseDateTime 将在步骤 3 中统一赋值
+                        Open = open,
+                        High = high,
+                        Low = low,
+                        Close = close,
+                        Volume = volume,
+                        Symbol = Path.GetFileNameWithoutExtension(fullPathFileName) // 假设 symbol 来自文件名
+                    };
+                    records.Add(ohlcv);
+                }
+            }
+
+            if (!records.Any())
+            {
+                return Enumerable.Empty<Ohlcv>();
+            }
+
+            // 2. 获取resolution Level
+            // 假设 _resolutionService.GetResolutionLevel 接受 List<Ohlcv> 并返回 ResolutionLevel
+            var resolutionLevel = _resolutionService.GetResolutionLevel(records);
+
+            // 3. 根据ResolutionLevel赋值CloseDateTime
+            var timeSpan = UtilityService.ResolutionLevelToTimeSpan(resolutionLevel);
+
+            foreach (var ohlcv in records)
+            {
+                ohlcv.CloseDateTime = ohlcv.OpenDateTime.Add(timeSpan);
+            }
+
+            return records;
+        }
+
+        // 辅助方法：安全解析 decimal (因为 Ohlcv 模型使用了 decimal)
+        private bool TryParseDecimal(string input, out decimal result)
+        {
+            return decimal.TryParse(input.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out result);
         }
 
         /// <summary>

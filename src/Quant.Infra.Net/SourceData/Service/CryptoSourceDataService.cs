@@ -194,7 +194,7 @@ namespace Quant.Infra.Net.SourceData.Service
             CancellationToken ct = default)
         {
             var list = new List<Ohlcv>();
-            var step = KlineIntervalToTimeSpan(interval);
+            var step = UtilityService. KlineIntervalToTimeSpan(interval);
             var limit = 1000;
 
             // openTime 范围：包含 closeFrom/closeTo 对应的 openTime
@@ -254,7 +254,7 @@ namespace Quant.Infra.Net.SourceData.Service
             CancellationToken ct = default)
         {
             var list = new List<Ohlcv>();
-            var step = KlineIntervalToTimeSpan(interval);
+            var step = UtilityService.KlineIntervalToTimeSpan(interval);
             var limit = 1000;
 
             var openCursor = closeFrom.Add(-step);
@@ -592,7 +592,7 @@ namespace Quant.Infra.Net.SourceData.Service
 
             // 2) 路径
             await UtilityService.IsPathExistAsync(path);
-            var step = KlineIntervalToTimeSpan(klineInterval);
+            var step = UtilityService.KlineIntervalToTimeSpan(klineInterval);
 
             // 3) 统一创建一个 client 复用
             using var client = new BinanceRestClient();
@@ -687,7 +687,7 @@ namespace Quant.Infra.Net.SourceData.Service
 
             // 2) 路径
             await UtilityService.IsPathExistAsync(path);
-            var step = KlineIntervalToTimeSpan(klineInterval);
+            var step = UtilityService.KlineIntervalToTimeSpan(klineInterval);
 
             // 3) 复用一个 client
             using var client = new BinanceRestClient();
@@ -750,24 +750,7 @@ namespace Quant.Infra.Net.SourceData.Service
             }
         }
 
-        /// <summary>
-        /// 将 KlineInterval 枚举转换为 TimeSpan，用于时间计算。
-        /// </summary>
-        private TimeSpan KlineIntervalToTimeSpan(KlineInterval interval)
-        {
-            switch (interval)
-            {
-                case KlineInterval.OneMinute: return TimeSpan.FromMinutes(1);
-                case KlineInterval.ThreeMinutes: return TimeSpan.FromMinutes(3);
-                case KlineInterval.FiveMinutes: return TimeSpan.FromMinutes(5);
-                case KlineInterval.OneHour: return TimeSpan.FromHours(1);
-                case KlineInterval.FourHour: return TimeSpan.FromHours(4);
-                case KlineInterval.OneDay: return TimeSpan.FromDays(1);
-                default:
-                    UtilityService.LogAndWriteLine($"Unsupported KlineInterval: {interval}.", LogEventLevel.Error);
-                    throw new ArgumentOutOfRangeException(nameof(interval), "Unsupported KlineInterval for TimeSpan conversion.");
-            }
-        }
+        
 
     }
 }

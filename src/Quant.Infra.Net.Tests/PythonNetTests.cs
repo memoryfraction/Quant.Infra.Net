@@ -1,8 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.Extensions.DependencyInjection;
-using Python.Runtime;
-using Quant.Infra.Net.Shared.Service;
 using Quant.Infra.Net.SourceData.Service;
+
 
 namespace Quant.Infra.Net.Tests
 {
@@ -25,6 +24,7 @@ namespace Quant.Infra.Net.Tests
             _serviceCollection.AddScoped<ITraditionalFinanceSourceDataService, TraditionalFinanceSourceDataService>();
             _serviceProvider = _serviceCollection.BuildServiceProvider();
         }
+
 
         ///// <summary>
         ///// 获取单个数据

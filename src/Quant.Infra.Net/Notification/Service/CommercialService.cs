@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Notification.Service
 {
-    public class MailKitCommercialService : IEmailService
+    public class CommercialService : IEmailService
     {
         
 

@@ -29,7 +29,7 @@ namespace Quant.Infra.Net.Tests
 
 			// 必须注册具体的实现类，因为 Factory 内部使用 GetRequiredService<T>
 			services.AddTransient<PersonalEmailService>();
-			services.AddTransient<MailKitCommercialService>();
+			services.AddTransient<CommercialService>();
 
 			// 将 IConfiguration 注入容器供某些可能需要的服务使用
 			services.AddSingleton(_config);

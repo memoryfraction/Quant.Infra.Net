@@ -19,7 +19,7 @@ namespace Quant.Infra.Net.Notification.Service
 			{
 				return _serviceProvider.GetRequiredService<PersonalEmailService>();
 			}
-			return _serviceProvider.GetRequiredService<MailKitCommercialService>();
+			return _serviceProvider.GetRequiredService<CommercialService>();
 		}
 	}
 }

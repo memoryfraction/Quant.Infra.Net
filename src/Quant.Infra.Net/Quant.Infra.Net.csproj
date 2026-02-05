@@ -4,6 +4,8 @@
 	<LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
 	<Version>1.2.2</Version>   <!-- NuGet 包版本 -->
+	<WarningsAsErrors></WarningsAsErrors>
+	<NoWarn>NU1605</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Analysis\Model\**" />

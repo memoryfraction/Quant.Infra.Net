@@ -21,5 +21,36 @@ namespace Quant.Infra.Net.Notification.Service
 			}
 			return _serviceProvider.GetRequiredService<CommercialService>();
 		}
+
+		/// <summary>
+		/// 根据服务类型获取邮件服务
+		/// </summary>
+		/// <param name="serviceType">服务类型</param>
+		/// <returns>邮件服务实例</returns>
+		public IEmailService GetService(EmailServiceType serviceType)
+		{
+			return serviceType switch
+			{
+				EmailServiceType.Personal => _serviceProvider.GetRequiredService<PersonalEmailService>(),
+				EmailServiceType.Commercial => _serviceProvider.GetRequiredService<CommercialService>(),
+				_ => _serviceProvider.GetRequiredService<PersonalEmailService>()
+			};
+		}
+	}
+
+	/// <summary>
+	/// 邮件服务类型枚举
+	/// </summary>
+	public enum EmailServiceType
+	{
+		/// <summary>
+		/// 个人邮件服务（126邮箱SMTP）
+		/// </summary>
+		Personal = 1,
+
+		/// <summary>
+		/// 商业邮件服务（Brevo API）
+		/// </summary>
+		Commercial = 2
 	}
 }

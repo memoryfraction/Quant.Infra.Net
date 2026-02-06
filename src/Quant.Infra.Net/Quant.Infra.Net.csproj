@@ -4,6 +4,7 @@
 	<LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
 	<Version>1.2.2</Version>   <!-- NuGet 包版本 -->
+	<UserSecretsId>8b042025-ae24-4b48-b89b-12b7001ca6e7</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Analysis\Model\**" />
@@ -27,6 +28,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
     <PackageReference Include="MySql.Data" Version="9.0.0" />
     <PackageReference Include="Polly" Version="8.5.0" />

@@ -23,7 +23,6 @@ namespace Quant.Infra.Net.Tests
 			// 添加包后可以恢复 .AddEnvironmentVariables() 调用。
 			_config = new ConfigurationBuilder()
 				.AddJsonFile("appsettings.test.json", optional: true)
-				// .AddEnvironmentVariables() // 已移除以修复 CS1061。如果已安装 Microsoft.Extensions.Configuration.EnvironmentVariables，可恢复此行。
 				.AddUserSecrets<EmailIntegrationTests>() // 建议将授权码存在 Secret 中
 				.Build();
 

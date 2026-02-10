@@ -39,7 +39,7 @@ namespace Quant.Infra.Net.Tests
 			var serviceProvider = services.BuildServiceProvider();
 
 			// 3. 初始化工厂
-			_factory = new EmailServiceFactory(serviceProvider);
+			_factory = new EmailServiceFactory(serviceProvider, _config);
 		}
 
 
@@ -60,7 +60,7 @@ namespace Quant.Infra.Net.Tests
 			var emailConfig = _config.GetSection("Email");
 			var personalConfig = emailConfig.GetSection("Personal");
 			
-			var settings = new EmailSettings
+			var settings = new PersonalEmailSetting
 			{
 				SmtpServer = personalConfig["SmtpServer"] ?? "smtp.126.com",
 				Port = int.Parse(personalConfig["Port"] ?? "465"),
@@ -92,7 +92,7 @@ namespace Quant.Infra.Net.Tests
 			// 发送给两个真实收件人，测试 Brevo 真实邮件发送
 			var recipients = new List<string> { _testRecipient, "rong.fan1031@gmail.com" };
 
-		var message = new EmailMessage
+			var message = new EmailMessage
 		{
 			To = recipients,
 			Subject = $"🎯 量化交易系统邮件测试 - {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
@@ -160,15 +160,16 @@ namespace Quant.Infra.Net.Tests
 			var emailConfig = _config.GetSection("Email");
 			var commercialConfig = emailConfig.GetSection("Commercial");
 			
-			var settings = new EmailSettings
+			var settings = new CommercialEmailSetting
 			{
 				SmtpServer = commercialConfig["SmtpServer"] ?? "smtp-relay.brevo.com",
-				Port = int.Parse(commercialConfig["Port"] ?? "587"),
-				SenderEmail = commercialConfig["SenderEmail"] ?? "yuanhw512@gmail.com",
-				SenderName = commercialConfig["SenderName"] ?? "Quant Lab System",
+				Port = int.Parse(commercialConfig["Port"] ?? "587"),			
 				Username = commercialConfig["Username"] ?? "", // SMTP 用户名，如果为空会在 CommercialService 中提示
-				Password = commercialConfig["Password"] ?? throw new InvalidOperationException("Brevo SMTP Key not found in user secrets")
+				Password = commercialConfig["Password"] ?? throw new InvalidOperationException("Brevo SMTP Key not found in user secrets"),
+				SenderEmail = commercialConfig["SenderEmail"] ?? "yuanhw512@gmail.com",
+				SenderName = commercialConfig["SenderName"] ?? "Quant Lab System"
 			};
+			settings.SenderEmail = settings.SenderEmail.ToLower();// 确保发件人邮箱小写，符合 Brevo 要求
 
 			// 验证配置
 			Console.WriteLine($"SMTP 服务器: {settings.SmtpServer}");

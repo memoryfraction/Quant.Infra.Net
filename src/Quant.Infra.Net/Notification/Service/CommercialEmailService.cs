@@ -6,7 +6,7 @@ using MimeKit;
 
 namespace Quant.Infra.Net.Notification.Service
 {
-    public class CommercialService : IEmailService
+    public class CommercialEmailService : IEmailService
     {
         public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
         {

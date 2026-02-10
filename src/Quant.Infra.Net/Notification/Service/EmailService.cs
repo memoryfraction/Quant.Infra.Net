@@ -57,13 +57,4 @@ namespace Quant.Infra.Net.Notification.Service
 			}
 		}
 	}
-
-	public class CommercialEmailService : IEmailService
-	{
-		public Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
-		{
-			// 这里可以实现商业邮件服务的发送逻辑，例如调用 Brevo 的 API
-			throw new NotImplementedException("Commercial email service is not implemented yet.");
-		}
-	}
 }

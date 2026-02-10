@@ -1,25 +1,40 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Quant.Infra.Net.Notification.Model;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Notification.Service
 {
 	public class EmailServiceFactory
 	{
 		private readonly IServiceProvider _serviceProvider;
-		public EmailServiceFactory(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
+		private readonly IConfiguration _configuration;
+
+		public EmailServiceFactory(IServiceProvider serviceProvider, IConfiguration configuration)
+		{
+			_configuration = configuration;
+			_serviceProvider = serviceProvider;
+		}
 
 		public IEmailService GetService(int recipientCount)
 		{
-			// 自动分流逻辑
-			if (recipientCount < 50)
+			// 1. 获取配置中的策略类型 (Commercial, Personal 或 Auto)
+			string strategy = _configuration["Email:Type"];
+
+			// 2. 根据策略和收件人数量决定具体服务类型
+			if (strategy.ToLower() == "Commercial".ToLower())
+			{
+				return _serviceProvider.GetRequiredService<CommercialEmailService>();
+			}
+
+			if (strategy.ToLower() == "Personal".ToLower())
 			{
 				return _serviceProvider.GetRequiredService<PersonalEmailService>();
 			}
-			return _serviceProvider.GetRequiredService<CommercialService>();
+
+			throw new InvalidOperationException("Invalid email service type configured.");
 		}
+
+		
 	}
 }

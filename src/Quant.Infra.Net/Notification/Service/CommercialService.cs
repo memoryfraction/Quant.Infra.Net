@@ -8,7 +8,7 @@ namespace Quant.Infra.Net.Notification.Service
 {
     public class CommercialService : IEmailService
     {
-        public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettings setting)
+        public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
         {
             if (setting == null) throw new ArgumentNullException(nameof(setting));
             if (message == null) throw new ArgumentNullException(nameof(message));
@@ -36,7 +36,7 @@ namespace Quant.Infra.Net.Notification.Service
             }
         }
 
-        private async Task<bool> SendRealBrevoEmail(EmailMessage message, EmailSettings setting)
+        private async Task<bool> SendRealBrevoEmail(EmailMessage message, EmailSettingBase setting)
         {
             UtilityService.LogAndWriteLine($"[CommercialService - Brevo] 开始真实邮件发送");
             UtilityService.LogAndWriteLine($"[Brevo] 发件人: {setting.SenderEmail} ({setting.SenderName})");
@@ -140,7 +140,7 @@ namespace Quant.Infra.Net.Notification.Service
             }
         }
 
-        private async Task<bool> SimulateBrevoEmail(EmailMessage message, EmailSettings setting)
+        private async Task<bool> SimulateBrevoEmail(EmailMessage message, EmailSettingBase setting)
         {
             UtilityService.LogAndWriteLine($"[CommercialService - Brevo] 开始模拟批量邮件发送");
             UtilityService.LogAndWriteLine($"[Brevo] 发件人: {setting.SenderEmail} ({setting.SenderName})");

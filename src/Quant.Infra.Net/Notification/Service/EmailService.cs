@@ -8,7 +8,7 @@ namespace Quant.Infra.Net.Notification.Service
 {
 	public class PersonalEmailService : IEmailService
 	{
-		public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettings setting)
+		public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
 		{
 			if (setting == null) throw new ArgumentNullException(nameof(setting));
 
@@ -55,6 +55,15 @@ namespace Quant.Infra.Net.Notification.Service
 				UtilityService.LogAndWriteLine($"[PersonalEmailService] 错误: {ex.Message}");
 				return false;
 			}
+		}
+	}
+
+	public class CommercialEmailService : IEmailService
+	{
+		public Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
+		{
+			// 这里可以实现商业邮件服务的发送逻辑，例如调用 Brevo 的 API
+			throw new NotImplementedException("Commercial email service is not implemented yet.");
 		}
 	}
 }

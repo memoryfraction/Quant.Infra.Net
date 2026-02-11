@@ -31,7 +31,7 @@ namespace Quant.Infra.Net.Tests
 
 			// 必须注册具体的实现类，因为 Factory 内部使用 GetRequiredService<T>
 			services.AddTransient<PersonalEmailService>();
-			services.AddTransient<CommercialService>();
+			services.AddTransient<CommercialEmailService>();
 
 			// 将 IConfiguration 注入容器供某些可能需要的服务使用
 			services.AddSingleton(_config);
@@ -181,7 +181,7 @@ namespace Quant.Infra.Net.Tests
 
 			// Act
 			// 1. 通过工厂获取服务 (recipientCount 为 1，但我们强制使用 CommercialService 进行测试)
-			var service = new CommercialService(); // 直接使用 CommercialService 而不是通过工厂
+			var service = new CommercialEmailService(); // 直接使用 CommercialService 而不是通过工厂
 
 			// 验证 SMTP 密钥是否正确读取
 			// 验证 SMTP 密钥格式

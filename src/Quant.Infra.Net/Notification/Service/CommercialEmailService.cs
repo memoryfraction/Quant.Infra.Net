@@ -4,30 +4,31 @@ using System;
 using System.Threading.Tasks;
 using MimeKit;
 
+
 namespace Quant.Infra.Net.Notification.Service
 {
-    public class CommercialService : IEmailService
+    public class CommercialEmailService : IEmailService
     {
-        public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettings setting)
+		private readonly Microsoft.Extensions.Hosting.IHostEnvironment _env;
+        public CommercialEmailService(Microsoft.Extensions.Hosting.IHostEnvironment env)
+        {
+            _env = env;
+		}
+		public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
         {
             if (setting == null) throw new ArgumentNullException(nameof(setting));
             if (message == null) throw new ArgumentNullException(nameof(message));
 
             try
             {
-                // 检查是否为真实的 Brevo SMTP Key
-                bool isRealBrevoKey = setting.Password.StartsWith("xsmtpsib-");
-                
-                if (isRealBrevoKey)
+				// todo 如果是生产环境，打印 Password， 帮助判断取值是否正确
+				var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+				if (envName.Equals("Production", StringComparison.OrdinalIgnoreCase))
                 {
-                    // 真实 Brevo SMTP 发送
-                    return await SendRealBrevoEmail(message, setting);
-                }
-                else
-                {
-                    // 模拟发送（用于测试）
-                    return await SimulateBrevoEmail(message, setting);
-                }
+					// UtilityService.LogAndWriteLine($"Password: {setting.Password ?? ""}"); // debug purpose
+				}
+				return await SendRealBrevoEmail(message, setting);
+
             }
             catch (Exception ex)
             {
@@ -36,7 +37,7 @@ namespace Quant.Infra.Net.Notification.Service
             }
         }
 
-        private async Task<bool> SendRealBrevoEmail(EmailMessage message, EmailSettings setting)
+        private async Task<bool> SendRealBrevoEmail(EmailMessage message, EmailSettingBase setting)
         {
             UtilityService.LogAndWriteLine($"[CommercialService - Brevo] 开始真实邮件发送");
             UtilityService.LogAndWriteLine($"[Brevo] 发件人: {setting.SenderEmail} ({setting.SenderName})");
@@ -140,7 +141,7 @@ namespace Quant.Infra.Net.Notification.Service
             }
         }
 
-        private async Task<bool> SimulateBrevoEmail(EmailMessage message, EmailSettings setting)
+        private async Task<bool> SimulateBrevoEmail(EmailMessage message, EmailSettingBase setting)
         {
             UtilityService.LogAndWriteLine($"[CommercialService - Brevo] 开始模拟批量邮件发送");
             UtilityService.LogAndWriteLine($"[Brevo] 发件人: {setting.SenderEmail} ({setting.SenderName})");

@@ -5,6 +5,6 @@ namespace Quant.Infra.Net.Notification.Service
 {
     public interface IEmailService
     {
-		Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettings setting);
+		Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting);
 	}
 }

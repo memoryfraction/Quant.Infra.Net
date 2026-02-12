@@ -8,7 +8,7 @@ namespace Quant.Infra.Net.Notification.Service
 {
 	public class PersonalEmailService : IEmailService
 	{
-		public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettings setting)
+		public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
 		{
 			if (setting == null) throw new ArgumentNullException(nameof(setting));
 

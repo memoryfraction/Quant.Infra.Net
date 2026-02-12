@@ -21,13 +21,17 @@ namespace Quant.Infra.Net.SourceData.Service
         }
 
         /// <summary>
-        /// 已知文件名和路径，使用csvHelper获取Ohlcvs
+        /// 已知文件名和路径，使用csvhelper获取Ohlcvs。
+        /// Read Ohlcvs from a CSV file by full path.
         /// </summary>
-        /// <param name="fullPathFilename"></param>
-        /// <returns></returns>
+        /// <param name="fullPathFileName">完整的文件路径 / full path to CSV file.</param>
+        /// <returns>Parsed Ohlcvs collection.</returns>
         public Ohlcvs ReadCsv(string fullPathFileName)
         {
-            // 如果文件{fullPathFileName}不存在，则抛出异常；
+            if (string.IsNullOrWhiteSpace(fullPathFileName))
+                throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
+
+            // 如果文件不存在，则抛出异常；
             if (!File.Exists(fullPathFileName))
             {
                 throw new FileNotFoundException($"The file {fullPathFileName} does not exist.");
@@ -60,6 +64,8 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <returns></returns>
         private IEnumerable<Ohlcv> GetOhlcvs(string fullPathFileName)
         {
+            if (string.IsNullOrWhiteSpace(fullPathFileName))
+                throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
             if (!File.Exists(fullPathFileName))
             {
                 throw new FileNotFoundException($"The file {fullPathFileName} does not exist.");
@@ -149,16 +155,23 @@ namespace Quant.Infra.Net.SourceData.Service
         }
 
         /// <summary>
-        /// 根据要求读取给定的csv文件, 如果条件不符合，则返回null
+        /// 根据要求读取给定的csv文件, 如果条件不符合，则返回null。
+        /// Read CSV and return converted Ohlcvs if it satisfies the required interval and resolution.
         /// </summary>
-        /// <param name="fullPathFileName">， 包括列：DateTime, Open, High, Low, Close, Volume</param>
-        /// <param name="requiredStartDt"></param>
-        /// <param name="requiredEndDt"></param>
-        /// <param name="requiredResolutionLevel"></param>
-        /// <returns></returns>
+        /// <param name="fullPathFileName">Full path to CSV; must include DateTime, Open, High, Low, Close, Volume.</param>
+        /// <param name="requiredStartDt">Required start DateTime (inclusive).</param>
+        /// <param name="requiredEndDt">Required end DateTime (inclusive).</param>
+        /// <param name="requiredResolutionLevel">Required resolution level.</param>
+        /// <returns>Converted Ohlcvs or null if conditions not satisfied.</returns>
         public Ohlcvs ReadCsv(string fullPathFileName, DateTime requiredStartDt, DateTime requiredEndDt, ResolutionLevel requiredResolutionLevel)
         {
-            // 如果文件{fullPathFileName}不存在，则抛出异常；
+            if (string.IsNullOrWhiteSpace(fullPathFileName))
+                throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
+
+            if (requiredStartDt > requiredEndDt)
+                throw new ArgumentException("requiredStartDt must be earlier than or equal to requiredEndDt.", nameof(requiredStartDt));
+
+            // 如果文件不存在，则抛出异常；
             if (!File.Exists(fullPathFileName))
             {
                 throw new FileNotFoundException($"The file {fullPathFileName} does not exist.");
@@ -202,12 +215,17 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <returns></returns>
         private TimeSeries GetTimeSeriesFromFullPathFileName(string fullPathFileName, DateTime startDt, DateTime endDt, ResolutionLevel resolution = ResolutionLevel.Hourly)
         {
+            if (string.IsNullOrWhiteSpace(fullPathFileName)) throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
+            if (startDt > endDt) throw new ArgumentException("startDt must be earlier than or equal to endDt.", nameof(startDt));
+
             List<DateTime> dates = new List<DateTime>();
             List<double> values = new List<double>();
 
             var ohlcvs = ReadCsv(fullPathFileName, startDt, endDt, resolution);
-            // 跳过第一行并遍历剩余行
-            for (int i = 1; i < ohlcvs.OhlcvSet.Count; i++)
+            if (ohlcvs == null || ohlcvs.OhlcvSet == null || !ohlcvs.OhlcvSet.Any())
+                throw new Exception($"file: {fullPathFileName} ohlcvs is null or empty.");
+			// 跳过第一行并遍历剩余行
+			for (int i = 1; i < ohlcvs.OhlcvSet.Count; i++)
             {
                 var dateTime = ohlcvs.OhlcvSet.ElementAt(i).OpenDateTime;
                 var value = (double)ohlcvs.OhlcvSet.ElementAt(i).Close;
@@ -224,8 +242,27 @@ namespace Quant.Infra.Net.SourceData.Service
 
 
         /// 读取文件CSV文件，获取TimeSeries
+        /// <summary>
+        /// 读取两个 CSV 文件并返回差值 TimeSeries。
+        /// Read two CSV files, compute diff = seriesB - slope * seriesA - intercept, and return as TimeSeries.
+        /// </summary>
         public TimeSeries GetDiffTimeSeries(string fullPathFileName1, string fullPathFileName2, double slope, double intercept, DateTime startDt, DateTime endDt, ResolutionLevel resolution = ResolutionLevel.Hourly)
         {
+            if (string.IsNullOrWhiteSpace(fullPathFileName1))
+                throw new ArgumentException("fullPathFileName1 must not be null or empty.", nameof(fullPathFileName1));
+            if (string.IsNullOrWhiteSpace(fullPathFileName2))
+                throw new ArgumentException("fullPathFileName2 must not be null or empty.", nameof(fullPathFileName2));
+            if (!File.Exists(fullPathFileName1))
+                throw new FileNotFoundException($"The file {fullPathFileName1} does not exist.");
+            if (!File.Exists(fullPathFileName2))
+                throw new FileNotFoundException($"The file {fullPathFileName2} does not exist.");
+            if (startDt > endDt)
+                throw new ArgumentException("startDt must be earlier than or equal to endDt.", nameof(startDt));
+            if (double.IsNaN(slope) || double.IsInfinity(slope))
+                throw new ArgumentException("slope must be a finite number.", nameof(slope));
+            if (double.IsNaN(intercept) || double.IsInfinity(intercept))
+                throw new ArgumentException("intercept must be a finite number.", nameof(intercept));
+
             var timeSeries1 = GetTimeSeriesFromFullPathFileName(fullPathFileName1, startDt, endDt, resolution);
             var timeSeries2 = GetTimeSeriesFromFullPathFileName(fullPathFileName2, startDt, endDt, resolution);
             if (timeSeries1.TimeSeriesElements.Count != timeSeries2.TimeSeriesElements.Count)
@@ -241,8 +278,17 @@ namespace Quant.Infra.Net.SourceData.Service
         }
 
 
+        /// <summary>
+        /// 使用 CsvHelper 将 Ohlcv 集合写入 CSV 文件。
+        /// Write Ohlcv collection to CSV using CsvHelper.
+        /// </summary>
         public void WriteCsv(string fullPathFileName, IEnumerable<Ohlcv> ohlcvs)
         {
+            if (string.IsNullOrWhiteSpace(fullPathFileName))
+                throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
+            if (ohlcvs == null)
+                throw new ArgumentNullException(nameof(ohlcvs));
+
             var directory = Path.GetDirectoryName(fullPathFileName);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {

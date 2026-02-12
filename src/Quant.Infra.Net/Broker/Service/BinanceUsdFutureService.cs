@@ -28,9 +28,10 @@ namespace Quant.Infra.Net.Broker.Service
 
         public BinanceUsdFutureService(IConfiguration configuration)
         {
+            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             _apiKey = configuration["Exchange:ApiKey"];
             _apiSecret = configuration["Exchange:ApiSecret"];
-            ExchangeEnvironment = (ExchangeEnvironment)Enum.Parse(typeof(ExchangeEnvironment), configuration["Exchange:Environment"].ToString());
+            ExchangeEnvironment = (ExchangeEnvironment)Enum.Parse(typeof(ExchangeEnvironment), configuration["Exchange:Environment"]?.ToString() ?? "Testnet");
 
             _retryPolicy = Policy
                 .Handle<Exception>()
@@ -93,18 +94,24 @@ namespace Quant.Infra.Net.Broker.Service
                 throw new Exception($"Failed to get account positions. Error Code: {positionInformation.Error.Code}, Message: {positionInformation.Error.Message}.");
             }
             var holdingPositions = positionInformation.Data.Where(x => x.Quantity != 0m).Select(x => x).ToList();
-            var totalCostBase = 0m;
-            var totalCurrentMarketValue = 0m;
+            if (!holdingPositions.Any()) return 0.0;
+
+            decimal totalCostBase = 0m;
+            decimal totalCurrentMarketValue = 0m;
             foreach (var holdingPosition in holdingPositions)
             {
-                totalCostBase = holdingPosition.EntryPrice * holdingPosition.Quantity;
-                totalCurrentMarketValue = holdingPosition.MarkPrice * holdingPosition.Quantity;
+                totalCostBase += holdingPosition.EntryPrice * holdingPosition.Quantity;
+                totalCurrentMarketValue += holdingPosition.MarkPrice * holdingPosition.Quantity;
             }
+
+            if (totalCostBase == 0m) return 0.0; // avoid divide-by-zero
+
             return Convert.ToDouble((totalCurrentMarketValue - totalCostBase) / totalCostBase);
         }
 
         public async Task LiquidateUsdFutureAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
             using var binanceRestClient = InitializeBinanceRestClient();
 
             var msg = $"Requesting position information for {symbol}";
@@ -201,6 +208,8 @@ namespace Quant.Infra.Net.Broker.Service
         /// <exception cref="Exception"></exception>
         public async Task SetUsdFutureHoldingsAsync(string symbol, double rate, PositionSide positionSide = PositionSide.Both)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
+            if (double.IsNaN(rate) || double.IsInfinity(rate) || rate < 0) throw new ArgumentOutOfRangeException(nameof(rate), "rate must be a non-negative finite number.");
             using var binanceRestClient = InitializeBinanceRestClient();
             UtilityService.LogAndWriteLine($"Requesting account balance for {symbol} at {DateTime.UtcNow}");
             var msg = $"Requesting account balance for {symbol}";
@@ -214,7 +223,9 @@ namespace Quant.Infra.Net.Broker.Service
                 throw new Exception($"Failed to retrieve account balance. Error Code: {accountResponse.Error.Code}, Message: {accountResponse.Error.Message}");
             }
 
-            decimal usdtBalance = accountResponse.Data.First(b => b.Asset == "USDT").WalletBalance;
+            var usdt = accountResponse.Data.FirstOrDefault(b => string.Equals(b.Asset, "USDT", StringComparison.OrdinalIgnoreCase));
+            if (usdt == null) throw new Exception("USDT balance not found in account balances.");
+            decimal usdtBalance = usdt.WalletBalance;
 
             msg = $"Received account balance response: Success = {accountResponse.Success}. usdtBalancne: {usdtBalance}";
             var errors = new List<string>() { accountResponse.Error?.Message };
@@ -249,7 +260,9 @@ namespace Quant.Infra.Net.Broker.Service
             UtilityService.LogAndWriteLine(msg);
 
             var exchangeInfo = await binanceRestClient.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
-            var symbolInfo = exchangeInfo.Data.Symbols.Single(s => s.Name == symbol);
+            if (!exchangeInfo.Success) throw new Exception($"Failed to retrieve exchange info. Error: {exchangeInfo.Error?.Message}");
+            var symbolInfo = exchangeInfo.Data.Symbols.SingleOrDefault(s => string.Equals(s.Name, symbol, StringComparison.OrdinalIgnoreCase));
+            if (symbolInfo == null) throw new ArgumentException($"Symbol '{symbol}' not found in exchange info.", nameof(symbol));
             var pricePrecision = symbolInfo.PricePrecision;
             var quantityPrecision = symbolInfo.QuantityPrecision;
 
@@ -312,6 +325,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         public async Task<bool> HasUsdFuturePositionAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
             using var binanceRestClient = InitializeBinanceRestClient();
 
             var msg = $"Checking if there is an open position for {symbol}";

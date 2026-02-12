@@ -17,7 +17,8 @@ namespace Quant.Infra.Net.Account.Service
         /// <param name="portfolioBase"></param>
         public InMemoryBinanceBrokerService(PortfolioBase portfolioBase)
         {
-            Portfolio = portfolioBase as CryptoPortfolio;
+            if (portfolioBase == null) throw new ArgumentNullException(nameof(portfolioBase));
+            Portfolio = portfolioBase as CryptoPortfolio ?? throw new ArgumentException("portfolioBase must be a CryptoPortfolio", nameof(portfolioBase));
             // Portfolio.InitCapital = initCapital;
         }
 

@@ -398,3 +398,5 @@ FodyWeavers.xsd
 *.sln.iml
 /src/Quant.Infra.Net.Tests/Python/.idea
 result
+.kiro
+tools

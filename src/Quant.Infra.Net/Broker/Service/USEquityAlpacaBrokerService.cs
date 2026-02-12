@@ -48,11 +48,21 @@ namespace Quant.Infra.Net.Broker.Service
         /// <param name="configuration">配置文件接口。</param>
         public USEquityAlpacaBrokerService(IConfiguration configuration)
         {
-            _apiKey = configuration["Exchange:ApiKey"];
-            _apiSecret = configuration["Exchange:ApiSecret"];
-            ExchangeEnvironment = (ExchangeEnvironment)Enum.Parse(typeof(ExchangeEnvironment), configuration["Exchange:Environment"].ToString());
+                if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
-            _alpacaClient = new AlpacaClient(new BrokerCredentials { ApiKey = _apiKey, Secret = _apiSecret }, ExchangeEnvironment);
+                var apiKey = configuration["Exchange:ApiKey"];
+                var apiSecret = configuration["Exchange:ApiSecret"];
+                var envStr = configuration["Exchange:Environment"];
+
+                if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("Exchange:ApiKey must be set in configuration.", nameof(configuration));
+                if (string.IsNullOrWhiteSpace(apiSecret)) throw new ArgumentException("Exchange:ApiSecret must be set in configuration.", nameof(configuration));
+                if (string.IsNullOrWhiteSpace(envStr)) throw new ArgumentException("Exchange:Environment must be set in configuration.", nameof(configuration));
+
+                _apiKey = apiKey;
+                _apiSecret = apiSecret;
+                ExchangeEnvironment = (ExchangeEnvironment)Enum.Parse(typeof(ExchangeEnvironment), envStr);
+
+                _alpacaClient = new AlpacaClient(new BrokerCredentials { ApiKey = _apiKey, Secret = _apiSecret }, ExchangeEnvironment);
             // 初始化_tradingClient
             var credentials = new SecretKey(_apiKey, _apiSecret);
             _alpacaTradingClient = ExchangeEnvironment == ExchangeEnvironment.Live
@@ -622,6 +632,8 @@ namespace Quant.Infra.Net.Broker.Service
 
         public async Task<Position> GetPositionAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentNullException(nameof(symbol));
+
             try
             {
                 // 1) 从 Alpaca SDK 拉取该标的的持仓信息
@@ -664,6 +676,10 @@ namespace Quant.Infra.Net.Broker.Service
             bool afterHours = false
             )
         {
+            if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+            if (string.IsNullOrWhiteSpace(underlying.Symbol)) throw new ArgumentException("Underlying.Symbol must not be null or empty.", nameof(underlying));
+            if (quality <= 0) throw new ArgumentOutOfRangeException(nameof(quality), "quality must be a positive integer representing number of shares.");
+
             var timeInForceAlpaca = AlpacaMarketsExtension.ToAlpacaTimeInForce(timeInForce);
             var orderTypeAlpaca = AlpacaMarketsExtension.ToAlpacaOrderType(orderType);
             await _alpacaClient.PlaceOrderAsync(underlying.Symbol, quality, orderTypeAlpaca, timeInForceAlpaca, afterHours);

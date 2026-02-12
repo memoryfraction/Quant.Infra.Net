@@ -4,7 +4,6 @@ using Microsoft.Extensions.Hosting; // 必须引用
 using Moq; // 建议安装 NuGet 包: Moq
 using Quant.Infra.Net.Notification.Model;
 using Quant.Infra.Net.Notification.Service;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Quant.Infra.Net.Tests
 {

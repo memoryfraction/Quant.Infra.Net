@@ -21,6 +21,10 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <returns>相关性系数</returns>
         public double CalculateCorrelation(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
+            if (seriesA == null) throw new ArgumentNullException(nameof(seriesA));
+            if (seriesB == null) throw new ArgumentNullException(nameof(seriesB));
+            if (!seriesA.Any() || !seriesB.Any()) throw new ArgumentException("Input series must not be empty.");
+
             return Correlation.Pearson(seriesA, seriesB);
         }
 
@@ -181,7 +185,14 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <returns>斜率和截距</returns>
         public (double Slope, double Intercept) PerformOLSRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
-            var regression = SimpleRegression.Fit(seriesA.ToArray(), seriesB.ToArray());
+            if (seriesA == null) throw new ArgumentNullException(nameof(seriesA));
+            if (seriesB == null) throw new ArgumentNullException(nameof(seriesB));
+            var arrA = seriesA.ToArray();
+            var arrB = seriesB.ToArray();
+            if (arrA.Length == 0 || arrB.Length == 0) throw new ArgumentException("Input series must not be empty.");
+            if (arrA.Length != arrB.Length) throw new ArgumentException("Input series must have the same length.");
+
+            var regression = SimpleRegression.Fit(arrA, arrB);
             return (Math.Round(regression.Item2, 6), Math.Round(regression.Item1, 6)); // Slope, Intercept
         }
 
@@ -193,8 +204,12 @@ namespace Quant.Infra.Net.Analysis.Service
         /// <returns></returns>
         public bool PerformShapiroWilkTest(IEnumerable<double> timeSeries, double threshold = 0.05)
         {
+            if (timeSeries == null) throw new ArgumentNullException(nameof(timeSeries));
+            var arr = timeSeries.ToArray();
+            if (arr.Length == 0) throw new ArgumentException("Time series must not be empty.", nameof(timeSeries));
+
             // 创建Shapiro-Wilk检验对象
-            var swTest = new ShapiroWilkTest(timeSeries.ToArray());
+            var swTest = new ShapiroWilkTest(arr);
 
             // 获取统计值和p值
             double W = swTest.Statistic;
@@ -217,18 +232,26 @@ namespace Quant.Infra.Net.Analysis.Service
 
         public static decimal CalculateZScores(IEnumerable<decimal> data, decimal value)
         {
+            if (data == null) throw new ArgumentNullException(nameof(data));
             var doubleData = data.Select(x => (double)x).ToList();
+            if (!doubleData.Any()) throw new ArgumentException("Data must not be empty.", nameof(data));
             var doubleValue = (double)value;
 
             var mean = doubleData.Average();
             var stdDev = Math.Sqrt(doubleData.Average(x => Math.Pow(x - mean, 2)));
+            if (stdDev == 0) throw new InvalidOperationException("Standard deviation is zero; cannot compute z-score.");
             return Convert.ToDecimal((doubleValue - mean) / stdDev);
         }
 
         public double CalculateZScores(IEnumerable<double> data, double value)
         {
-            double mean = data.Average();
-            double stdDev = Math.Sqrt(data.Average(x => Math.Pow(x - mean, 2)));
+            if (data == null) throw new ArgumentNullException(nameof(data));
+            var arr = data.ToArray();
+            if (arr.Length == 0) throw new ArgumentException("Data must not be empty.", nameof(data));
+
+            double mean = arr.Average();
+            double stdDev = Math.Sqrt(arr.Average(x => Math.Pow(x - mean, 2)));
+            if (stdDev == 0) throw new InvalidOperationException("Standard deviation is zero; cannot compute z-score.");
             return (value - mean) / stdDev;
         }
 

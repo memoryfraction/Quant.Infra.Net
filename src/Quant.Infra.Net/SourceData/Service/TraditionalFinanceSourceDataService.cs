@@ -20,25 +20,50 @@ namespace Quant.Infra.Net.SourceData.Service
         private readonly IMapper _mapper;
         private readonly IHistoricalDataSourceService _historicalDataSourceService;
 
+        /// <summary>
+        /// 构造函数。
+        /// Constructor for TraditionalFinanceSourceDataService.
+        /// </summary>
+        /// <param name="mapper">AutoMapper instance.</param>
+        /// <param name="historicalDataSourceService">Historical data source service.</param>
         public TraditionalFinanceSourceDataService(IMapper mapper, IHistoricalDataSourceService historicalDataSourceService)
         {
+            if (mapper == null) throw new ArgumentNullException(nameof(mapper));
+            if (historicalDataSourceService == null) throw new ArgumentNullException(nameof(historicalDataSourceService));
+
             _mapper = mapper;
             _historicalDataSourceService = historicalDataSourceService;
         }
 
+        /// <summary>
+        /// Begin syncing source daily data (not implemented).
+        /// 开始同步每日数据（未实现）。
+        /// </summary>
         public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Shared.Model.ResolutionLevel Period = Shared.Model.ResolutionLevel.Daily)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
+            if (startDt > endDt) throw new ArgumentException("startDt must be earlier than or equal to endDt.", nameof(startDt));
+            if (string.IsNullOrWhiteSpace(fullPathFileName)) throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
+            return Task.FromException<Ohlcvs>(new NotImplementedException());
         }
 
+        /// <summary>
+        /// Download Ohlcv list for a traditional finance symbol from the configured historical source.
+        /// 从配置的历史数据源下载指定标的的 Ohlcv 列表。
+        /// </summary>
         public async Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Shared.Model.ResolutionLevel period = Shared.Model.ResolutionLevel.Daily, DataSource dataSource = DataSource.MongoDBWebApi)
-        {            var ohlcvs = new Ohlcvs();
-            
-            if(dataSource == DataSource.MongoDBWebApi)
-            { 
+        {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
+            if (startDt > endDt) throw new ArgumentException("startDt must be earlier than or equal to endDt.", nameof(startDt));
+            if (startDt == endDt) throw new ArgumentException("startDt and endDt must not be equal.", nameof(startDt));
+
+            var ohlcvs = new Ohlcvs();
+            if (dataSource == DataSource.MongoDBWebApi)
+            {
                 // 根据_historicalDataSourceService 获取历史数据，并返回类型，忽略dataSource;
-                ohlcvs.OhlcvSet = (await  _historicalDataSourceService.GetOhlcvListAsync(new Underlying(symbol, AssetType.UsEquity), startDt, endDt, period)).ToHashSet();
-            
+                var result = await _historicalDataSourceService.GetOhlcvListAsync(new Underlying(symbol, AssetType.UsEquity), startDt, endDt, period);
+                ohlcvs.OhlcvSet = result != null ? result.ToHashSet() : new HashSet<Ohlcv>();
+
                 ohlcvs.Symbol = symbol;
                 ohlcvs.StartDateTimeUtc = startDt;
                 ohlcvs.EndDateTimeUtc = endDt;
@@ -51,10 +76,16 @@ namespace Quant.Infra.Net.SourceData.Service
 
       
 
+        /// <summary>
+        /// Read Ohlcv list from a CSV file.
+        /// 从 CSV 文件读取 Ohlcv 列表。
+        /// </summary>
         public async Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFileName)
         {
+            if (string.IsNullOrWhiteSpace(fullPathFileName)) throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
             if (!File.Exists(fullPathFileName))
-                throw new ArgumentNullException($"File not found: {fullPathFileName}");
+                throw new FileNotFoundException($"File not found: {fullPathFileName}");
+
             var ohlcvList = new List<Ohlcv>();
 
             using (var reader = new StreamReader(fullPathFileName))
@@ -76,6 +107,10 @@ namespace Quant.Infra.Net.SourceData.Service
         /// <summary>
         /// 获取 S&P500 的成分股 symbol 列表。
         /// </summary>
+        /// <summary>
+        /// 获取 S&P500 的成分股 symbol 列表。
+        /// Get S&P500 constituent symbols.
+        /// </summary>
         public async Task<IEnumerable<string>> GetSp500SymbolsAsync(int number = 500)
         {
             var url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies";
@@ -93,6 +128,7 @@ namespace Quant.Infra.Net.SourceData.Service
             var tickers = new List<string>();
             var nodes = htmlDoc.DocumentNode.SelectNodes("//table[contains(@class, 'wikitable')][1]//tr/td[1]/a");
 
+            if (number <= 0) throw new ArgumentOutOfRangeException(nameof(number), "number must be positive.");
             if (nodes == null || nodes.Count == 0)
                 throw new Exception("Failed to parse Wikipedia table. XPath may have changed.");
 
@@ -104,13 +140,18 @@ namespace Quant.Infra.Net.SourceData.Service
             return tickers.Take(number).OrderBy(x => x);
         }
 
+        /// <summary>
+        /// Save Ohlcv list to CSV.
+        /// 将 Ohlcv 列表保存到 CSV 文件。
+        /// </summary>
         public async Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName)
         {
+            if (string.IsNullOrWhiteSpace(fullPathFileName)) throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
+            if (ohlcvList == null) throw new ArgumentNullException(nameof(ohlcvList));
+            if (!ohlcvList.Any()) return; // silently skip empty list
+
             if (!File.Exists(fullPathFileName))
                 await UtilityService.IsPathExistAsync(fullPathFileName);
-
-            if (ohlcvList == null || !ohlcvList.Any())
-                throw new ArgumentNullException("ohlcvList is null");
 
             await UtilityService.IsPathExistAsync(fullPathFileName);
 

@@ -38,6 +38,7 @@ namespace Quant.Infra.Net.Account.Service
 
         public BinanceService(IConfiguration configuration)
         {
+            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             _configuration = configuration;
             _apiKey = _configuration["Exchange:ApiKey"];
             _apiSecret = _configuration["Exchange:ApiSecret"];
@@ -102,6 +103,9 @@ namespace Quant.Infra.Net.Account.Service
 
         public override async Task<decimal> GetLatestPriceAsync(Underlying underlying)
         {
+            if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+            if (string.IsNullOrWhiteSpace(underlying.Symbol)) throw new ArgumentException("Underlying.Symbol must not be null or empty.", nameof(underlying));
+
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 if (underlying.AssetType == AssetType.CryptoSpot)
@@ -110,19 +114,19 @@ namespace Quant.Infra.Net.Account.Service
                     if (getPriceResponse.Success == true)
                         return getPriceResponse.Data.Price;
                     else
-                        throw new Exception();
+                        throw new Exception("Failed to get spot price from Binance.");
                 }
-                else if(underlying.AssetType == AssetType.CryptoPerpetualContract)
+                else if (underlying.AssetType == AssetType.CryptoPerpetualContract)
                 {
                     var getPriceResponse = await client.UsdFuturesApi.ExchangeData.GetPriceAsync(underlying.Symbol);
                     if (getPriceResponse.Success == true)
                         return getPriceResponse.Data.Price;
                     else
-                        throw new Exception();
+                        throw new Exception("Failed to get futures price from Binance.");
                 }
                 else
                 {
-                    throw new Exception();
+                    throw new ArgumentException($"Not supported AssetType:{underlying.AssetType}", nameof(underlying));
                 }
             }
         }
@@ -166,6 +170,8 @@ namespace Quant.Infra.Net.Account.Service
             PositionSide positionSide, 
             FuturesOrderType futuresOrderType = FuturesOrderType.Market)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentNullException(nameof(symbol));
+            if (quantity <= 0) throw new ArgumentOutOfRangeException(nameof(quantity), "quantity must be positive.");
             BinanceRestClient.SetDefaultOptions(options =>
             {
                 options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
@@ -187,6 +193,8 @@ namespace Quant.Infra.Net.Account.Service
 
         private async Task CreateSpotOrder(string symbol, decimal quantity, SpotOrderType spotOrderType = SpotOrderType.Market)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentNullException(nameof(symbol));
+            if (quantity <= 0) throw new ArgumentOutOfRangeException(nameof(quantity), "quantity must be positive.");
             throw new NotImplementedException();
         }
 
@@ -199,6 +207,8 @@ namespace Quant.Infra.Net.Account.Service
         /// <returns>返回持有该资产的份额 / Returns the holdings shares of the asset</returns>
         public override async Task<decimal> GetHoldingAsync(Underlying underlying)
         {
+            if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+            if (string.IsNullOrWhiteSpace(underlying.Symbol)) throw new ArgumentException("Underlying.Symbol must not be null or empty.", nameof(underlying));
             BinanceRestClient.SetDefaultOptions(options =>
             {
                 options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
@@ -229,7 +239,7 @@ namespace Quant.Infra.Net.Account.Service
                 }
                 else
                 {
-                    throw new Exception($"Not supported AssetType:{underlying.AssetType}");
+                    throw new ArgumentException($"Not supported AssetType:{underlying.AssetType}", nameof(underlying));
                 }
 
             }
@@ -321,6 +331,10 @@ namespace Quant.Infra.Net.Account.Service
             DateTime? endDt = null,
             int limit = 1)
         {
+            if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+            if (string.IsNullOrWhiteSpace(underlying.Symbol)) throw new ArgumentException("underlying.Symbol must not be null or empty.", nameof(underlying));
+            if (limit <= 0) throw new ArgumentOutOfRangeException(nameof(limit), "limit must be positive.");
+            if (endDt.HasValue && startDt.HasValue && startDt > endDt) throw new ArgumentException("startDt must be earlier than or equal to endDt.");
             // 定义重试策略
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -425,6 +439,9 @@ namespace Quant.Infra.Net.Account.Service
         /// <exception cref="NotImplementedException"></exception>
         public async Task<DataFrame> GetHistoricalDataFrameAsync(Underlying underlying, DateTime startDate, DateTime endDate, ResolutionLevel resolutionLevel)
         {
+            if (underlying == null) throw new ArgumentNullException(nameof(underlying));
+            if (endDate <= startDate) throw new ArgumentException("endDate must be after startDate", nameof(endDate));
+
             var ohlcvList = await GetOhlcvListAsync(underlying, resolutionLevel, startDate, endDate);
             // 创建 DataFrame 列，只需要 DateTime 和 Close 列
             var dateTimeColumn = new PrimitiveDataFrameColumn<DateTime>("DateTime");
@@ -467,6 +484,7 @@ namespace Quant.Infra.Net.Account.Service
         /// <returns>The number of bars required to cover the time range. 覆盖此时间范围所需的bar数量。</returns>
         int calculateLimit(DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel)
         {
+            if (startDt > endDt) throw new ArgumentException("startDt must be earlier than or equal to endDt.", nameof(startDt));
             // Calculate the total time span between the start and end dates
             // 计算开始日期和结束日期之间的总时间跨度
             var timeSpan = endDt - startDt;

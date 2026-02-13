@@ -42,6 +42,7 @@ namespace Quant.Infra.Net.SourceData.Service
 
         public CryptoSourceDataService(IOService ioService)
         {
+            if (ioService == null) throw new ArgumentNullException(nameof(ioService));
             _ioService = ioService;
         }
 
@@ -59,7 +60,7 @@ namespace Quant.Infra.Net.SourceData.Service
                 throw new ArgumentException("cmcBaseUrl 不能为空。", nameof(cmcBaseUrl));
             if (!Uri.TryCreate(cmcBaseUrl, UriKind.Absolute, out var baseUri))
                 throw new ArgumentException("cmcBaseUrl 不是有效的绝对 URL。", nameof(cmcBaseUrl));
-            if (count <= 0) return new List<string>();
+            if (count <= 0) throw new ArgumentOutOfRangeException(nameof(count), "count must be positive.");
 
             var limit = Math.Min(count, 5000); // CMC 单次上限足够
             var url = new Uri(baseUri, $"/v1/cryptocurrency/listings/latest?limit={limit}&convert=USD&sort=market_cap&sort_dir=desc");
@@ -456,12 +457,15 @@ namespace Quant.Infra.Net.SourceData.Service
             string path = "",
             KlineInterval klineInterval = KlineInterval.OneHour)
         {
+            if (symbols == null) throw new ArgumentNullException(nameof(symbols));
             var symbolList = symbols?.ToList();
-            if (symbolList is null || symbolList.Count == 0)
+            if (symbolList == null || symbolList.Count == 0)
             {
                 UtilityService.LogAndWriteLine("No symbols provided for spot download. Aborting.");
                 return;
             }
+
+            if (startDt > endDt) throw new ArgumentException("startDt must be earlier than or equal to endDt.", nameof(startDt));
 
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -502,12 +506,15 @@ namespace Quant.Infra.Net.SourceData.Service
             string path = "",
             KlineInterval klineInterval = KlineInterval.OneHour)
         {
+            if (symbols == null) throw new ArgumentNullException(nameof(symbols));
             var symbolList = symbols?.ToList();
-            if (symbolList is null || symbolList.Count == 0)
+            if (symbolList == null || symbolList.Count == 0)
             {
                 UtilityService.LogAndWriteLine("No symbols provided for USD Future download. Aborting.");
                 return;
             }
+
+            if (startDt > endDt) throw new ArgumentException("startDt must be earlier than or equal to endDt.", nameof(startDt));
 
             if (string.IsNullOrWhiteSpace(path))
             {

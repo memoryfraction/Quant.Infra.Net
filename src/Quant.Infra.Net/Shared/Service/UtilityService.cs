@@ -513,11 +513,11 @@ namespace Quant.Infra.Net.Shared.Service
         /// <returns></returns>
         public static async Task SaveOhlcvsToCsv(string symbol, Binance.Net.Enums.KlineInterval interval, DateTime startDt, DateTime endDt, string fullPathFileName, bool overWrite = true)
         {
-            if (string.IsNullOrEmpty(symbol))
-                throw new ArgumentNullException(symbol);
+            if (string.IsNullOrWhiteSpace(symbol))
+                throw new ArgumentNullException(nameof(symbol));
 
-            if (string.IsNullOrEmpty(fullPathFileName))
-                throw new ArgumentNullException(fullPathFileName);
+            if (string.IsNullOrWhiteSpace(fullPathFileName))
+                throw new ArgumentNullException(nameof(fullPathFileName));
 
             // 确保路径存在 / Ensure the path exists
             var directory = Path.GetDirectoryName(fullPathFileName);
@@ -578,6 +578,11 @@ namespace Quant.Infra.Net.Shared.Service
         /// <returns></returns>
         public static DataFrame LoadCsvToDataFrame(string fullPathFileName)
         {
+            if (string.IsNullOrWhiteSpace(fullPathFileName))
+                throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
+            if (!File.Exists(fullPathFileName))
+                throw new FileNotFoundException($"The file {fullPathFileName} does not exist.");
+
             var dateTimeColumn = new PrimitiveDataFrameColumn<DateTime>("DateTime");
             var closeColumn = new DoubleDataFrameColumn("Close");
 
@@ -609,6 +614,11 @@ namespace Quant.Infra.Net.Shared.Service
         /// <returns>返回Close列</returns>
         public static List<double> ReadCloseColFromCsv(string fullPathFileName)
         {
+            if (string.IsNullOrWhiteSpace(fullPathFileName))
+                throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
+            if (!File.Exists(fullPathFileName))
+                throw new FileNotFoundException($"The file {fullPathFileName} does not exist.");
+
             var config = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 HasHeaderRecord = true,

@@ -1,10 +1,8 @@
 <Solution>
-  <Project Path="Saas.Infra.Admin/Saas.Infra.Admin.csproj" Id="72a85e00-0bdb-4ae4-9ac3-eba203e556c7" />
-  <Project Path="Saas.Infra.Api/Saas.Infra.Api.csproj" Id="33991f16-b66b-41b7-8d27-d11fac5c2154" />
   <Project Path="Saas.Infra.Core/Saas.Infra.Core.csproj" />
   <Project Path="Saas.Infra.Data/Saas.Infra.Data.csproj" />
+  <Project Path="Saas.Infra.MVC/Saas.Infra.MVC.csproj" Id="6e43d1c7-b55f-44df-9083-5d0736f095fc" />
   <Project Path="Saas.Infra.Payment/Saas.Infra.Payment.csproj" Id="82867c34-0902-4939-9663-8020df595e1b" />
   <Project Path="Saas.Infra.Products/Saas.Infra.Products.csproj" Id="8d2f78df-0d5b-40bc-8bc1-1d0c5bbde199" />
   <Project Path="Saas.Infra.SSO/Saas.Infra.SSO.csproj" />
-  <Project Path="Saas.Infra.Web/Saas.Infra.Web.csproj" Id="bf202223-d9f0-41e2-8156-131c1222a964" />
 </Solution>

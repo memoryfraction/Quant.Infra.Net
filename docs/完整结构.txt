@@ -1,0 +1,237 @@
+Saas.Infra.Net/                  # 根目录（Repo名称）
+├── .github/                     # Github CI/CD配置
+│   ├── workflows/
+│   │   ├── build.yml            # 自动构建CI脚本
+│   │   └── deploy-aca.yml       # 自动部署ACA脚本
+│   └── ISSUE_TEMPLATE/          # 问题模板（可选）
+├── docs/                        # 项目文档
+│   ├── api-docs/                # Api层接口文档
+│   │   ├── oidc-endpoints.md    # OIDC标准端点文档
+│   │   ├── auth-api.md          # 认证接口文档
+│   │   ├── payment-api.md       # 支付接口文档
+│   │   └── products-api.md      # 多产品管理接口文档
+│   ├── deploy/                  # 部署文档
+│   │   ├── aca-deploy.md        # ACA部署手册
+│   │   ├── supabase-setup.md    # Supabase初始化手册
+│   │   └── env-vars.md          # 环境变量配置清单
+│   ├── design/                  # 设计相关
+│   │   ├── figma-link.md        # Figma设计稿链接
+│   │   └── database-schema.md   # 数据库表结构文档
+│   └── usage/                   # 使用文档
+│       ├── integrate-sso.md     # 外部产品接入SSO指南
+│       └── multi-language.md    # 多语言配置指南
+├── deploy/                      # 部署配置文件
+│   ├── docker/
+│   │   ├── api/
+│   │   │   └── Dockerfile       # Api层Dockerfile
+│   │   ├── admin/
+│   │   │   └── Dockerfile       # Admin层Dockerfile
+│   │   └── web/
+│   │       └── Dockerfile       # Web静态页面Dockerfile（可选）
+│   ├── aca/
+│   │   ├── api-app.yml          # Api层ACA部署配置
+│   │   └── admin-app.yml        # Admin层ACA部署配置
+│   └── docker-compose.yml       # 本地开发环境一键启动配置
+├── src/                         # 源代码目录（所有项目）
+│   ├── Saas.Infra.Core/         # 基础核心层（类库）
+│   │   ├── Saas.Infra.Core.csproj # 项目文件
+│   │   ├── Abstractions/        # 抽象接口（面向接口编程）
+│   │   │   ├── IAuditLogService.cs
+│   │   │   ├── IEmailService.cs
+│   │   │   ├── IJwtService.cs
+│   │   │   └── ILocalizationService.cs
+│   │   ├── Constants/           # 常量定义
+│   │   │   ├── AuthConstants.cs # JWT/OIDC常量
+│   │   │   ├── RateLimitConstants.cs # 限流常量
+│   │   │   └── RoleConstants.cs # 角色常量（高级管理员/普通管理员）
+│   │   ├── Entities/            # 通用实体基类
+│   │   │   ├── BaseEntity.cs    # 所有实体的基类（ID/创建时间/更新时间）
+│   │   │   └── AuditLog.cs      # 审计日志实体
+│   │   ├── Extensions/          # 通用扩展方法
+│   │   │   ├── JwtExtensions.cs
+│   │   │   └── StringExtensions.cs
+│   │   ├── Helpers/             # 通用工具类
+│   │   │   ├── JwtHelper.cs     # JWT生成/验签工具
+│   │   │   └── PasswordHelper.cs # 密码加密/验证工具
+│   │   ├── Localization/        # 多语言核心逻辑
+│   │   │   ├── Language.cs      # 语言枚举（En/Zh）
+│   │   │   └── ResourceManager.cs # 多语言资源管理
+│   │   └── Middlewares/         # 通用中间件抽象
+│   │       ├── RateLimitMiddleware.cs
+│   │       └── AuditLogMiddleware.cs
+│   ├── Saas.Infra.Data/         # 基础设施层（类库）
+│   │   ├── Saas.Infra.Data.csproj
+│   │   ├── Configurations/      # EF Core实体配置
+│   │   │   ├── ApplicationConfiguration.cs # 应用表配置
+│   │   │   ├── RoleConfiguration.cs        # 角色表配置
+│   │   │   ├── SubscriptionConfiguration.cs # 订阅表配置
+│   │   │   └── UserConfiguration.cs        # 用户表配置
+│   │   ├── Context/
+│   │   │   └── SaasDbContext.cs # Supabase数据库上下文
+│   │   ├── Migrations/          # EF Core迁移文件（Supabase表初始化）
+│   │   ├── Repositories/        # 仓储实现（数据访问）
+│   │   │   ├── ApplicationRepository.cs
+│   │   │   ├── BaseRepository.cs
+│   │   │   ├── SubscriptionRepository.cs
+│   │   │   └── UserRepository.cs
+│   │   └── Services/            # 第三方服务实现
+│   │       ├── BrevoEmailService.cs # Brevo邮件实现
+│   │       ├── GoogleLoginService.cs # Google登录实现
+│   │       ├── MicrosoftLoginService.cs # 微软登录实现
+│   │       └── WeChatLoginService.cs # 微信登录实现（可选）
+│   ├── Saas.Infra.SSO/          # SSO业务层（类库）
+│   │   ├── Saas.Infra.SSO.csproj
+│   │   ├── Dtos/                # 数据传输对象（入参/出参）
+│   │   │   ├── LoginRequestDto.cs
+│   │   │   ├── RegisterRequestDto.cs
+│   │   │   └── TokenResponseDto.cs
+│   │   ├── Exceptions/          # 业务异常
+│   │   │   ├── AppIdInvalidException.cs
+│   │   │   └── UserNotFoundException.cs
+│   │   ├── Services/            # SSO业务逻辑实现
+│   │   │   ├── AuthService.cs   # 登录/注册核心逻辑
+│   │   │   ├── AppManagementService.cs # AppId/AppSecret管理
+│   │   │   ├── OidcService.cs   # OIDC协议核心逻辑
+│   │   │   └── RbacService.cs   # RBAC权限逻辑
+│   │   └── Validators/          # 输入验证
+│   │       ├── LoginRequestValidator.cs
+│   │       └── RegisterRequestValidator.cs
+│   ├── Saas.Infra.Payment/      # 支付业务层（类库）
+│   │   ├── Saas.Infra.Payment.csproj
+│   │   ├── Dtos/
+│   │   │   ├── StripeCheckoutRequestDto.cs
+│   │   │   ├── StripeWebhookDto.cs
+│   │   │   └── SubscriptionResponseDto.cs
+│   │   ├── Enums/               # 支付相关枚举
+│   │   │   ├── PaymentMethod.cs # Stripe/OxaPay/TRC20
+│   │   │   └── SubscriptionStatus.cs
+│   │   ├── Interfaces/          # 支付接口（预留扩展）
+│   │   │   ├── IPaymentService.cs
+│   │   │   └── IWebhookHandler.cs
+│   │   └── Services/
+│   │       ├── StripeService.cs # Stripe核心逻辑（MVP）
+│   │       ├── OxaPayService.cs # OxaPay逻辑（V1.5预留）
+│   │       └── Trc20Service.cs  # TRC20逻辑（V1.5预留）
+│   ├── Saas.Infra.Products/     # 多产品管理业务层（类库）
+│   │   ├── Saas.Infra.Products.csproj
+│   │   ├── Dtos/
+│   │   │   ├── ProductCreateDto.cs
+│   │   │   ├── ProductResponseDto.cs
+│   │   │   └── ProductUserBindDto.cs
+│   │   └── Services/
+│   │       └── ProductService.cs # 产品配置/权限绑定逻辑
+│   ├── Saas.Infra.Api/          # 对外接口层（Web API）
+│   │   ├── Saas.Infra.Api.csproj
+│   │   ├── Configurations/      # Api配置
+│   │   │   ├── AuthenticationConfig.cs # JWT/OIDC配置
+│   │   │   ├── CorsConfig.cs    # 跨域配置
+│   │   │   ├── RateLimitConfig.cs # 限流配置
+│   │   │   └── SwaggerConfig.cs # Swagger接口文档配置
+│   │   ├── Controllers/         # API控制器
+│   │   │   ├── AuthController.cs # 登录/注册接口
+│   │   │   ├── OidcController.cs # OIDC标准端点（Authorize/Token）
+│   │   │   ├── PaymentController.cs # 支付接口
+│   │   │   ├── ProductsController.cs # 多产品管理接口
+│   │   │   └── UserController.cs # 用户信息接口
+│   │   ├── Middlewares/         # Api中间件
+│   │   │   ├── AuditLogMiddleware.cs # 审计日志中间件
+│   │   │   ├── ExceptionMiddleware.cs # 全局异常处理
+│   │   │   └── RateLimitMiddleware.cs # 限流中间件
+│   │   ├── Program.cs           # 程序入口
+│   │   ├── Properties/
+│   │   │   └── launchSettings.json # 启动配置
+│   │   └── wwwroot/             # Api静态资源（可选，如SwaggerUI）
+│   ├── Saas.Infra.Admin/        # 管理后台（Blazor Server）
+│   │   ├── Saas.Infra.Admin.csproj
+│   │   ├── Components/          # 复用组件（非页面级）
+│   │   │   ├── Layout/          # 布局组件
+│   │   │   │   ├── MainLayout.razor # 主布局
+│   │   │   │   └── NavMenu.razor # 侧边导航
+│   │   │   ├── Auth/            # 认证相关复用组件
+│   │   │   │   ├── LoginForm.razor # 登录表单组件
+│   │   │   │   └── ThirdPartyLoginButtons.razor # 第三方登录按钮
+│   │   │   ├── Common/          # 通用组件
+│   │   │   │   ├── LanguageSelector.razor # 多语言选择器
+│   │   │   │   ├── LogoConfig.razor # Logo配置组件
+│   │   │   │   └── Pagination.razor # 分页组件
+│   │   │   └── Payment/         # 支付相关复用组件
+│   │   │       └── SubscriptionTable.razor # 订阅列表组件
+│   │   ├── Pages/               # 页面级组件（路由入口）
+│   │   │   ├── Auth/            # 认证页面
+│   │   │   │   ├── Login.razor  # 登录页
+│   │   │   │   ├── Register.razor # 注册页
+│   │   │   │   ├── ForgotPassword.razor # 忘记密码页
+│   │   │   │   └── ResetPassword.razor # 重置密码页
+│   │   │   ├── Dashboard/       # 仪表盘页面
+│   │   │   │   └── Index.razor  # 后台首页
+│   │   │   ├── Applications/    # AppId管理页面
+│   │   │   │   ├── Create.razor # 新增AppId
+│   │   │   │   ├── Edit.razor   # 编辑AppId
+│   │   │   │   └── List.razor   # AppId列表
+│   │   │   ├── Products/        # 产品管理页面
+│   │   │   │   ├── Create.razor
+│   │   │   │   ├── Edit.razor
+│   │   │   │   └── List.razor
+│   │   │   ├── Payments/        # 支付管理页面
+│   │   │   │   ├── Subscriptions.razor # 订阅列表
+│   │   │   │   └── WebhookLogs.razor # 支付回调日志
+│   │   │   ├── Users/           # 用户管理页面
+│   │   │   │   ├── List.razor
+│   │   │   │   └── RoleBind.razor # 角色绑定
+│   │   │   ├── Settings/        # 系统设置页面
+│   │   │   │   ├── General.razor # 通用设置（Logo/公司名称）
+│   │   │   │   ├── Language.razor # 多语言配置
+│   │   │   │   └── Security.razor # 安全设置（限流/IP白名单）
+│   │   │   └── _Layout.razor    # 全局布局（引用MainLayout）
+│   │   ├── Properties/
+│   │   │   └── launchSettings.json
+│   │   ├── Services/            # Admin层专属服务
+│   │   │   ├── AdminAuthService.cs # 后台登录验证
+│   │   │   └── ConfigService.cs # 系统配置读取
+│   │   └── wwwroot/             # 静态资源
+│   │       ├── css/             # 样式（Figma还原）
+│   │       │   ├── auth.css     # 认证页面样式
+│   │       │   ├── dashboard.css # 仪表盘样式
+│   │       │   ├── layout.css   # 布局样式
+│   │       │   └── main.css     # 全局样式
+│   │       ├── js/              # 前端交互
+│   │       │   ├── form-validation.js # 表单验证
+│   │       │   └── localization.js # 前端多语言切换
+│   │       ├── images/          # 图片资源（默认Logo/图标）
+│   │       └── locales/         # 前端多语言文案
+│   │           ├── en.json
+│   │           └── zh.json
+│   └── Saas.Infra.Web/          # 外部通用静态页面（纯前端）
+│       ├── index.html           # 通用登录页（默认）
+│       ├── register.html        # 通用注册页
+│       ├── forgot-password.html # 通用忘记密码页
+│       ├── consent.html         # OIDC授权确认页
+│       ├── reset-password.html  # 通用重置密码页
+│       ├── css/                 # Figma设计样式
+│       │   ├── auth-common.css  # 认证通用样式
+│       │   └── consent.css      # 授权确认页样式
+│       ├── js/                  # 前端逻辑
+│       │   ├── api.js           # 封装Api层接口调用
+│       │   ├── auth.js          # Token存储/登录逻辑
+│       │   └── localization.js  # 多语言切换
+│       ├── images/              # 静态图片（Logo/图标）
+│       └── locales/             # 多语言文案
+│           ├── en.json
+│           └── zh.json
+├── tests/                       # 测试项目
+│   ├── Saas.Infra.Core.Tests/   # 核心层单元测试
+│   │   ├── Saas.Infra.Core.Tests.csproj
+│   │   └── Helpers/
+│   │       ├── JwtHelperTests.cs
+│   │       └── PasswordHelperTests.cs
+│   ├── Saas.Infra.SSO.Tests/    # SSO业务层单元测试
+│   │   ├── Saas.Infra.SSO.Tests.csproj
+│   │   └── Services/
+│   │       └── AuthServiceTests.cs
+│   └── Saas.Infra.Api.Tests/    # Api层集成测试
+│       ├── Saas.Infra.Api.Tests.csproj
+│       └── Controllers/
+│           └── AuthControllerTests.cs
+├── .gitignore                   # Git忽略文件（.vs/obj/bin等）
+├── README.md                    # 项目根说明（快速开始/核心特性）
+└── Saas.Infra.Net.sln           # 解决方案文件（包含所有项目）

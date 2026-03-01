@@ -2,3 +2,4 @@
 所有public级别的方法，变量必须有xml注释
 所有public方法开头必须符合参数有效性校验
 敏感数据,e.g. apikey\secret等,不得上传github代码库
+每个特性单独实现branch， 以PR提交，保证main分支100%可用。branch命名规则举例：features/jwt_miniAuth

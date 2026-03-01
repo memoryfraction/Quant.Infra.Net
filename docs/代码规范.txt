@@ -1,0 +1,4 @@
+所有代码必须符合SOLID原则
+所有public级别的方法，变量必须有xml注释
+所有public方法开头必须符合参数有效性校验
+敏感数据,e.g. apikey\secret等,不得上传github代码库

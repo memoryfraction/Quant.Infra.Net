@@ -416,3 +416,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+/src/.kiro/specs/code-quality-improvement/baseline-metrics.md
+/src/.kiro/specs/code-quality-improvement/design.md
+/src/.kiro/specs/code-quality-improvement/final-quality-report.md
+/src/.kiro/specs/code-quality-improvement/post-refactoring-metrics.md
+/src/.kiro/specs/code-quality-improvement/requirements.md
+/src/.kiro/specs/code-quality-improvement/tasks.md

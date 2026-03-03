@@ -23,7 +23,17 @@ namespace Saas.Infra.SSO
 		/// <exception cref="ArgumentException">
 		/// 当 <paramref name="userId"/> 或 <paramref name="clientId"/> 为空字符串时抛出。
 		/// </exception>
-		Task<JwtTokenResponse> GenerateTokensAsync(string userId, string clientId);
+        /// <summary>
+        /// 异步生成JWT访问令牌和刷新令牌（包含密码验证）。
+        /// Asynchronously generates JWT access and refresh tokens (includes password verification).
+        /// </summary>
+        /// <param name="userId">用户唯一标识符，不能为null或空字符串。 / The username; cannot be null or empty.</param>
+        /// <param name="password">明文密码，用于验证用户凭据。 / The plaintext password used to verify credentials.</param>
+        /// <param name="clientId">客户端唯一标识符，不能为null或空字符串。 / The client identifier.</param>
+        /// <returns>
+        /// 包含JWT令牌信息的 <see cref="JwtTokenResponse"/> 对象。 / A <see cref="JwtTokenResponse"/> containing token information.
+        /// </returns>
+        Task<JwtTokenResponse> GenerateTokensAsync(string userId, string password, string clientId);
 
 		/// <summary>
 		/// 异步验证JWT令牌并提取声明主体。

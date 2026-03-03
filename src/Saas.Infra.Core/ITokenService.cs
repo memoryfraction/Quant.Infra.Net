@@ -3,20 +3,18 @@ using System.Security.Claims;
 
 namespace Saas.Infra.Core
 {
-    /// <summary>
-    /// 令牌服务接口，封装JWT令牌的生成逻辑。
-    /// Token service interface that encapsulates JWT token generation logic.
-    /// </summary>
     public interface ITokenService
     {
         /// <summary>
-        /// 为指定的用户名和客户端ID生成JWT访问令牌及刷新令牌。
-        /// Generates a JWT access token and refresh token for the specified username and client id.
+        /// 生成 JWT 访问令牌及刷新令牌。
         /// </summary>
-        /// <param name="username">用户标识，不能为空或空白。 / The username; cannot be null or whitespace.</param>
-        /// <param name="clientId">可选客户端标识符。/ Optional client identifier.</param>
-        /// <param name="additionalClaims">可选的额外Claims。/ Optional additional claims.</param>
-        /// <returns>包含访问令牌、刷新令牌和过期时间的响应对象。 / A response object that contains access token, refresh token and expiration.</returns>
         JwtTokenResponse GenerateToken(string username, string? clientId = null, IEnumerable<Claim>? additionalClaims = null);
+
+        /// <summary>
+        /// [新增] 验证 JWT 令牌并提取声明主体。
+        /// </summary>
+        /// <param name="token">要验证的 JWT 字符串。</param>
+        /// <returns>如果有效则返回 ClaimsPrincipal，否则返回 null 或抛出异常。</returns>
+        ClaimsPrincipal? ValidateToken(string token);
     }
 }

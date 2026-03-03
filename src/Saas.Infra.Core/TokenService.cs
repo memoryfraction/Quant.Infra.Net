@@ -81,6 +81,61 @@ namespace Saas.Infra.Core
                 ExpiresIn = (int)(expires - DateTime.UtcNow).TotalSeconds
             };
         }
+
+        /// <summary>
+        /// 验证给定的 JWT 字符串并返回声明主体（如果验证成功）。
+        /// Validates the provided JWT string and returns the claims principal if validation succeeds.
+        /// </summary>
+        /// <param name="token">要验证的 JWT 字符串，不能为空或空白。/ The JWT string to validate; cannot be null or whitespace.</param>
+        /// <returns>如果令牌有效则返回 <see cref="ClaimsPrincipal"/>，否则返回 null。</returns>
+        public ClaimsPrincipal? ValidateToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                throw new ArgumentNullException(nameof(token));
+
+            if (string.IsNullOrWhiteSpace(_options.SigningKey))
+                throw new InvalidOperationException("JWT signing key is not configured.");
+
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var validationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = _options.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = _options.Audience,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey)),
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromMinutes(5),
+                    RequireSignedTokens = true,
+                    RequireExpirationTime = true
+                };
+
+                var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
+
+                // optional: ensure token uses expected algorithm
+                if (validatedToken is JwtSecurityToken jwt &&
+                    !string.Equals(jwt.Header.Alg, SecurityAlgorithms.HmacSha256, StringComparison.Ordinal))
+                {
+                    Log.Warning("Unexpected JWT algorithm: {Alg}", jwt.Header.Alg);
+                    return null;
+                }
+
+                return principal;
+            }
+            catch (SecurityTokenException stEx)
+            {
+                Log.Warning(stEx, "Token validation failed: {Message}", stEx.Message);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Unexpected error during token validation");
+                return null;
+            }
+        }
     }
 
 }

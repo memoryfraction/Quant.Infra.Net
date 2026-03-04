@@ -22,37 +22,42 @@ namespace Saas.Infra.MVC.Middleware
 			_env = env; // 接收环境信息
 		}
 
-		public async Task InvokeAsync(HttpContext context)
-		{
-			try
-			{
-				// 执行后续中间件
-				await _next(context);
-			}
-			catch (Exception ex)
-			{
-				// 记录异常日志（Serilog + 内置日志双保险）
-				_logger.LogError(ex, "全局异常捕获：{ErrorMessage}", ex.Message);
-				Log.Error(ex, "Serilog 全局异常日志：{ErrorMessage}", ex.Message);
+        /// <summary>
+        /// 中间件入口，捕获下游异常并转换为统一的 JSON 错误响应。
+        /// Middleware entry point that catches downstream exceptions and converts them to a uniform JSON error response.
+        /// </summary>
+        /// <param name="context">当前 HTTP 上下文。/ The current HTTP context.</param>
+        public async Task InvokeAsync(HttpContext context)
+        {
+            if (context == null) throw new ArgumentNullException(nameof(context));
 
-				// 统一异常响应格式
-				context.Response.ContentType = "application/json";
-				context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            try
+            {
+                // Execute next middleware
+                await _next(context);
+            }
+            catch (Exception ex)
+            {
+                // Log exception (Serilog + injected logger)
+                _logger.LogError(ex, "Global exception caught: {ErrorMessage}", ex.Message);
+                Log.Error(ex, "Serilog global exception log: {ErrorMessage}", ex.Message);
 
-				// 使用注入的_env判断环境，替代app.Environment
-				var errorResponse = new
-				{
-					StatusCode = context.Response.StatusCode,
-					Message = _env.IsDevelopment() ? ex.Message : "服务器内部错误，请联系管理员",
-					Detail = _env.IsDevelopment() ? ex.StackTrace : string.Empty,
-					Timestamp = DateTime.UtcNow
-				};
+                // Standardize error response
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-				// 确保JSON序列化配置（避免循环引用等问题）
-				var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-				await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse, options));
-			}
-		}
+                var errorResponse = new
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = _env.IsDevelopment() ? ex.Message : "Internal server error, please contact the administrator",
+                    Detail = _env.IsDevelopment() ? ex.StackTrace : string.Empty,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse, options));
+            }
+        }
 	}
 
 	// 扩展方法：简化中间件注册

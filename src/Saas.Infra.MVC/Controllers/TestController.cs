@@ -2,24 +2,38 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
-[ApiController]
-[Route("api/test")]
-public class TestController : ControllerBase
+namespace Saas.Infra.MVC.Controllers
 {
-	// 受JWT保护的接口
-	[HttpGet("protected")]
-	[Authorize] // 核心：必须携带有效JWT才能访问
-	public IActionResult GetProtectedData()
+	/// <summary>
+	/// 提供JWT认证测试接口。
+	/// Provides JWT authentication test endpoints.
+	/// </summary>
+	[ApiController]
+	[Route("api/test")]
+	public class TestController : ControllerBase
 	{
-		// 从JWT中解析用户信息
-		var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-			?? User.FindFirst("sub")?.Value;
-
-		return Ok(new
+		/// <summary>
+		/// 获取受JWT保护的数据。需要有效的JWT令牌才能访问。
+		/// Retrieves protected data that requires a valid JWT token to access.
+		/// </summary>
+		/// <returns>
+		/// 包含用户信息和时间戳的响应对象。
+		/// A response object containing user information and timestamp.
+		/// </returns>
+		[HttpGet("protected")]
+		[Authorize]
+		public IActionResult GetProtectedData()
 		{
-			Message = "✅ JWT 认证成功！",
-			Username = username,
-			Timestamp = DateTime.UtcNow
-		});
+			// Extract username from JWT claims
+			var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+				?? User.FindFirst("sub")?.Value;
+
+			return Ok(new
+			{
+				Message = "JWT authentication successful.",
+				Username = username,
+				Timestamp = DateTime.UtcNow
+			});
+		}
 	}
 }

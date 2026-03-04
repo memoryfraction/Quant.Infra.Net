@@ -21,13 +21,15 @@ namespace Saas.Infra.Data
 
         public async Task AddAsync(RefreshTokenRecord record)
         {
+            if (record == null) throw new ArgumentNullException(nameof(record));
             var entity = new RefreshToken
             {
+                Id = record.Id == Guid.Empty ? Guid.NewGuid() : record.Id,
                 UserId = record.UserId,
                 TokenHash = record.TokenHash,
                 ExpiresAt = record.ExpiresAt,
                 Revoked = record.Revoked,
-                CreatedAt = record.CreatedAt,
+                CreatedTime = record.CreatedAt,
                 ReplacedByHash = record.ReplacedByHash
             };
             _db.RefreshTokens.Add(entity);
@@ -46,7 +48,7 @@ namespace Saas.Infra.Data
                 TokenHash = e.TokenHash,
                 ExpiresAt = e.ExpiresAt,
                 Revoked = e.Revoked,
-                CreatedAt = e.CreatedAt,
+                CreatedAt = e.CreatedTime,
                 ReplacedByHash = e.ReplacedByHash
             };
         }
@@ -68,14 +70,14 @@ namespace Saas.Infra.Data
                 old.Revoked = true;
                 old.ReplacedByHash = newRecord.TokenHash;
             }
-
             var entity = new RefreshToken
             {
+                Id = newRecord.Id == Guid.Empty ? Guid.NewGuid() : newRecord.Id,
                 UserId = newRecord.UserId,
                 TokenHash = newRecord.TokenHash,
                 ExpiresAt = newRecord.ExpiresAt,
                 Revoked = newRecord.Revoked,
-                CreatedAt = newRecord.CreatedAt,
+                CreatedTime = newRecord.CreatedAt,
                 ReplacedByHash = newRecord.ReplacedByHash
             };
             _db.RefreshTokens.Add(entity);

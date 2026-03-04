@@ -5,12 +5,14 @@ using Saas.Infra.Core;
 namespace Saas.Infra.Data
 {
     /// <summary>
-    /// Configure Mapster mappings between data entities and domain DTOs.
+    /// 注册 Mapster 映射配置，负责 Data Entity 与 Domain DTO 之间的转换。
+    /// Register Mapster mapping configurations which handle conversions between Data Entities and Domain DTOs.
     /// </summary>
     public static class MapsterSetup
     {
         /// <summary>
-        /// Register mappings. Call this once at application startup.
+        /// 在应用启动时调用以注册所有映射。
+        /// Call at application startup to register all mappings.
         /// </summary>
         public static void RegisterMappings()
         {

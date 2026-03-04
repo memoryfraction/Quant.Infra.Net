@@ -51,6 +51,7 @@ namespace Saas.Infra.Data
         public async Task<Saas.Infra.Core.User?> GetByUsernameAsync(string username)
         {
             // Map Data.User to Core.User DTO/contract
+            if (string.IsNullOrWhiteSpace(username)) throw new ArgumentException("username must not be null or whitespace", nameof(username));
             var u = await _db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.UserName == username);
             if (u == null) return null;
             return u.Adapt<Saas.Infra.Core.User>();
@@ -76,8 +77,16 @@ namespace Saas.Infra.Data
             };
         }
 
+        /// <summary>
+        /// 更新指定用户的密码哈希。
+        /// Update the password hash for the specified user id.
+        /// </summary>
+        /// <param name="userId">用户数值 Id。/ The numeric user Id.</param>
+        /// <param name="newPasswordHash">新的密码哈希，不能为空。/ The new password hash; must not be null or empty.</param>
         public async Task UpdatePasswordAsync(long userId, string newPasswordHash)
         {
+            if (userId <= 0) throw new ArgumentException("userId must be a positive integer", nameof(userId));
+            if (string.IsNullOrWhiteSpace(newPasswordHash)) throw new ArgumentException("newPasswordHash must not be null or whitespace", nameof(newPasswordHash));
             var u = await _db.Users.SingleOrDefaultAsync(x => x.Id == userId);
             if (u == null) throw new InvalidOperationException("User not found.");
             u.PasswordHash = newPasswordHash;

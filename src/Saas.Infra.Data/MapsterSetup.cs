@@ -20,7 +20,6 @@ namespace Saas.Infra.Data
 
             config.NewConfig<UserEntity, Saas.Infra.Core.User>()
                 .Map(dest => dest.Id, src => src.Id)
-                .Map(dest => dest.UserId, src => src.UserId)
                 .Map(dest => dest.Username, src => src.UserName)
                 .Map(dest => dest.PasswordHash, src => src.PasswordHash)
                 .Map(dest => dest.Email, src => src.Email)
@@ -35,7 +34,6 @@ namespace Saas.Infra.Data
 
             config.NewConfig<Saas.Infra.Core.User, UserEntity>()
                 .Map(dest => dest.Id, src => src.Id)
-                .Map(dest => dest.UserId, src => src.UserId == Guid.Empty ? Guid.NewGuid() : src.UserId)
                 .Map(dest => dest.UserName, src => src.Username)
                 .Map(dest => dest.PasswordHash, src => src.PasswordHash)
                 .Map(dest => dest.Email, src => src.Email ?? string.Empty)

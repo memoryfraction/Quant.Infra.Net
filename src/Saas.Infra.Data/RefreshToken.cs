@@ -15,7 +15,7 @@ namespace Saas.Infra.Data
         public Guid Id { get; set; }
 
         [Column("UserId")]
-        public long UserId { get; set; }
+        public Guid UserId { get; set; }
 
         [Column("TokenHash")]
         public string TokenHash { get; set; } = string.Empty; // stores SHA256 hash of the refresh token

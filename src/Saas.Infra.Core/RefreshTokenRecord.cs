@@ -16,7 +16,7 @@ namespace Saas.Infra.Core
         /// <summary>
         /// Numeric user id (bigserial) owning the token.
         /// </summary>
-        public long UserId { get; set; }
+        public Guid UserId { get; set; }
 
         /// <summary>
         /// SHA256 hash of the refresh token.
@@ -42,5 +42,7 @@ namespace Saas.Infra.Core
         /// Optional hash of the replacement token.
         /// </summary>
         public string? ReplacedByHash { get; set; }
+
+        public Guid CreatedBy { get; set; }
     }
 }

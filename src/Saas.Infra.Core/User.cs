@@ -9,24 +9,14 @@ namespace Saas.Infra.Core
     public class User
     {
         /// <summary>
-        /// Database numeric id (bigserial -> long).
+        /// User UUID (primary key).
         /// </summary>
-        public long Id { get; set; }
-
-        /// <summary>
-        /// Stable user GUID (UserId in DB).
-        /// </summary>
-        public Guid UserId { get; set; }
+        public Guid Id { get; set; }
 
         /// <summary>
         /// Username (UserName column).
         /// </summary>
         public string Username { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Display name (optional).
-        /// </summary>
-        public string? DisplayName { get; set; }
 
         /// <summary>
         /// Password hash.
@@ -49,6 +39,11 @@ namespace Saas.Infra.Core
         public short Status { get; set; }
 
         /// <summary>
+        /// Last login timestamp.
+        /// </summary>
+        public DateTime? LastLoginTime { get; set; }
+
+        /// <summary>
         /// Created timestamp.
         /// </summary>
         public DateTime CreatedAt { get; set; }
@@ -59,14 +54,14 @@ namespace Saas.Infra.Core
         public DateTime? UpdatedTime { get; set; }
 
         /// <summary>
-        /// CreatedBy user id.
+        /// CreatedBy user id (UUID).
         /// </summary>
-        public long? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
 
         /// <summary>
-        /// UpdatedBy user id.
+        /// UpdatedBy user id (UUID).
         /// </summary>
-        public long? UpdatedBy { get; set; }
+        public Guid? UpdatedBy { get; set; }
 
         /// <summary>
         /// Soft-delete flag.

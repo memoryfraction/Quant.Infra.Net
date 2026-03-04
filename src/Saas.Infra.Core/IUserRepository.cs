@@ -13,13 +13,19 @@ namespace Saas.Infra.Core
         /// Gets a user entity by username asynchronously; returns null if not found.
         /// </summary>
         /// <param name="username">用户名，不能为空或空白。 / The username; cannot be null or whitespace.</param>
+        /// <summary>
+        /// Get a user by username.
+        /// </summary>
         Task<User?> GetByUsernameAsync(string username);
 
         /// <summary>
         /// 根据用户 Id 异步获取用户实体，如果不存在则返回 null。
         /// Gets a user entity by id asynchronously; returns null if not found.
         /// </summary>
-        Task<User?> GetByIdAsync(int id);
+        /// <summary>
+        /// Get a user by numeric id.
+        /// </summary>
+        Task<User?> GetByIdAsync(long id);
 
         /// <summary>
         /// 更新指定用户的密码哈希。
@@ -27,13 +33,16 @@ namespace Saas.Infra.Core
         /// </summary>
         /// <param name="userId">用户 Id。</param>
         /// <param name="newPasswordHash">新的密码哈希。</param>
-        Task UpdatePasswordAsync(int userId, string newPasswordHash);
+        Task UpdatePasswordAsync(long userId, string newPasswordHash);
 
         /// <summary>
         /// 添加新用户到存储并保存更改。
         /// Adds a new user to the store and saves changes.
         /// </summary>
         /// <param name="user">要添加的用户实体。 / The user entity to add.</param>
+        /// <summary>
+        /// Add a new user to the store and persist changes.
+        /// </summary>
         Task AddAsync(User user);
     }
 }

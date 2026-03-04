@@ -105,8 +105,9 @@ namespace Saas.Infra.MVC
                 var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
                 if (!string.IsNullOrWhiteSpace(defaultConn))
                 {
+                    // Use Npgsql (PostgreSQL) provider
                     builder.Services.AddDbContext<Saas.Infra.Data.ApplicationDbContext>(options =>
-                        Microsoft.EntityFrameworkCore.SqlServerDbContextOptionsExtensions.UseSqlServer(options, defaultConn));
+                        options.UseNpgsql(defaultConn));
                 }
 
                 // Repositories and helpers

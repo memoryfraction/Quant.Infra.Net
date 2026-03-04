@@ -55,6 +55,7 @@ namespace Saas.Infra.SSO
                 Username = username,
                 PasswordHash = _passwordHasher.HashPassword(password),
                 DisplayName = displayName,
+                Email = string.IsNullOrWhiteSpace(displayName) ? $"{username}@local" : displayName,
                 CreatedAt = DateTime.UtcNow
             };
 

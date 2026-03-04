@@ -9,7 +9,7 @@ namespace Saas.Infra.Data
     public class RefreshToken
     {
         public int Id { get; set; }
-        public int UserId { get; set; }
+        public long UserId { get; set; }
         public string TokenHash { get; set; } = string.Empty; // 存储 Token 的 SHA256 哈希
         public DateTime ExpiresAt { get; set; }
         public bool Revoked { get; set; }

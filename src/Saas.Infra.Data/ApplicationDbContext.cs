@@ -14,5 +14,28 @@ namespace Saas.Infra.Data
 
         public DbSet<UserEntity> Users { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            
+            // 配置 UserEntity 映射，确保不查询 UserId 列
+            modelBuilder.Entity<UserEntity>(entity =>
+            {
+                entity.ToTable("Users");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id");
+                entity.Property(e => e.UserName).HasColumnName("UserName");
+                entity.Property(e => e.PasswordHash).HasColumnName("PasswordHash");
+                entity.Property(e => e.Email).HasColumnName("Email");
+                entity.Property(e => e.PhoneNumber).HasColumnName("PhoneNumber");
+                entity.Property(e => e.Status).HasColumnName("Status");
+                entity.Property(e => e.CreatedTime).HasColumnName("CreatedTime");
+                entity.Property(e => e.UpdatedTime).HasColumnName("UpdatedTime");
+                entity.Property(e => e.CreatedBy).HasColumnName("CreatedBy");
+                entity.Property(e => e.UpdatedBy).HasColumnName("UpdatedBy");
+                entity.Property(e => e.IsDeleted).HasColumnName("IsDeleted");
+            });
+        }
     }
 }

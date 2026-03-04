@@ -12,11 +12,7 @@ namespace Saas.Infra.Data
     {
         [Key]
         [Column("Id")]
-        public long Id { get; set; }
-
-        [Required]
-        [Column("UserId")]
-        public Guid UserId { get; set; }
+        public Guid Id { get; set; }
 
         [Required]
         [Column("UserName")]
@@ -35,6 +31,9 @@ namespace Saas.Infra.Data
         [Column("Status")]
         public short Status { get; set; } = 1;
 
+        [Column("LastLoginTime")]
+        public DateTime? LastLoginTime { get; set; }
+
         [Column("CreatedTime")]
         public DateTime CreatedTime { get; set; } = DateTime.UtcNow;
 
@@ -42,10 +41,10 @@ namespace Saas.Infra.Data
         public DateTime? UpdatedTime { get; set; }
 
         [Column("CreatedBy")]
-        public long? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
 
         [Column("UpdatedBy")]
-        public long? UpdatedBy { get; set; }
+        public Guid? UpdatedBy { get; set; }
 
         [Column("IsDeleted")]
         public bool IsDeleted { get; set; } = false;

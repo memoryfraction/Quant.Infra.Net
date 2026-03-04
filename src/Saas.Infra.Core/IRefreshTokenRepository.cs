@@ -26,11 +26,5 @@ namespace Saas.Infra.Core
         /// Revoke a refresh token by hash.
         /// </summary>
         Task RevokeAsync(string tokenHash);
-
-        /// <summary>
-        /// 更新旧令牌为已被替换（设置 ReplacedByHash 并撤销旧的）。
-        /// Replace an old token with a new one atomically.
-        /// </summary>
-        Task ReplaceAsync(string oldHash, RefreshTokenRecord newRecord);
     }
 }

@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
-namespace Saas.Infra.MVC.Controllers
+namespace Saas.Infra.MVC.Controllers.Api
 {
 	/// <summary>
 	/// 提供JWT认证测试接口。

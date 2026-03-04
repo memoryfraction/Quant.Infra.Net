@@ -32,8 +32,8 @@ namespace Saas.Infra.MVC.Middleware
 			catch (Exception ex)
 			{
 				// 记录异常日志（Serilog + 内置日志双保险）
-				_logger.LogError(ex, "全局异常捕获：{ErrorMessage}", ex.Message);
-				Log.Error(ex, "Serilog 全局异常日志：{ErrorMessage}", ex.Message);
+                _logger.LogError(ex, "Global exception caught: {ErrorMessage}", ex.Message);
+                Log.Error(ex, "Serilog global exception log: {ErrorMessage}", ex.Message);
 
 				// 统一异常响应格式
 				context.Response.ContentType = "application/json";
@@ -43,7 +43,7 @@ namespace Saas.Infra.MVC.Middleware
 				var errorResponse = new
 				{
 					StatusCode = context.Response.StatusCode,
-					Message = _env.IsDevelopment() ? ex.Message : "服务器内部错误，请联系管理员",
+                    Message = _env.IsDevelopment() ? ex.Message : "Internal server error, please contact the administrator",
 					Detail = _env.IsDevelopment() ? ex.StackTrace : string.Empty,
 					Timestamp = DateTime.UtcNow
 				};

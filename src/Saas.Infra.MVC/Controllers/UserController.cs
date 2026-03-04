@@ -96,7 +96,7 @@ namespace Saas.Infra.MVC.Controllers
             if (!_passwordHasher.VerifyPassword(user.PasswordHash, request.OldPassword))
             {
                 Log.Warning("ChangePassword: invalid old password for {Username}", username);
-                return BadRequest(new { message = "旧密码不正确" });
+                return BadRequest(new { message = "Old password is incorrect" });
             }
 
             var newHash = _passwordHasher.HashPassword(request.NewPassword);
@@ -143,7 +143,7 @@ namespace Saas.Infra.MVC.Controllers
             catch (Exception ex)
             {
                 Log.Error(ex, "Error during user registration for {Username}", request.Username);
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "注册时发生错误" });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred during registration, please try again later" });
             }
         }
     }

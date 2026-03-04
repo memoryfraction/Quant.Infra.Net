@@ -42,7 +42,6 @@ namespace Saas.Infra.MVC.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [HttpPost("generate-token")]
         public async Task<IActionResult> GenerateToken([FromBody] LoginRequest request)
         {
             // 1. 基础参数验证 (防御性编程)
@@ -71,13 +70,13 @@ namespace Saas.Infra.MVC.Controllers
                 // 3. 处理预期的业务异常 (如：用户名密码不匹配、账号锁定等)
                 // 统一返回 401，并隐藏具体细节以防攻击
                 Log.Warning("Login failed for user: {Username}. Reason: {Reason}", request.Username, ex.Message);
-                return Unauthorized(new { message = "用户名或密码错误" });
+                return Unauthorized(new { message = "Invalid username or password" });
             }
             catch (Exception ex)
             {
                 // 4. 处理未预期的系统异常
                 Log.Error(ex, "Unexpected error during token generation for user: {Username}", request.Username);
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "服务器内部错误，请稍后再试" });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Internal server error, please try again later" });
             }
         }
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.MVC.Middleware; // 引入自定义异常中间件
 using Serilog;
@@ -30,7 +31,7 @@ namespace Saas.Infra.MVC
 
             try
             {
-                Log.Information("Saas.Infra.MVC 应用启动中...");
+                Log.Information("Saas.Infra.MVC application starting...");
                 var builder = WebApplication.CreateBuilder(args);
 
                 // ===================== 2. 替换默认日志为Serilog =====================
@@ -38,7 +39,7 @@ namespace Saas.Infra.MVC
 
                 // ===================== 3. 读取JWT配置 =====================
                 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"]
-                    ?? throw new ArgumentNullException("Jwt:SigningKey 未配置，请检查appsettings.json");
+                    ?? throw new ArgumentNullException("Jwt:SigningKey is not configured. Please check appsettings.json or user-secrets.");
                 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? JwtConstants.Issuer;
                 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "Saas.Infra.Clients";
 
@@ -71,13 +72,13 @@ namespace Saas.Infra.MVC
                     {
                         OnAuthenticationFailed = context =>
                         {
-                            Log.Error(context.Exception, "JWT认证失败：{ErrorMessage}", context.Exception.Message);
+                            Log.Error(context.Exception, "JWT authentication failed: {ErrorMessage}", context.Exception.Message);
                             return Task.CompletedTask;
                         },
                         OnTokenValidated = context =>
                         {
-                            var username = context.Principal?.Identity?.Name ?? "未知用户";
-                            Log.Information("JWT认证成功，用户：{Username}", username);
+                            var username = context.Principal?.Identity?.Name ?? "unknown user";
+                            Log.Information("JWT authentication succeeded for user: {Username}", username);
                             return Task.CompletedTask;
                         }
                     };
@@ -95,8 +96,25 @@ namespace Saas.Infra.MVC
                 builder.Services.AddControllersWithViews();
                 builder.Services.AddLogging(); // 供异常中间件使用
 
-                // 注册 SSO 服务到 DI 容器（示例）：在控制器或其它服务中注入 ISsoService
-                // 使用 Scoped 生命周期作为常见的 Web 请求范围服务注册
+                // Register application services and data access
+                // Bind Jwt options and register token service
+                builder.Services.Configure<Saas.Infra.Core.JwtOptions>(builder.Configuration.GetSection("Jwt"));
+                builder.Services.AddSingleton<Saas.Infra.Core.ITokenService, Saas.Infra.Core.TokenService>();
+
+                // Register EF Core DbContext and repositories
+                var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
+                if (!string.IsNullOrWhiteSpace(defaultConn))
+                {
+                    builder.Services.AddDbContext<Saas.Infra.Data.ApplicationDbContext>(options =>
+                        Microsoft.EntityFrameworkCore.SqlServerDbContextOptionsExtensions.UseSqlServer(options, defaultConn));
+                }
+
+                // Repositories and helpers
+                builder.Services.AddScoped<Saas.Infra.Core.IUserRepository, Saas.Infra.Data.UserRepository>();
+                builder.Services.AddScoped<Saas.Infra.Core.IRefreshTokenRepository, Saas.Infra.Data.RefreshTokenRepository>();
+                builder.Services.AddScoped<Saas.Infra.Core.IPasswordHasher, Saas.Infra.SSO.BCryptPasswordHasher>();
+
+                // Register SSO service into DI container (scoped)
                 builder.Services.AddScoped<Saas.Infra.SSO.ISsoService, Saas.Infra.SSO.SsoService>();
 
                 // ===================== 7. 构建应用并配置管道 =====================
@@ -136,12 +154,12 @@ namespace Saas.Infra.MVC
                     pattern: "{controller=Home}/{action=Index}/{id?}")
                     .WithStaticAssets();
 
-                Log.Information("Saas.Infra.MVC 启动成功，监听地址：{Urls}", string.Join("; ", app.Urls));
+                Log.Information("Saas.Infra.MVC started, listening on: {Urls}", string.Join("; ", app.Urls));
                 app.Run();
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "应用启动失败");
+                Log.Fatal(ex, $"Application startup failed, {ex.Message}");
             }
             finally
             {

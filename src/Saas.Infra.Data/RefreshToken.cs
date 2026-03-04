@@ -18,7 +18,7 @@ namespace Saas.Infra.Data
         public Guid UserId { get; set; }
 
         [Column("TokenHash")]
-        public string TokenHash { get; set; } = string.Empty; // stores SHA256 hash of the refresh token
+        public string TokenHash { get; set; } = string.Empty;
 
         [Column("ExpiresAt")]
         public DateTime ExpiresAt { get; set; }
@@ -29,7 +29,7 @@ namespace Saas.Infra.Data
         [Column("CreatedTime")]
         public DateTime CreatedTime { get; set; }
 
-        [Column("ReplacedByHash")]
-        public string? ReplacedByHash { get; set; }
+        [Column("CreatedBy")]
+        public Guid? CreatedBy { get; set; }
     }
 }

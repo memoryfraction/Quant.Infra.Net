@@ -43,7 +43,7 @@ namespace Saas.Infra.SSO
                 Username = username,
                 PasswordHash = _passwordHasher.HashPassword(password),
                 Email = string.IsNullOrWhiteSpace(displayName) ? $"{username}@local" : displayName,
-                CreatedAt = DateTime.UtcNow
+                CreatedTime = DateTime.UtcNow
             };
 
             await _userRepository.AddAsync(newUser);
@@ -57,7 +57,7 @@ namespace Saas.Infra.SSO
                 TokenHash = refreshHash,
                 ExpiresAt = DateTime.UtcNow.AddDays(JwtConstants.RefreshTokenExpirationDays),
                 Revoked = false,
-                CreatedAt = DateTime.UtcNow,
+                CreatedTime = DateTime.UtcNow,
                 CreatedBy = newUser.Id
             };
             await _refreshTokenRepository.AddAsync(record);
@@ -106,7 +106,7 @@ namespace Saas.Infra.SSO
                 TokenHash = newHash,
                 ExpiresAt = DateTime.UtcNow.AddDays(JwtConstants.RefreshTokenExpirationDays),
                 Revoked = false,
-                CreatedAt = DateTime.UtcNow,
+                CreatedTime = DateTime.UtcNow,
                 CreatedBy = user.Id
             };
 

@@ -46,7 +46,7 @@ namespace Saas.Infra.Core
         /// <summary>
         /// Created timestamp.
         /// </summary>
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedTime { get; set; }
 
         /// <summary>
         /// Updated timestamp (nullable).

@@ -36,13 +36,11 @@ namespace Saas.Infra.Core
         /// <summary>
         /// Creation timestamp.
         /// </summary>
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedTime { get; set; }
 
         /// <summary>
-        /// Optional hash of the replacement token.
+        /// User ID who created this token (nullable).
         /// </summary>
-        public string? ReplacedByHash { get; set; }
-
-        public Guid CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }

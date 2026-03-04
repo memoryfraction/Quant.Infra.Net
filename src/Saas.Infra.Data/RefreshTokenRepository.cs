@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Saas.Infra.Core;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Saas.Infra.Data
@@ -29,8 +28,8 @@ namespace Saas.Infra.Data
                 TokenHash = record.TokenHash,
                 ExpiresAt = record.ExpiresAt,
                 Revoked = record.Revoked,
-                CreatedTime = record.CreatedAt,
-                ReplacedByHash = record.ReplacedByHash
+                CreatedTime = record.CreatedTime,
+                CreatedBy = record.CreatedBy
             };
             _db.RefreshTokens.Add(entity);
             await _db.SaveChangesAsync();
@@ -48,8 +47,8 @@ namespace Saas.Infra.Data
                 TokenHash = e.TokenHash,
                 ExpiresAt = e.ExpiresAt,
                 Revoked = e.Revoked,
-                CreatedAt = e.CreatedTime,
-                ReplacedByHash = e.ReplacedByHash
+                CreatedTime = e.CreatedTime,
+                CreatedBy = e.CreatedBy
             };
         }
 
@@ -59,30 +58,6 @@ namespace Saas.Infra.Data
             if (e == null) return;
             e.Revoked = true;
             await _db.SaveChangesAsync();
-        }
-
-        public async Task ReplaceAsync(string oldHash, RefreshTokenRecord newRecord)
-        {
-            // mark old revoked and insert new
-            var old = await _db.RefreshTokens.SingleOrDefaultAsync(x => x.TokenHash == oldHash);
-            if (old != null)
-            {
-                old.Revoked = true;
-                old.ReplacedByHash = newRecord.TokenHash;
-            }
-            var entity = new RefreshToken
-            {
-                Id = newRecord.Id == Guid.Empty ? Guid.NewGuid() : newRecord.Id,
-                UserId = newRecord.UserId,
-                TokenHash = newRecord.TokenHash,
-                ExpiresAt = newRecord.ExpiresAt,
-                Revoked = newRecord.Revoked,
-                CreatedTime = newRecord.CreatedAt,
-                ReplacedByHash = newRecord.ReplacedByHash
-            };
-            _db.RefreshTokens.Add(entity);
-            await _db.SaveChangesAsync();
-            newRecord.Id = entity.Id;
         }
     }
 }

@@ -63,7 +63,7 @@ namespace Saas.Infra.MVC.Controllers
                 user.Id,
                 user.Username,
                 // user.DisplayName,
-                user.CreatedAt
+                user.CreatedTime
             });
         }
 

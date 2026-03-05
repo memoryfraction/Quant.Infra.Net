@@ -26,7 +26,7 @@ namespace Saas.Infra.SSO
         /// <summary>
         /// [保留] 验证令牌合法性。
         /// </summary>
-        Task<ClaimsPrincipal> ValidateTokenAsync(string token);
+        Task<ClaimsPrincipal?> ValidateTokenAsync(string token);
 
         /// <summary>
         /// 注册新用户并返回登录令牌（自动登录）。

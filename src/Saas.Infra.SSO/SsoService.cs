@@ -123,7 +123,7 @@ namespace Saas.Infra.SSO
             await _refreshTokenRepository.RevokeAsync(hash);
         }
 
-        public async Task<ClaimsPrincipal> ValidateTokenAsync(string token)
+        public async Task<ClaimsPrincipal?> ValidateTokenAsync(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
                 throw new ArgumentNullException(nameof(token));

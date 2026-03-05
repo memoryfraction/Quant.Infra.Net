@@ -7,6 +7,7 @@ namespace Saas.Infra.Core
 	/// Represents an exception thrown when a JWT token is invalid, used when token validation fails, token is expired, or token format is incorrect.
 	/// </summary>
 	[Serializable]
+#pragma warning disable SYSLIB0051
 	public class InvalidTokenException : Exception
 	{
 		/// <summary>
@@ -35,5 +36,6 @@ namespace Saas.Infra.Core
 		/// <param name="context">有关源或目标的上下文信息。 / The StreamingContext that contains contextual information about the source or destination.</param>
 		protected InvalidTokenException(SerializationInfo info, StreamingContext context) 
 			: base(info, context) { }
+#pragma warning restore SYSLIB0051
 	}
 }

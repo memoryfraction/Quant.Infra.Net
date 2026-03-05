@@ -386,14 +386,6 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		[Compare("Password", ErrorMessage = "Passwords do not match")]
 		[Display(Name = "Confirm Password")]
 		public string ConfirmPassword { get; set; } = string.Empty;
-
-		/// <summary>
-		/// 是否同意服务条款。
-		/// Agree to terms of service.
-		/// </summary>
-		[Required(ErrorMessage = "You must agree to the Terms of Service")]
-		[Display(Name = "I agree to the Terms of Service")]
-		public bool AgreeToTerms { get; set; }
 	}
 
 	/// <summary>

@@ -94,12 +94,12 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 			try
 			{
-                Log.Information("Login attempt for user: {Username}", model.Username);
+                Log.Information("Login attempt for email: {Email}", model.Email);
 
 				var client = _httpClientFactory.CreateClient();
 				var loginRequest = new
 				{
-					username = model.Username,
+					email = model.Email,
 					password = model.Password,
 					clientId = "Saas.Infra.Clients"
 				};
@@ -115,8 +115,8 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 				if (!response.IsSuccessStatusCode)
 				{
-                    Log.Warning("Login failed for user: {Username}", model.Username);
-					ModelState.AddModelError(string.Empty, "Invalid username or password");
+                    Log.Warning("Login failed for email: {Email}", model.Email);
+					ModelState.AddModelError(string.Empty, "Invalid email or password");
 					return View(model);
 				}
 
@@ -149,19 +149,19 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 				if (model.RememberMe)
 				{
-					Response.Cookies.Append("RememberUsername", model.Username,
+					Response.Cookies.Append("RememberEmail", model.Email,
 						new Microsoft.AspNetCore.Http.CookieOptions
 						{
 							Expires = DateTimeOffset.UtcNow.AddDays(30)
 						});
 				}
 
-                Log.Information("Login successful for user: {Username}", model.Username);
+                Log.Information("Login successful for email: {Email}", model.Email);
 				return RedirectToAction("Index", "Dashboard");
 			}
 			catch (Exception ex)
 			{
-                Log.Error(ex, "Error during login for user: {Username}", model.Username);
+                Log.Error(ex, "Error during login for email: {Email}", model.Email);
 				ModelState.AddModelError(string.Empty, "An error occurred during login. Please try again.");
 				return View(model);
 			}
@@ -204,11 +204,12 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 			try
 			{
-                Log.Information("Registration attempt for user: {Username}", model.Username);
+                Log.Information("Registration attempt for email: {Email}", model.Email);
 
 				var client = _httpClientFactory.CreateClient();
 				var registerRequest = new
 				{
+					email = model.Email,
 					username = model.Username,
 					password = model.Password,
 					clientId = "Saas.Infra.Client"
@@ -226,18 +227,18 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 				if (!response.IsSuccessStatusCode)
 				{
 					var errorContent = await response.Content.ReadAsStringAsync();
-                    Log.Warning("Registration failed for user: {Username}. Error: {Error}", model.Username, errorContent);
-					ModelState.AddModelError(string.Empty, "Registration failed. Username may already exist.");
+                    Log.Warning("Registration failed for email: {Email}. Error: {Error}", model.Email, errorContent);
+					ModelState.AddModelError(string.Empty, "Registration failed. Email may already exist.");
 					return View(model);
 				}
 
-                Log.Information("Registration successful for user: {Username}", model.Username);
+                Log.Information("Registration successful for email: {Email}", model.Email);
 				TempData["SuccessMessage"] = "Registration successful! Please log in with your credentials.";
 				return RedirectToAction("Login");
 			}
 			catch (Exception ex)
 			{
-                Log.Error(ex, "Error during registration for user: {Username}", model.Username);
+                Log.Error(ex, "Error during registration for email: {Email}", model.Email);
 				ModelState.AddModelError(string.Empty, "An error occurred during registration. Please try again.");
 				return View(model);
 			}
@@ -327,13 +328,13 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 	public class LoginViewModel
 	{
 		/// <summary>
-		/// 用户名。
-		/// Username.
+		/// 电子邮件地址。
+		/// Email address.
 		/// </summary>
-		[Required(ErrorMessage = "Username is required")]
-		[StringLength(100, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 100 characters")]
-		[Display(Name = "Username")]
-		public string Username { get; set; } = string.Empty;
+		[Required(ErrorMessage = "Email is required")]
+		[EmailAddress(ErrorMessage = "Invalid email address")]
+		[Display(Name = "Email Address")]
+		public string Email { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 密码。
@@ -345,7 +346,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		public string Password { get; set; } = string.Empty;
 
 		/// <summary>
-		/// 是否记住用户名。
+		/// 是否记住邮箱。
 		/// Remember me.
 		/// </summary>
 		[Display(Name = "Remember me")]
@@ -359,13 +360,21 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 	public class RegisterViewModel
 	{
 		/// <summary>
-		/// 用户名。
-		/// Username.
+		/// 电子邮件地址。
+		/// Email address.
 		/// </summary>
-		[Required(ErrorMessage = "Username is required")]
+		[Required(ErrorMessage = "Email is required")]
+		[EmailAddress(ErrorMessage = "Invalid email address")]
+		[Display(Name = "Email Address")]
+		public string Email { get; set; } = string.Empty;
+
+		/// <summary>
+		/// 用户名（可选）。
+		/// Username (optional).
+		/// </summary>
 		[StringLength(100, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 100 characters")]
 		[Display(Name = "Username")]
-		public string Username { get; set; } = string.Empty;
+		public string? Username { get; set; }
 
 		/// <summary>
 		/// 密码。

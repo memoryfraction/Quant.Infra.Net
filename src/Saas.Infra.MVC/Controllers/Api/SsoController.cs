@@ -49,7 +49,7 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             if (!ModelState.IsValid)
             {
-                Log.Warning("Invalid model state for login request: {Username}", request.Username);
+                Log.Warning("Invalid model state for login request: {Email}", request.Email);
                 return BadRequest(ModelState);
             }
 
@@ -58,24 +58,24 @@ namespace Saas.Infra.MVC.Controllers.Api
                 // 2. 调用 SSO 服务处理核心逻辑
                 // 核心：数据库读取、密码哈希校验、状态检查都在 GenerateTokensAsync 内部完成
                 var tokenResponse = await _ssoService.GenerateTokensAsync(
-                    request.Username,
+                    request.Email,
                     request.Password,
                     request.ClientId ?? "default");
 
-                Log.Information("Token generated successfully for user: {Username}", request.Username);
+                Log.Information("Token generated successfully for email: {Email}", request.Email);
                 return Ok(tokenResponse);
             }
             catch (InvalidOperationException ex)
             {
                 // 3. 处理预期的业务异常 (如：用户名密码不匹配、账号锁定等)
                 // 统一返回 401，并隐藏具体细节以防攻击
-                Log.Warning("Login failed for user: {Username}. Reason: {Reason}", request.Username, ex.Message);
-                return Unauthorized(new { message = "Invalid username or password" });
+                Log.Warning("Login failed for email: {Email}. Reason: {Reason}", request.Email, ex.Message);
+                return Unauthorized(new { message = "Invalid email or password" });
             }
             catch (Exception ex)
             {
                 // 4. 处理未预期的系统异常
-                Log.Error(ex, "Unexpected error during token generation for user: {Username}", request.Username);
+                Log.Error(ex, "Unexpected error during token generation for email: {Email}", request.Email);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Internal server error, please try again later" });
             }
         }

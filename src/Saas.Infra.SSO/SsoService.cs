@@ -27,22 +27,40 @@ namespace Saas.Infra.SSO
             _refreshTokenRepository = refreshTokenRepository ?? throw new ArgumentNullException(nameof(refreshTokenRepository));
         }
 
-        public async Task<JwtTokenResponse> RegisterUserAsync(string username, string password, string? displayName = null, string? clientId = null)
+        public async Task<JwtTokenResponse> RegisterUserAsync(string email, string password, string? username = null, string? clientId = null)
         {
-            if (string.IsNullOrWhiteSpace(username))
-                throw new ArgumentException("username must not be null or whitespace", nameof(username));
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentException("email must not be null or whitespace", nameof(email));
             if (string.IsNullOrWhiteSpace(password))
                 throw new ArgumentException("password must not be null or whitespace", nameof(password));
 
-            var existing = await _userRepository.GetByUsernameAsync(username);
+            var existing = await _userRepository.GetByEmailAsync(email);
             if (existing != null)
-                throw new InvalidOperationException("User already exists.");
+                throw new InvalidOperationException("User with this email already exists.");
+
+            // Auto-generate username if not provided
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                username = GenerateUsername();
+                // Ensure generated username is unique
+                while (await _userRepository.GetByUsernameAsync(username) != null)
+                {
+                    username = GenerateUsername();
+                }
+            }
+            else
+            {
+                // Check if provided username is already taken
+                var existingByUsername = await _userRepository.GetByUsernameAsync(username);
+                if (existingByUsername != null)
+                    throw new InvalidOperationException("Username already exists.");
+            }
 
             var newUser = new Saas.Infra.Core.User
             {
                 Username = username,
                 PasswordHash = _passwordHasher.HashPassword(password),
-                Email = string.IsNullOrWhiteSpace(displayName) ? $"{username}@local" : displayName,
+                Email = email,
                 CreatedTime = DateTime.UtcNow
             };
 
@@ -62,18 +80,18 @@ namespace Saas.Infra.SSO
             };
             await _refreshTokenRepository.AddAsync(record);
 
-            Log.Information("User registered: {Username}", username);
+            Log.Information("User registered with email: {Email}", email);
             return tokenResponse;
         }
 
-        public async Task<JwtTokenResponse> GenerateTokensAsync(string userId, string password, string clientId)
+        public async Task<JwtTokenResponse> GenerateTokensAsync(string email, string password, string clientId)
         {
-            if (string.IsNullOrWhiteSpace(userId))
-                throw new ArgumentException("userId must not be null or whitespace", nameof(userId));
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentException("email must not be null or whitespace", nameof(email));
             if (password is null)
                 throw new ArgumentNullException(nameof(password));
 
-            var user = await _userRepository.GetByUsernameAsync(userId);
+            var user = await _userRepository.GetByEmailAsync(email);
 
             if (user == null || !_passwordHasher.VerifyPassword(user.PasswordHash, password))
                 throw new InvalidOperationException("Invalid credentials.");
@@ -137,6 +155,16 @@ namespace Saas.Infra.SSO
             var bytes = System.Text.Encoding.UTF8.GetBytes(input);
             var hash = sha.ComputeHash(bytes);
             return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+        }
+
+        /// <summary>
+        /// 生成随机用户名。
+        /// Generates a random username.
+        /// </summary>
+        /// <returns>生成的用户名 / Generated username</returns>
+        private static string GenerateUsername()
+        {
+            return $"user_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
         }
     }
 }

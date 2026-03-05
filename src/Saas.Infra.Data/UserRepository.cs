@@ -69,6 +69,38 @@ namespace Saas.Infra.Data
             };
         }
 
+        /// <summary>
+        /// 根据电子邮件地址获取用户。
+        /// Get user by email address.
+        /// </summary>
+        /// <param name="email">电子邮件地址 / Email address</param>
+        /// <returns>用户对象或null / User object or null</returns>
+        /// <exception cref="ArgumentException">当email为null或空白时抛出 / Thrown when email is null or whitespace</exception>
+        public async Task<Saas.Infra.Core.User?> GetByEmailAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentException("email must not be null or whitespace", nameof(email));
+
+            var u = await _db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Email == email);
+            if (u == null) return null;
+
+            return new Saas.Infra.Core.User
+            {
+                Id = u.Id,
+                Username = u.UserName,
+                PasswordHash = u.PasswordHash,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                Status = u.Status,
+                LastLoginTime = u.LastLoginTime,
+                CreatedTime = u.CreatedTime,
+                UpdatedTime = u.UpdatedTime,
+                CreatedBy = u.CreatedBy,
+                UpdatedBy = u.UpdatedBy,
+                IsDeleted = u.IsDeleted
+            };
+        }
+
         public async Task<Saas.Infra.Core.User?> GetByIdAsync(Guid id)
         {
             var u = await _db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);

@@ -15,6 +15,12 @@ namespace Saas.Infra.Core
         Task<User?> GetByUsernameAsync(string username);
 
         /// <summary>
+        /// 根据电子邮件地址异步获取用户实体，如果不存在则返回 null。
+        /// Gets a user entity by email address asynchronously; returns null if not found.
+        /// </summary>
+        Task<User?> GetByEmailAsync(string email);
+
+        /// <summary>
         /// 根据用户 UUID 异步获取用户实体，如果不存在则返回 null。
         /// Gets a user entity by UUID asynchronously; returns null if not found.
         /// </summary>

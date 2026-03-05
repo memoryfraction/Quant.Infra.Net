@@ -104,6 +104,17 @@ namespace Saas.Infra.MVC
                     options.Cookie.HttpOnly = true;
                     options.Cookie.IsEssential = true;
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
+                });
+                
+                // Add CSRF protection
+                builder.Services.AddAntiforgery(options =>
+                {
+                    options.HeaderName = "X-CSRF-TOKEN";
+                    options.FormFieldName = "__RequestVerificationToken";
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
                 });
                 
                 // Add HTTP client factory for API calls
@@ -131,16 +142,23 @@ namespace Saas.Infra.MVC
                 // Register SSO service into DI container (scoped)
                 builder.Services.AddScoped<Saas.Infra.SSO.ISsoService, Saas.Infra.SSO.SsoService>();
 
+                // Register redirect validation and product configuration services
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Redirect.IRedirectValidator, Saas.Infra.MVC.Services.Redirect.RedirectValidator>();
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Product.IProductConfigService, Saas.Infra.MVC.Services.Product.ProductConfigService>();
+
                 // ===================== 7. 构建应用并配置管道 =====================
                 var app = builder.Build();
 
                 // 【核心】注册全局异常中间件（必须放在管道最前面）
                 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+                // Add security headers middleware
+                app.UseSecurityHeaders();
+
                 // 环境配置
                 if (!app.Environment.IsDevelopment())
                 {
-                    app.UseExceptionHandler("/Home/Error");
+                    app.UseExceptionHandler("/Account/Login");
                     app.UseHsts();
                 }
 
@@ -168,7 +186,7 @@ namespace Saas.Infra.MVC
                 app.MapStaticAssets();
                 app.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}")
+                    pattern: "{controller=Account}/{action=Login}/{id?}")
                     .WithStaticAssets();
 
                 Log.Information("Saas.Infra.MVC started, listening on: {Urls}", string.Join("; ", app.Urls));

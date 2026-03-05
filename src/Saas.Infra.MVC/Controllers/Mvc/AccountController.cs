@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Saas.Infra.MVC.Models;
+using Saas.Infra.MVC.Models.Responses;
 using Serilog;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
@@ -19,7 +21,6 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		/// </summary>
 		private readonly IHttpClientFactory _httpClientFactory;
 
-
 		/// <summary>
 		/// 应用程序配置。
 		/// Application configuration.
@@ -33,20 +34,35 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		private readonly string _apiBaseUrl;
 
 		/// <summary>
+		/// Redirect validator service
+		/// </summary>
+		private readonly Saas.Infra.MVC.Services.Redirect.IRedirectValidator _redirectValidator;
+
+		/// <summary>
+		/// Product configuration service
+		/// </summary>
+		private readonly Saas.Infra.MVC.Services.Product.IProductConfigService _productConfigService;
+
+		/// <summary>
 		/// 构造函数 - 依赖注入。
 		/// Constructor - Dependency injection.
 		/// </summary>
 		/// <param name="httpClientFactory">HTTP客户端工厂 / HTTP client factory</param>
-		/// <param name="logger">日志记录器 / Logger instance</param>
 		/// <param name="configuration">应用程序配置 / Application configuration</param>
+		/// <param name="redirectValidator">Redirect validator service</param>
+		/// <param name="productConfigService">Product configuration service</param>
 		/// <exception cref="ArgumentNullException">当参数为null时抛出 / Thrown when parameter is null</exception>
 		public AccountController(
 			IHttpClientFactory httpClientFactory,
-			IConfiguration configuration)
+			IConfiguration configuration,
+			Saas.Infra.MVC.Services.Redirect.IRedirectValidator redirectValidator,
+			Saas.Infra.MVC.Services.Product.IProductConfigService productConfigService)
 		{
 			// Parameter validation
 			_httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory), "IHttpClientFactory cannot be null");
 			_configuration = configuration ?? throw new ArgumentNullException(nameof(configuration), "IConfiguration cannot be null");
+			_redirectValidator = redirectValidator ?? throw new ArgumentNullException(nameof(redirectValidator), "IRedirectValidator cannot be null");
+			_productConfigService = productConfigService ?? throw new ArgumentNullException(nameof(productConfigService), "IProductConfigService cannot be null");
 			_apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7268";
 		}
 
@@ -75,12 +91,13 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		/// Handles login form submission. Calls backend API for authentication.
 		/// </summary>
 		/// <param name="model">登录模型 / Login model</param>
-		/// <returns>成功时重定向到仪表板；失败时返回登录页面 / Redirects to dashboard on success; returns login page on failure</returns>
+		/// <param name="redirectUrl">Optional redirect URL after successful login</param>
+		/// <returns>成功时返回登录成功响应；失败时返回登录页面 / Returns login success response on success; returns login page on failure</returns>
 		/// <exception cref="ArgumentNullException">当model为null时抛出 / Thrown when model is null</exception>
 		[HttpPost]
 		[Route("account/login")]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Login([FromForm] LoginViewModel model)
+		public async Task<IActionResult> Login([FromForm] LoginViewModel model, [FromQuery] string? redirectUrl = null)
 		{
 			// Parameter validation
 			if (model == null)
@@ -94,12 +111,12 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 			try
 			{
-                Log.Information("Login attempt for user: {Username}", model.Username);
+                Log.Information("Login attempt for email: {Email}", model.Email);
 
 				var client = _httpClientFactory.CreateClient();
 				var loginRequest = new
 				{
-					username = model.Username,
+					email = model.Email,
 					password = model.Password,
 					clientId = "Saas.Infra.Clients"
 				};
@@ -115,8 +132,8 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 				if (!response.IsSuccessStatusCode)
 				{
-                    Log.Warning("Login failed for user: {Username}", model.Username);
-					ModelState.AddModelError(string.Empty, "Invalid username or password");
+                    Log.Warning("Login failed for email: {Email}", model.Email);
+					ModelState.AddModelError(string.Empty, "Invalid email or password");
 					return View(model);
 				}
 
@@ -132,7 +149,24 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 					return View(model);
 				}
 
-				// Store tokens in session
+				// Validate redirect URL
+				var validationResult = await _redirectValidator.ValidateAsync(redirectUrl);
+				var availableProducts = await _productConfigService.GetAvailableProductsAsync(model.Email);
+
+				// Build login success response
+				var loginSuccessResponse = new LoginSuccessResponse
+				{
+					Success = true,
+					AccessToken = tokenResponse.AccessToken,
+					RefreshToken = tokenResponse.RefreshToken,
+					ExpiresIn = tokenResponse.ExpiresIn,
+					RedirectUrl = validationResult.IsValid ? validationResult.ValidatedPath : null,
+					ShowProductSelection = !validationResult.IsValid || string.IsNullOrEmpty(validationResult.ValidatedPath),
+					AvailableProducts = availableProducts,
+					WarningMessage = validationResult.IsValid ? null : "登录成功，但跳转地址无效"
+				};
+
+				// Store tokens in session (for backward compatibility)
 				HttpContext.Session.SetString("AccessToken", tokenResponse.AccessToken);
 				HttpContext.Session.SetString("RefreshToken", tokenResponse.RefreshToken);
 				HttpContext.Session.SetInt32("ExpiresIn", tokenResponse.ExpiresIn);
@@ -149,19 +183,21 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 				if (model.RememberMe)
 				{
-					Response.Cookies.Append("RememberUsername", model.Username,
+					Response.Cookies.Append("RememberEmail", model.Email,
 						new Microsoft.AspNetCore.Http.CookieOptions
 						{
 							Expires = DateTimeOffset.UtcNow.AddDays(30)
 						});
 				}
 
-                Log.Information("Login successful for user: {Username}", model.Username);
-				return RedirectToAction("Index", "Dashboard");
+                Log.Information("Login successful for email: {Email}", model.Email);
+				
+				// Return JSON response for AJAX/API clients
+				return Json(loginSuccessResponse);
 			}
 			catch (Exception ex)
 			{
-                Log.Error(ex, "Error during login for user: {Username}", model.Username);
+                Log.Error(ex, "Error during login for email: {Email}", model.Email);
 				ModelState.AddModelError(string.Empty, "An error occurred during login. Please try again.");
 				return View(model);
 			}
@@ -204,11 +240,12 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 			try
 			{
-                Log.Information("Registration attempt for user: {Username}", model.Username);
+                Log.Information("Registration attempt for email: {Email}", model.Email);
 
 				var client = _httpClientFactory.CreateClient();
 				var registerRequest = new
 				{
+					email = model.Email,
 					username = model.Username,
 					password = model.Password,
 					clientId = "Saas.Infra.Client"
@@ -226,18 +263,18 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 				if (!response.IsSuccessStatusCode)
 				{
 					var errorContent = await response.Content.ReadAsStringAsync();
-                    Log.Warning("Registration failed for user: {Username}. Error: {Error}", model.Username, errorContent);
-					ModelState.AddModelError(string.Empty, "Registration failed. Username may already exist.");
+                    Log.Warning("Registration failed for email: {Email}. Error: {Error}", model.Email, errorContent);
+					ModelState.AddModelError(string.Empty, "Registration failed. Email may already exist.");
 					return View(model);
 				}
 
-                Log.Information("Registration successful for user: {Username}", model.Username);
+                Log.Information("Registration successful for email: {Email}", model.Email);
 				TempData["SuccessMessage"] = "Registration successful! Please log in with your credentials.";
 				return RedirectToAction("Login");
 			}
 			catch (Exception ex)
 			{
-                Log.Error(ex, "Error during registration for user: {Username}", model.Username);
+                Log.Error(ex, "Error during registration for email: {Email}", model.Email);
 				ModelState.AddModelError(string.Empty, "An error occurred during registration. Please try again.");
 				return View(model);
 			}
@@ -316,8 +353,53 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 			Response.Cookies.Delete("AccessToken");
 			Response.Cookies.Delete("RememberUsername");
 
-			return RedirectToAction("Index", "Home");
+			return RedirectToAction("Login", "Account");
 		}
+
+		/// <summary>
+		/// 显示产品选择页面。
+		/// Display product selection page.
+		/// </summary>
+		/// <returns>ProductSelection view with available products and tokens</returns>
+		[HttpGet]
+		[Route("account/product-selection")]
+		public async Task<IActionResult> ProductSelection()
+		{
+			// Get access token from session
+			var accessToken = HttpContext.Session.GetString("AccessToken");
+			var refreshToken = HttpContext.Session.GetString("RefreshToken");
+			var expiresIn = HttpContext.Session.GetInt32("ExpiresIn") ?? 0;
+
+			if (string.IsNullOrEmpty(accessToken))
+			{
+				Log.Warning("ProductSelection accessed without valid session");
+				return RedirectToAction("Login", "Account");
+			}
+
+			try
+			{
+				// Get available products
+				var availableProducts = await _productConfigService.GetAvailableProductsAsync(null);
+
+				var viewModel = new ProductSelectionViewModel
+				{
+					SuccessMessage = "登录成功，请选择要进入的产品",
+					Products = availableProducts,
+					AccessToken = accessToken,
+					RefreshToken = refreshToken,
+					ExpiresIn = expiresIn
+				};
+
+				Log.Information("ProductSelection page displayed");
+				return View(viewModel);
+			}
+			catch (Exception ex)
+			{
+				Log.Error(ex, "Error displaying product selection page");
+				return RedirectToAction("Login", "Account");
+			}
+		}
+
 	}
 
 	/// <summary>
@@ -327,13 +409,13 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 	public class LoginViewModel
 	{
 		/// <summary>
-		/// 用户名。
-		/// Username.
+		/// 电子邮件地址。
+		/// Email address.
 		/// </summary>
-		[Required(ErrorMessage = "Username is required")]
-		[StringLength(100, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 100 characters")]
-		[Display(Name = "Username")]
-		public string Username { get; set; } = string.Empty;
+		[Required(ErrorMessage = "Email is required")]
+		[EmailAddress(ErrorMessage = "Invalid email address")]
+		[Display(Name = "Email Address")]
+		public string Email { get; set; } = string.Empty;
 
 		/// <summary>
 		/// 密码。
@@ -345,7 +427,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		public string Password { get; set; } = string.Empty;
 
 		/// <summary>
-		/// 是否记住用户名。
+		/// 是否记住邮箱。
 		/// Remember me.
 		/// </summary>
 		[Display(Name = "Remember me")]
@@ -359,13 +441,21 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 	public class RegisterViewModel
 	{
 		/// <summary>
-		/// 用户名。
-		/// Username.
+		/// 电子邮件地址。
+		/// Email address.
 		/// </summary>
-		[Required(ErrorMessage = "Username is required")]
+		[Required(ErrorMessage = "Email is required")]
+		[EmailAddress(ErrorMessage = "Invalid email address")]
+		[Display(Name = "Email Address")]
+		public string Email { get; set; } = string.Empty;
+
+		/// <summary>
+		/// 用户名（可选）。
+		/// Username (optional).
+		/// </summary>
 		[StringLength(100, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 100 characters")]
 		[Display(Name = "Username")]
-		public string Username { get; set; } = string.Empty;
+		public string? Username { get; set; }
 
 		/// <summary>
 		/// 密码。

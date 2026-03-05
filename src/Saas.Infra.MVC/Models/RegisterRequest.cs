@@ -1,19 +1,26 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Saas.Infra.MVC.Models
 {
     /// <summary>
-    /// 表示用户登录请求的数据传输对象。 / Represents the data transfer object for a user login request.
+    /// 表示用户注册请求的数据传输对象。 / Represents the data transfer object for a user registration request.
     /// </summary>
-    public class LoginRequest
+    public class RegisterRequest
     {
         /// <summary>
         /// 获取或设置电子邮件地址。 / Gets or sets the email address.
         /// </summary>
-        /// <value>用户的登录电子邮件。 / The email address used for login.</value>
+        /// <value>用户的电子邮件地址。 / The user's email address.</value>
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 获取或设置用户名（可选）。 / Gets or sets the username (optional).
+        /// </summary>
+        /// <value>用户的用户名。如果未提供，系统将自动生成。 / The user's username. If not provided, the system will auto-generate one.</value>
+        [StringLength(100, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 100 characters")]
+        public string? Username { get; set; }
 
         /// <summary>
         /// 获取或设置密码。 / Gets or sets the password.

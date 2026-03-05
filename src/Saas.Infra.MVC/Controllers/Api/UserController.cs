@@ -110,11 +110,11 @@ namespace Saas.Infra.MVC.Controllers.Api
         /// 为新用户注册并返回自动登录的令牌对。
         /// Registers a new user and returns tokens for immediate login.
         /// </summary>
-        /// <param name="request">包含用户名、密码和可选 clientId 的注册请求。/ The registration request containing username, password and optional clientId.</param>
+        /// <param name="request">包含电子邮件、密码和可选用户名的注册请求。/ The registration request containing email, password and optional username.</param>
         /// <returns>返回 <see cref="JwtTokenResponse"/> 包含 access/refresh token。/ Returns <see cref="JwtTokenResponse"/> with access/refresh tokens.</returns>
         [AllowAnonymous]
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] LoginRequest request)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             // 参数有效性校验
             if (request == null)
@@ -130,19 +130,19 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             try
             {
-                var tokenResponse = await _ssoService.RegisterUserAsync(request.Username, request.Password, null, request.ClientId ?? "default");
-                Log.Information("User registered successfully: {Username}", request.Username);
+                var tokenResponse = await _ssoService.RegisterUserAsync(request.Email, request.Password, request.Username, request.ClientId ?? "default");
+                Log.Information("User registered successfully with email: {Email}", request.Email);
                 return Ok(tokenResponse);
             }
             catch (InvalidOperationException ex)
             {
                 // e.g. user already exists
-                Log.Warning(ex, "Register failed for user: {Username}", request.Username);
+                Log.Warning(ex, "Register failed for email: {Email}", request.Email);
                 return Conflict(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error during user registration for {Username}", request.Username);
+                Log.Error(ex, "Error during user registration for {Email}", request.Email);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred during registration, please try again later" });
             }
         }

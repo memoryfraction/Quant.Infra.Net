@@ -84,7 +84,7 @@
 
         .form-actions {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             margin-bottom: 20px;
             font-size: 14px;
@@ -104,16 +104,6 @@
             margin: 0;
             cursor: pointer;
             font-weight: normal;
-        }
-
-        .forgot-link {
-            color: #667eea;
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-
-        .forgot-link:hover {
-            color: #764ba2;
         }
 
         .btn-login {
@@ -217,7 +207,6 @@
                     <input asp-for="RememberMe" type="checkbox" id="rememberMe">
                     <label for="rememberMe">Remember me</label>
                 </div>
-                <a href="@Url.Action("ForgotPassword", "Account")" class="forgot-link">Forgot password?</a>
             </div>
 
             <button type="submit" class="btn-login">Sign In</button>

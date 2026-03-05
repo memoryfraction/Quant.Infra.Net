@@ -189,7 +189,7 @@
             </div>
         }
 
-        <form method="post" asp-action="Login" asp-controller="Account">
+        <form id="loginForm" method="post" asp-action="Login" asp-controller="Account">
             @Html.AntiForgeryToken()
 
             <div class="form-group">
@@ -218,5 +218,66 @@
             Don't have an account? <a href="@Url.Action("Register", "Account")">Sign up</a>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(loginForm);
+                const redirectUrl = new URLSearchParams(window.location.search).get('redirect_url');
+                
+                fetch(loginForm.action + (redirectUrl ? '?redirect_url=' + encodeURIComponent(redirectUrl) : ''), {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(text);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Store tokens in sessionStorage
+                        if (data.accessToken) {
+                            sessionStorage.setItem('accessToken', data.accessToken);
+                        }
+                        if (data.refreshToken) {
+                            sessionStorage.setItem('refreshToken', data.refreshToken);
+                        }
+                        if (data.expiresIn) {
+                            sessionStorage.setItem('expiresIn', data.expiresIn);
+                        }
+                        
+                        // If valid redirect URL, navigate directly
+                        if (data.redirectUrl && !data.showProductSelection) {
+                            window.location.href = data.redirectUrl;
+                        } else {
+                            // Navigate to product selection page
+                            window.location.href = '@Url.Action("ProductSelection", "Account")';
+                        }
+                    } else {
+                        // Show error message
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-danger';
+                        alertDiv.textContent = data.message || 'Login failed. Please try again.';
+                        loginForm.parentNode.insertBefore(alertDiv, loginForm);
+                    }
+                })
+                .catch(error => {
+                    console.error('Login error:', error);
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger';
+                    alertDiv.textContent = 'An error occurred during login. Please try again.';
+                    loginForm.parentNode.insertBefore(alertDiv, loginForm);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

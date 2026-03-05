@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Saas.Infra.MVC.Models;
 using System.Diagnostics;
 
-namespace Saas.Infra.MVC.Controllers
+namespace Saas.Infra.MVC.Controllers.Mvc
 {
 	/// <summary>
 	/// 提供主页和隐私页面的视图。

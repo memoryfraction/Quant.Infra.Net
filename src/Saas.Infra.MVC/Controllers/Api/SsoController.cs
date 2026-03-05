@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Saas.Infra.Core;
 using Saas.Infra.MVC.Models;
 using Serilog;
 
-namespace Saas.Infra.MVC.Controllers
+namespace Saas.Infra.MVC.Controllers.Api
 {
     /// <summary>
     /// 提供单点登录(SSO)相关的API端点。处理用户认证和JWT令牌生成请求。
@@ -13,7 +13,7 @@ namespace Saas.Infra.MVC.Controllers
     [Route("sso")]
     public class SsoController : ControllerBase
     {
-        private readonly Saas.Infra.SSO.ISsoService _ssoService;
+        private readonly SSO.ISsoService _ssoService;
 
         /// <summary>
         /// 初始化 <see cref="SsoController"/> 类的新实例。 / Initializes a new instance of the <see cref="SsoController"/> class.
@@ -21,7 +21,7 @@ namespace Saas.Infra.MVC.Controllers
         /// <param name="config">应用程序配置实例，用于读取JWT配置。 / The application configuration instance used to read JWT settings.</param>
         /// <param name="ssoService">SSO 服务实例，用于处理令牌生成与验证。 / The SSO service instance used to handle token generation and validation.</param>
         /// <exception cref="ArgumentNullException">当 <paramref name="config"/> 或 <paramref name="ssoService"/> 为null时抛出。 / Thrown when <paramref name="config"/> or <paramref name="ssoService"/> is null.</exception>
-        public SsoController(Saas.Infra.SSO.ISsoService ssoService)
+        public SsoController(SSO.ISsoService ssoService)
         {
             _ssoService = ssoService ?? throw new ArgumentNullException(nameof(ssoService));
         }

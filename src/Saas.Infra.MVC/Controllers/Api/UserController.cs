@@ -5,7 +5,7 @@ using Saas.Infra.MVC.Models;
 using Serilog;
 using System.Security.Claims;
 
-namespace Saas.Infra.MVC.Controllers
+namespace Saas.Infra.MVC.Controllers.Api
 {
     /// <summary>
     /// 提供用户相关的受保护 API（个人资料、修改密码等）。
@@ -18,7 +18,7 @@ namespace Saas.Infra.MVC.Controllers
     {
         private readonly IUserRepository _userRepository;
         private readonly IPasswordHasher _passwordHasher;
-        private readonly Saas.Infra.SSO.ISsoService _ssoService;
+        private readonly SSO.ISsoService _ssoService;
 
         /// <summary>
         /// 初始化 <see cref="UserController"/> 的新实例。
@@ -27,7 +27,7 @@ namespace Saas.Infra.MVC.Controllers
         /// <param name="userRepository">用户仓储实现。/ The user repository implementation.</param>
         /// <param name="passwordHasher">密码哈希实现。/ The password hasher implementation.</param>
         /// <param name="ssoService">单点登录服务，用于生成 Token 等。/ The SSO service used to generate tokens.</param>
-        public UserController(IUserRepository userRepository, IPasswordHasher passwordHasher, Saas.Infra.SSO.ISsoService ssoService)
+        public UserController(IUserRepository userRepository, IPasswordHasher passwordHasher, SSO.ISsoService ssoService)
         {
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));

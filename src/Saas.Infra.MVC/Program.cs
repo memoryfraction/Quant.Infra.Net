@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.MVC.Middleware; // 引入自定义异常中间件
 using Serilog;
@@ -95,6 +96,18 @@ namespace Saas.Infra.MVC
                 builder.Services.AddAuthorization();
                 builder.Services.AddControllersWithViews();
                 builder.Services.AddLogging(); // 供异常中间件使用
+                
+                // Add session support for MVC
+                builder.Services.AddSession(options =>
+                {
+                    options.IdleTimeout = TimeSpan.FromMinutes(30);
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.IsEssential = true;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                });
+                
+                // Add HTTP client factory for API calls
+                builder.Services.AddHttpClient();
 
                 // Register application services and data access
                 // Bind Jwt options and register token service
@@ -133,15 +146,18 @@ namespace Saas.Infra.MVC
 
                 app.UseHttpsRedirection();
                 app.UseRouting();
+                
+                // Add session middleware
+                app.UseSession();
 
                 // Swagger配置（仅开发环境）
-                if (app.Environment.IsDevelopment())
+                if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
                 {
                     app.UseSwagger();
                     app.UseSwaggerUI(options =>
                     {
                         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Saas.Infra.MVC API v1");
-                        options.RoutePrefix = string.Empty; // Swagger作为首页
+                        options.RoutePrefix = "swagger"; 
                     });
                 }
 

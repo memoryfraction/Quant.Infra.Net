@@ -4,12 +4,24 @@ using System.Security.Claims;
 
 namespace Saas.Infra.MVC.Middleware
 {
+    /// <summary>
+    /// 自定义JWT验证中间件，使用固定的RSA安全密钥验证传入的Bearer令牌并绕过令牌头部的kid匹配。
+    /// Custom JWT validation middleware that validates incoming Bearer tokens using a fixed RSA security key and bypasses token header kid matching.
+    /// </summary>
     public class CustomJwtMiddleware
     {
         private readonly RequestDelegate _next;
         private readonly IConfiguration _configuration;
         private readonly RsaSecurityKey _validationKey;
 
+        /// <summary>
+        /// 初始化<see cref="CustomJwtMiddleware"/>的新实例。
+        /// Initializes a new instance of the <see cref="CustomJwtMiddleware"/> class.
+        /// </summary>
+        /// <param name="next">管道中的下一个中间件。 / The next middleware in the pipeline.</param>
+        /// <param name="configuration">应用程序配置。 / Application configuration.</param>
+        /// <param name="validationKey">用于验证传入令牌的RSA密钥。 / The RSA key used to validate incoming tokens.</param>
+        /// <exception cref="ArgumentNullException">当必需的参数为null时抛出。 / Thrown when required parameters are null.</exception>
         public CustomJwtMiddleware(
             RequestDelegate next,
             IConfiguration configuration,
@@ -20,8 +32,17 @@ namespace Saas.Infra.MVC.Middleware
             _validationKey = validationKey ?? throw new ArgumentNullException(nameof(validationKey));
         }
 
+        /// <summary>
+        /// 调用中间件以验证JWT并设置HttpContext.User主体。
+        /// Invokes the middleware to validate JWT and set the HttpContext.User principal.
+        /// </summary>
+        /// <param name="context">当前请求的HTTP上下文。 / HTTP context for the current request.</param>
+        /// <returns>表示请求处理完成的任务。 / A task that represents the completion of request processing.</returns>
+        /// <exception cref="ArgumentNullException">当context为null时抛出。 / Thrown when context is null.</exception>
         public async Task InvokeAsync(HttpContext context)
         {
+            if (context == null) throw new ArgumentNullException(nameof(context));
+
             var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
 
             if (string.IsNullOrEmpty(authHeader) ||
@@ -32,73 +53,66 @@ namespace Saas.Infra.MVC.Middleware
             }
 
             var token = authHeader["Bearer ".Length..].Trim();
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                await _next(context);
+                return;
+            }
 
             try
             {
                 var tokenHandler = new JwtSecurityTokenHandler();
 
-                // 读取并记录 token header（诊断用途）
                 JwtSecurityToken? jwtToken = null;
                 try
                 {
-                    // Log full incoming token for diagnostics
-                    Serilog.Log.Information("[JWT DEBUG] incoming raw token: {Token}", token);
+                    Serilog.Log.Information("[JWT DEBUG] Incoming raw token: {Token}", token);
 
                     jwtToken = tokenHandler.ReadJwtToken(token);
-                    Serilog.Log.Information("[JWT DEBUG] ReadJwtToken header alg={Alg}, kid={Kid}, typ={Typ}", jwtToken.Header.Alg, jwtToken.Header.Kid ?? "(none)", jwtToken.Header.Typ ?? "(none)");
-                    Serilog.Log.Information("[JWT DEBUG] ReadJwtToken rawHeader={RawHeader}", jwtToken.RawHeader);
-                    Serilog.Log.Information("[JWT DEBUG] ReadJwtToken rawPayload={RawPayload}", jwtToken.RawPayload);
+                    Serilog.Log.Information("[JWT DEBUG] Token header alg={Alg}, kid={Kid}, typ={Typ}", 
+                        jwtToken.Header.Alg, jwtToken.Header.Kid ?? "(none)", jwtToken.Header.Typ ?? "(none)");
+                    Serilog.Log.Information("[JWT DEBUG] Token rawHeader={RawHeader}", jwtToken.RawHeader);
+                    Serilog.Log.Information("[JWT DEBUG] Token rawPayload={RawPayload}", jwtToken.RawPayload);
                 }
                 catch (Exception rex)
                 {
-                    Serilog.Log.Warning(rex, "[JWT DEBUG] ReadJwtToken failed");
+                    Serilog.Log.Warning(rex, "[JWT DEBUG] Failed to read incoming token");
                 }
 
                 var validationParameters = new TokenValidationParameters
                 {
-                    // 必须验证签名
                     ValidateIssuerSigningKey = true,
-
-                    // 通过 Resolver 强制使用我们注入的固定公钥（绕过 token.kid）
                     IssuerSigningKeyResolver = (tokenString, securityToken, kid, parameters) =>
                     {
-                        Serilog.Log.Information("[JWT DEBUG] IssuerSigningKeyResolver called. token.kid={Kid}, configuredKeyId={KeyId}", kid ?? "(none)", _validationKey?.KeyId ?? "(none)");
+                        Serilog.Log.Information("[JWT DEBUG] IssuerSigningKeyResolver called. Token kid={Kid}, ValidationKey KeyId={KeyId}", 
+                            kid ?? "(none)", _validationKey?.KeyId ?? "(none)");
                         return new[] { _validationKey };
                     },
-
-                    // issuer 和 audience 校验（根据你之前 token 的实际值）
                     ValidateIssuer = true,
                     ValidIssuer = _configuration["Jwt:Issuer"] ?? JwtConstants.Issuer,
-
                     ValidateAudience = true,
                     ValidAudience = _configuration["Jwt:Audience"] ?? "Saas.Infra.Clients",
-
-                    // 时间校验
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero,
-
-                    // 要求 token 必须签名（默认就是，但显式写出来更安全）
                     RequireSignedTokens = true,
                 };
 
-                // 诊断：记录 validationParameters 关键信息
                 try
                 {
                     var keysCount = validationParameters.IssuerSigningKeys?.Count() ?? 0;
                     var hasResolver = validationParameters.IssuerSigningKeyResolver != null;
-                    Serilog.Log.Information("[JWT DEBUG] ValidationParameters prepared. IssuerSigningKeysCount={Count}, HasResolver={HasResolver}, validationKey.KeyId={KeyId}", keysCount, hasResolver, _validationKey?.KeyId ?? "(none)");
+                    Serilog.Log.Information("[JWT DEBUG] ValidationParameters: IssuerSigningKeysCount={Count}, HasResolver={HasResolver}, ValidationKey KeyId={KeyId}", 
+                        keysCount, hasResolver, _validationKey?.KeyId ?? "(none)");
                 }
                 catch (Exception lx)
                 {
                     Serilog.Log.Warning(lx, "[JWT DEBUG] Failed to log ValidationParameters details");
                 }
 
-                // 执行验证
                 var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
 
                 if (principal?.Identity is ClaimsIdentity identity)
                 {
-                    // 确保 AuthenticationType 正确，让 IsAuthenticated 为 true
                     var authenticatedIdentity = new ClaimsIdentity(
                         identity.Claims,
                         "Bearer",
@@ -108,27 +122,27 @@ namespace Saas.Infra.MVC.Middleware
                     context.User = new ClaimsPrincipal(authenticatedIdentity);
 
                     Serilog.Log.Information(
-                        "JWT 验证成功。User Name = {Name}, IsAuthenticated = {IsAuth}, AuthenticationType = {AuthType}",
+                        "[JWT DEBUG] JWT validation success. User Name={Name}, IsAuthenticated={IsAuth}, AuthenticationType={AuthType}",
                         context.User.Identity?.Name ?? "(unknown)",
                         context.User.Identity?.IsAuthenticated,
                         context.User.Identity?.AuthenticationType);
                 }
                 else
                 {
-                    Serilog.Log.Warning("Token 验证通过，但 principal.Identity 为 null 或不是 ClaimsIdentity");
+                    Serilog.Log.Warning("[JWT DEBUG] Token validation passed but principal.Identity is null or not ClaimsIdentity");
                 }
             }
             catch (SecurityTokenSignatureKeyNotFoundException ex)
             {
-                Serilog.Log.Error(ex, "签名密钥未找到：{Message}", ex.Message);
+                Serilog.Log.Error(ex, "[JWT ERROR] Signature key not found: {Message}", ex.Message);
             }
             catch (SecurityTokenInvalidSignatureException ex)
             {
-                Serilog.Log.Error(ex, "签名无效：{Message}", ex.Message);
+                Serilog.Log.Error(ex, "[JWT ERROR] Invalid signature: {Message}", ex.Message);
             }
             catch (Exception ex)
             {
-                Serilog.Log.Error(ex, "JWT 验证失败：{Message}", ex.Message);
+                Serilog.Log.Error(ex, "[JWT ERROR] JWT validation failed: {Message}", ex.Message);
             }
 
             await _next(context);

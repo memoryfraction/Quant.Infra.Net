@@ -379,7 +379,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 			try
 			{
 				// Get available products
-				var availableProducts = await _productConfigService.GetAvailableProductsAsync(null);
+				var availableProducts = await _productConfigService.GetAvailableProductsAsync(string.Empty);
 
 				var viewModel = new ProductSelectionViewModel
 				{

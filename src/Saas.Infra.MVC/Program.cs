@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.MVC.Middleware; // 引入自定义异常中间件
 using Serilog;
-using System.Text;
+using System.Security.Cryptography;
 
 namespace Saas.Infra.MVC
 {
@@ -38,65 +37,113 @@ namespace Saas.Infra.MVC
                 // ===================== 2. 替换默认日志为Serilog =====================
                 builder.Host.UseSerilog(); // 关键：让ASP.NET Core使用Serilog作为日志提供器
 
-                // ===================== 3. 读取JWT配置 =====================
-                var jwtSigningKey = builder.Configuration["Jwt:SigningKey"]
-                    ?? throw new ArgumentNullException("Jwt:SigningKey is not configured. Please check appsettings.json or user-secrets.");
+                // ===================== 3. 读取JWT配置 + 加载RSA密钥（核心修改） =====================
+                // JWT基础配置
                 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? JwtConstants.Issuer;
                 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "Saas.Infra.Clients";
 
-                // ===================== 4. 注册JWT认证服务（补充Serilog日志） =====================
-                builder.Services.AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidIssuer = jwtIssuer,
-                        ValidateAudience = true,
-                        ValidAudience = jwtAudience,
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
-                        ValidateLifetime = true,
-                        ClockSkew = TimeSpan.FromMinutes(5),
-                        RequireSignedTokens = true,
-                        RequireExpirationTime = true
-                    };
-                    options.SaveToken = false; // 纯JWT，不存Cookie
-                    options.IncludeErrorDetails = builder.Environment.IsDevelopment();
+                // 加载RSA私钥（SSO签发用）和公钥（验证用）
+                var privateKeyPath = builder.Configuration["Jwt:PrivateKeyPath"]
+                    ?? throw new ArgumentNullException("Jwt:PrivateKeyPath is not configured. Check appsettings.json.");
+                var publicKeyPath = builder.Configuration["Jwt:PublicKeyPath"]
+                    ?? throw new ArgumentNullException("Jwt:PublicKeyPath is not configured. Check appsettings.json.");
 
-                    // 替换Console为Serilog日志（同时输出到控制台+文件）
-                    options.Events = new JwtBearerEvents
-                    {
-                        OnAuthenticationFailed = context =>
-                        {
-                            Log.Error(context.Exception, "JWT authentication failed: {ErrorMessage}", context.Exception.Message);
-                            return Task.CompletedTask;
-                        },
-                        OnTokenValidated = context =>
-                        {
-                            var username = context.Principal?.Identity?.Name ?? "unknown user";
-                            Log.Information("JWT authentication succeeded for user: {Username}", username);
-                            return Task.CompletedTask;
-                        }
-                    };
+                // 验证密钥文件存在
+                if (!File.Exists(privateKeyPath))
+                    throw new FileNotFoundException("RSA private key file not found", privateKeyPath);
+                if (!File.Exists(publicKeyPath))
+                    throw new FileNotFoundException("RSA public key file not found", publicKeyPath);
+
+                // We will use a custom JWT middleware (CustomJwtMiddleware) instead of the built-in JwtBearer handler.
+                // Register RSA private instance first (used by TokenService to sign tokens and by validation key below).
+                builder.Services.AddSingleton(sp =>
+                {
+                    var configuration = sp.GetRequiredService<IConfiguration>();
+                    var keyPath = configuration["Jwt:PrivateKeyPath"]
+                        ?? throw new InvalidOperationException("Jwt:PrivateKeyPath is not configured.");
+                    if (!File.Exists(keyPath))
+                        throw new FileNotFoundException("RSA private key file not found", keyPath);
+
+                    var keyText = File.ReadAllText(keyPath);
+                    var rsaInstance = RSA.Create();
+                    rsaInstance.ImportFromPem(keyText);
+                    Log.Information("RSA private key loaded successfully from {KeyPath}", keyPath);
+                    return rsaInstance;
                 });
 
-                // ===================== 5. 极简Swagger配置 =====================
+                // Register a single RsaSecurityKey based on the RSA singleton so TokenService and middleware share the same key.
+                builder.Services.AddSingleton(sp =>
+                {
+                    var rsa = sp.GetRequiredService<RSA>();
+                    var publicBytes = rsa.ExportSubjectPublicKeyInfo();
+                    using var shaForKid = System.Security.Cryptography.SHA256.Create();
+                    var kidBytes = shaForKid.ComputeHash(publicBytes);
+                    var keyId = Base64UrlEncoder.Encode(kidBytes);
+                    Log.Information("Computed JWT KeyId (kid): {KeyId}", keyId);
+                    return new RsaSecurityKey(rsa) { KeyId = keyId };
+                });
+
+                // ===================== 5. 注册RSA私钥实例到DI容器（供TokenService签发用） =====================
+                // 使用 Singleton 生命周期，RSA实例在应用程序生命周期内保持不变。
+                // RSA instances are thread-safe and should be reused across requests for better performance.
+                builder.Services.AddSingleton(sp =>
+                {
+                    var configuration = sp.GetRequiredService<IConfiguration>();
+                    var keyPath = configuration["Jwt:PrivateKeyPath"]
+                        ?? throw new InvalidOperationException("Jwt:PrivateKeyPath is not configured.");
+                    if (!File.Exists(keyPath))
+                        throw new FileNotFoundException("RSA private key file not found", keyPath);
+
+                    var keyText = File.ReadAllText(keyPath);
+                    var rsaInstance = RSA.Create();
+                    rsaInstance.ImportFromPem(keyText);
+                    Log.Information("RSA private key loaded successfully from {KeyPath}", keyPath);
+                    return rsaInstance;
+                });
+
+                // ===================== 6. 极简Swagger配置 =====================
                 builder.Services.AddEndpointsApiExplorer();
                 builder.Services.AddSwaggerGen(c =>
                 {
                     c.SwaggerDoc("v1", new() { Title = "Saas.Infra.MVC API", Version = "v1" });
+                    // 新增：Swagger支持JWT授权
+                    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                    {
+                        Name = "Authorization",
+                        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                        Scheme = "bearer",
+                        BearerFormat = "JWT",
+                        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                        Description = "Enter 'Bearer' followed by a space and your JWT token."
+                    });
+                    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+                    {
+                        {
+                            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                            {
+                                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                                {
+                                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                                    Id = "Bearer"
+                                }
+                            },
+                            Array.Empty<string>()
+                        }
+                    });
                 });
 
-                // ===================== 6. 注册基础服务 =====================
+                // ===================== 7. 注册基础服务 =====================
                 builder.Services.AddAuthorization();
+                // Register a placeholder authentication handler for the "Bearer" scheme so
+                // the framework can issue proper challenges/forbids when [Authorize] fails.
+                builder.Services.AddAuthentication(options =>
+                {
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                })
+                .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, Saas.Infra.MVC.Middleware.DummyJwtAuthenticationHandler>(JwtBearerDefaults.AuthenticationScheme, options => { });
                 builder.Services.AddControllersWithViews();
                 builder.Services.AddLogging(); // 供异常中间件使用
-                
+
                 // Add session support for MVC
                 builder.Services.AddSession(options =>
                 {
@@ -106,7 +153,7 @@ namespace Saas.Infra.MVC
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
                 });
-                
+
                 // Add CSRF protection
                 builder.Services.AddAntiforgery(options =>
                 {
@@ -116,14 +163,15 @@ namespace Saas.Infra.MVC
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
                 });
-                
+
                 // Add HTTP client factory for API calls
                 builder.Services.AddHttpClient();
 
                 // Register application services and data access
                 // Bind Jwt options and register token service
                 builder.Services.Configure<Saas.Infra.Core.JwtOptions>(builder.Configuration.GetSection("Jwt"));
-                builder.Services.AddSingleton<Saas.Infra.Core.ITokenService, Saas.Infra.Core.TokenService>();
+                // ITokenService is Scoped and depends on Singleton RSA instance
+                builder.Services.AddScoped<Saas.Infra.Core.ITokenService, Saas.Infra.SSO.TokenService>();
 
                 // Register EF Core DbContext and repositories
                 var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -146,7 +194,7 @@ namespace Saas.Infra.MVC
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Redirect.IRedirectValidator, Saas.Infra.MVC.Services.Redirect.RedirectValidator>();
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Product.IProductConfigService, Saas.Infra.MVC.Services.Product.ProductConfigService>();
 
-                // ===================== 7. 构建应用并配置管道 =====================
+                // ===================== 8. 构建应用并配置管道 =====================
                 var app = builder.Build();
 
                 // 【核心】注册全局异常中间件（必须放在管道最前面）
@@ -164,7 +212,7 @@ namespace Saas.Infra.MVC
 
                 app.UseHttpsRedirection();
                 app.UseRouting();
-                
+
                 // Add session middleware
                 app.UseSession();
 
@@ -175,21 +223,62 @@ namespace Saas.Infra.MVC
                     app.UseSwaggerUI(options =>
                     {
                         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Saas.Infra.MVC API v1");
-                        options.RoutePrefix = "swagger"; 
+                        options.RoutePrefix = "swagger";
                     });
                 }
 
                 // 认证&授权
                 app.UseAuthentication();
+                // Custom JWT middleware performs token validation and sets HttpContext.User
+                app.UseMiddleware<CustomJwtMiddleware>();
                 app.UseAuthorization();
 
-                app.MapStaticAssets();
+                // Add antiforgery middleware
+                app.UseAntiforgery();
+
                 app.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Account}/{action=Login}/{id?}")
-                    .WithStaticAssets();
+                    pattern: "{controller=Account}/{action=Login}/{id?}");
 
                 Log.Information("Saas.Infra.MVC started, listening on: {Urls}", string.Join("; ", app.Urls));
+                
+                // Initialize database and seed test data
+                using (var scope = app.Services.CreateScope())
+                {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<Saas.Infra.Data.ApplicationDbContext>();
+                    try
+                    {
+                        // Ensure database is created
+                        dbContext.Database.EnsureCreated();
+                        Log.Information("Database initialized successfully");
+                        
+                        // Seed test user if not exists
+                        var userRepository = scope.ServiceProvider.GetRequiredService<Saas.Infra.Core.IUserRepository>();
+                        var passwordHasher = scope.ServiceProvider.GetRequiredService<Saas.Infra.Core.IPasswordHasher>();
+                        
+                        var testUser = userRepository.GetByEmailAsync("test@126.com").Result;
+                        if (testUser == null)
+                        {
+                            var newUser = new Saas.Infra.Core.User
+                            {
+                                Username = "test_user",
+                                Email = "test@126.com",
+                                PasswordHash = passwordHasher.HashPassword("Test@123456"),
+                                CreatedTime = DateTime.UtcNow
+                            };
+                            userRepository.AddAsync(newUser).Wait();
+                            Log.Information("Test user created: test@126.com");
+                        }
+
+                        // Product seeding disabled to avoid schema mismatch with target database.
+                        // Use EF Core migrations or manual SQL scripts to create and seed Products table.
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Error during database initialization");
+                    }
+                }
+                
                 app.Run();
             }
             catch (Exception ex)

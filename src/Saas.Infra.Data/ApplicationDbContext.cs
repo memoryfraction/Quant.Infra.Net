@@ -14,6 +14,7 @@ namespace Saas.Infra.Data
 
         public DbSet<UserEntity> Users { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+        public DbSet<ProductEntity> Products { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -35,6 +36,46 @@ namespace Saas.Infra.Data
                 entity.Property(e => e.CreatedBy).HasColumnName("CreatedBy");
                 entity.Property(e => e.UpdatedBy).HasColumnName("UpdatedBy");
                 entity.Property(e => e.IsDeleted).HasColumnName("IsDeleted");
+            });
+
+            // Product entity mapping (matches product pricing schema)
+            modelBuilder.Entity<ProductEntity>(entity =>
+            {
+                entity.ToTable("Products");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id");
+
+                entity.Property(e => e.Code)
+                    .HasColumnName("Code")
+                    .HasMaxLength(50)
+                    .IsRequired();
+                entity.HasIndex(e => e.Code).IsUnique();
+
+                entity.Property(e => e.Name)
+                    .HasColumnName("Name")
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.Description)
+                    .HasColumnName("Description")
+                    .HasColumnType("text");
+
+                entity.Property(e => e.AllowedPaymentGateways)
+                    .HasColumnName("AllowedPaymentGateways")
+                    .HasColumnType("text[]");
+
+                entity.Property(e => e.IsActive)
+                    .HasColumnName("IsActive");
+
+                entity.Property(e => e.Metadata)
+                    .HasColumnName("Metadata")
+                    .HasColumnType("jsonb");
+
+                entity.Property(e => e.CreatedTime).HasColumnName("CreatedTime");
+                entity.Property(e => e.UpdatedTime).HasColumnName("UpdatedTime");
+
+                entity.Property(e => e.CreatedBy).HasColumnName("CreatedBy");
+                entity.Property(e => e.UpdatedBy).HasColumnName("UpdatedBy");
             });
         }
     }

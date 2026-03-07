@@ -253,13 +253,22 @@
                         if (data.expiresIn) {
                             sessionStorage.setItem('expiresIn', data.expiresIn);
                         }
-                        
-                        // If valid redirect URL, navigate directly
-                        if (data.redirectUrl && !data.showProductSelection) {
-                            window.location.href = data.redirectUrl;
+
+                        // If redirectUrl provided by server use it, otherwise go to dashboard
+                        if (data.redirectUrl) {
+                            // Append tokens to redirect URL as query parameters
+                            try {
+                                const separator = data.redirectUrl.indexOf('?') === -1 ? '?' : '&';
+                                const access = data.accessToken ? '&access_token=' + encodeURIComponent(data.accessToken) : '';
+                                const refresh = data.refreshToken ? '&refresh_token=' + encodeURIComponent(data.refreshToken) : '';
+                                const urlToGo = data.redirectUrl + separator + 'source=saas_infra' + access + refresh;
+                                window.location.href = urlToGo;
+                            } catch (e) {
+                                // Fallback: navigate without appending tokens
+                                window.location.href = data.redirectUrl;
+                            }
                         } else {
-                            // Navigate to product selection page
-                            window.location.href = '@Url.Action("ProductSelection", "Account")';
+                            window.location.href = '/dashboard';
                         }
                     } else {
                         // Show error message

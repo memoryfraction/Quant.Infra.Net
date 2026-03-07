@@ -278,6 +278,36 @@ namespace Saas.Infra.MVC
                             userRepository.AddAsync(newUser).Wait();
                             Log.Information("Test user created: test@126.com");
                         }
+
+                        // Seed sample products if Products table is empty (useful for local development)
+                        try
+                        {
+                            if (!dbContext.Products.Any())
+                            {
+                                dbContext.Products.AddRange(
+                                    new Saas.Infra.Data.ProductEntity
+                                    {
+                                        Id = "product_alpha",
+                                        Name = "Product Alpha",
+                                        Url = "/alpha",
+                                        Description = "Sample product: Alpha"
+                                    },
+                                    new Saas.Infra.Data.ProductEntity
+                                    {
+                                        Id = "product_beta",
+                                        Name = "Product Beta",
+                                        Url = "/beta",
+                                        Description = "Sample product: Beta"
+                                    }
+                                );
+                                dbContext.SaveChanges();
+                                Log.Information("Seeded sample products into Products table");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "Failed to seed sample products");
+                        }
                     }
                     catch (Exception ex)
                     {

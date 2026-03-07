@@ -1,4 +1,4 @@
-@model UserProfileViewModel
+@model Saas.Infra.MVC.Models.DashboardViewModel
 
 @{
     ViewData["Title"] = "Dashboard - Saas.Infra";
@@ -282,6 +282,35 @@
             <h1>Welcome, <span>@Model.Username</span>!</h1>
             <p>You are successfully logged in to Saas.Infra</p>
         </div>
+
+        <!-- Product list (loaded from database) -->
+        @if (Model.Products != null && Model.Products.Any())
+        {
+            <div class="product-container card" style="margin-bottom:20px; padding:20px;">
+                <h2 style="margin-bottom:12px;">Available Products</h2>
+                <div class="row">
+                    @foreach (var product in Model.Products)
+                    {
+                        <div class="col-md-4" style="margin-bottom:12px;">
+                            <div class="card h-100" style="padding:12px;">
+                                @if (!string.IsNullOrEmpty(product.IconUrl))
+                                {
+                                    <img src="@product.IconUrl" alt="@product.Name" style="width:100%; height:120px; object-fit:cover; border-radius:6px;" />
+                                }
+                                <div style="padding-top:8px;">
+                                    <h5>@product.Name</h5>
+                                    @if (!string.IsNullOrEmpty(product.Description))
+                                    {
+                                        <p style="color:#666; font-size:14px;">@product.Description</p>
+                                    }
+                                    <a class="btn btn-primary" href="@product.Url">Enter</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
 
         <div class="dashboard-grid">
             <div class="card">

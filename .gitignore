@@ -422,3 +422,4 @@ FodyWeavers.xsd
 /src/.kiro/specs/code-quality-improvement/post-refactoring-metrics.md
 /src/.kiro/specs/code-quality-improvement/requirements.md
 /src/.kiro/specs/code-quality-improvement/tasks.md
+/src/Saas.Infra.MVC/Secrets/sso_rsa_private.pem

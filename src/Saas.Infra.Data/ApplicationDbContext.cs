@@ -14,6 +14,7 @@ namespace Saas.Infra.Data
 
         public DbSet<UserEntity> Users { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+        public DbSet<ProductEntity> Products { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -35,6 +36,18 @@ namespace Saas.Infra.Data
                 entity.Property(e => e.CreatedBy).HasColumnName("CreatedBy");
                 entity.Property(e => e.UpdatedBy).HasColumnName("UpdatedBy");
                 entity.Property(e => e.IsDeleted).HasColumnName("IsDeleted");
+            });
+
+            // Product entity mapping
+            modelBuilder.Entity<ProductEntity>(entity =>
+            {
+                entity.ToTable("Products");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id");
+                entity.Property(e => e.Name).HasColumnName("Name");
+                entity.Property(e => e.Url).HasColumnName("Url");
+                entity.Property(e => e.IconUrl).HasColumnName("IconUrl");
+                entity.Property(e => e.Description).HasColumnName("Description");
             });
         }
     }

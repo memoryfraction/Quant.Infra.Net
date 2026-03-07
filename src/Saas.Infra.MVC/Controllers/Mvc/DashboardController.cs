@@ -27,13 +27,14 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		/// 应用程序配置。
 		/// Application configuration.
 		/// </summary>
-		private readonly IConfiguration _configuration;
+        private readonly IConfiguration _configuration;
+        private readonly Saas.Infra.MVC.Services.Product.IProductConfigService _productConfigService;
 
-		/// <summary>
-		/// 后端API基础URL。
-		/// Backend API base URL.
-		/// </summary>
-		private readonly string _apiBaseUrl;
+        /// <summary>
+        /// 后端API基础URL。
+        /// Backend API base URL.
+        /// </summary>
+        private readonly string _apiBaseUrl;
 
 		/// <summary>
 		/// 构造函数 - 依赖注入。
@@ -43,16 +44,18 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		/// <param name="logger">日志记录器 / Logger instance</param>
 		/// <param name="configuration">应用程序配置 / Application configuration</param>
 		/// <exception cref="ArgumentNullException">当参数为null时抛出 / Thrown when parameter is null</exception>
-		public DashboardController(
-			IHttpClientFactory httpClientFactory,
-			ILogger<DashboardController> logger,
-			IConfiguration configuration)
+        public DashboardController(
+            IHttpClientFactory httpClientFactory,
+            ILogger<DashboardController> logger,
+            IConfiguration configuration,
+            Saas.Infra.MVC.Services.Product.IProductConfigService productConfigService)
 		{
 			// Parameter validation
 			_httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory), "IHttpClientFactory cannot be null");
 			_logger = logger ?? throw new ArgumentNullException(nameof(logger), "ILogger cannot be null");
-			_configuration = configuration ?? throw new ArgumentNullException(nameof(configuration), "IConfiguration cannot be null");
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration), "IConfiguration cannot be null");
 			_apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7268";
+            _productConfigService = productConfigService ?? throw new ArgumentNullException(nameof(productConfigService));
 		}
 
 		/// <summary>
@@ -99,18 +102,44 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 				}
 
 				var responseContent = await response.Content.ReadAsStringAsync();
-				var userProfile = JsonSerializer.Deserialize<UserProfileViewModel>(
-					responseContent,
-					new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var userProfile = JsonSerializer.Deserialize<UserProfileViewModel>(
+                    responseContent,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-				if (userProfile == null)
-				{
-					_logger.LogError("Failed to deserialize user profile");
-					return RedirectToAction("Login", "Account");
-				}
+                if (userProfile == null)
+                {
+                    _logger.LogError("Failed to deserialize user profile");
+                    return RedirectToAction("Login", "Account");
+                }
 
-				_logger.LogInformation("Dashboard loaded for user: {Username}", userProfile.Username);
-				return View(userProfile);
+                // Build dashboard view model including available products and tokens
+                var dashboardModel = new Saas.Infra.MVC.Models.DashboardViewModel
+                {
+                    Id = userProfile.Id,
+                    Username = userProfile.Username,
+                    Email = userProfile.GetType().GetProperty("Email") != null ? (string?)userProfile.GetType().GetProperty("Email")?.GetValue(userProfile) : null,
+                    CreatedAt = userProfile.CreatedAt,
+                    AccessToken = accessToken,
+                    RefreshToken = HttpContext.Session.GetString("RefreshToken"),
+                    ExpiresIn = HttpContext.Session.GetInt32("ExpiresIn") ?? 0
+                };
+
+                try
+                {
+                    var availableProducts = await _productConfigService.GetAvailableProductsAsync(userProfile.Username);
+                    if (availableProducts != null && availableProducts.Any())
+                    {
+                        dashboardModel.Products = availableProducts;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load available products for user {Username}", userProfile.Username);
+                    dashboardModel.WarningMessage = "无法加载可用产品列表";
+                }
+
+                _logger.LogInformation("Dashboard loaded for user: {Username}", userProfile.Username);
+                return View(dashboardModel);
 			}
 			catch (Exception ex)
 			{
@@ -139,10 +168,16 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		public string Username { get; set; } = string.Empty;
 
 		/// <summary>
-		/// 账户创建时间。
-		/// Account creation time.
+		/// 账户创建时间（后端返回字段通常为 CreatedTime）。
+		/// Account creation time (backend often returns CreatedTime).
 		/// </summary>
-		public DateTime CreatedAt { get; set; }
+		public DateTime CreatedTime { get; set; }
+
+		/// <summary>
+		/// 兼容属性：CreatedAt，返回 CreatedTime。
+		/// Compatibility property: CreatedAt returns CreatedTime.
+		/// </summary>
+		public DateTime CreatedAt => CreatedTime;
 
 		/// <summary>
 		/// 获取账户创建日期的格式化字符串。
@@ -155,5 +190,10 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		/// Gets the first letter of username for avatar.
 		/// </summary>
 		public string AvatarInitial => string.IsNullOrEmpty(Username) ? "U" : Username[0].ToString().ToUpper();
+
+		/// <summary>
+		/// 用户Email（后端返回）
+		/// </summary>
+		public string? Email { get; set; }
 	}
 }

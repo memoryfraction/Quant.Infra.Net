@@ -1,28 +1,40 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>8a44ede1-a899-4cbf-8e5a-66ae432759e2</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UserSecretsId>8a44ede1-a899-4cbf-8e5a-66ae432759e2</UserSecretsId>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Serilog" Version="4.3.1" />
-    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
-    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.4" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.4" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.4" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.4" />
-  </ItemGroup>
+	<ItemGroup>
+		<!-- JWT 认证核心包 -->
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
+        <!-- Blazor Web App (removed) -->
+		<!-- EF Core 设计时工具 -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<!-- Serilog 日志 -->
+		<PackageReference Include="Serilog" Version="4.3.1" />
+		<PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+		<PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+		<!-- Swagger 核心包（降级为 6.5.0，解决命名空间问题） -->
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+		<!-- RSA 加密相关 -->
+		<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.3" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Saas.Infra.SSO\Saas.Infra.SSO.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Saas.Infra.Data\Saas.Infra.Data.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Saas.Infra.SSO\Saas.Infra.SSO.csproj" />
+		<ProjectReference Include="..\Saas.Infra.Data\Saas.Infra.Data.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Components\Layout\" />
+	  <Folder Include="Components\Pages\" />
+	</ItemGroup>
 
 </Project>

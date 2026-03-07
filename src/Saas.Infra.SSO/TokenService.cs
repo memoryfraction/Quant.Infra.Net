@@ -15,7 +15,7 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
     public class TokenService : ITokenService
     {
         private readonly JwtOptions _options;
-        private readonly RSA _rsa; // 注入RSA实例，用于签名
+        private readonly Microsoft.IdentityModel.Tokens.RsaSecurityKey _signingKey; // 注入带 KeyId 的签名密钥
 
         /// <summary>
         /// 初始化 <see cref="TokenService"/> 的新实例（适配RSA签名）。
@@ -24,10 +24,10 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
         /// <param name="options">JWT配置选项 / JWT configuration options</param>
         /// <param name="rsa">RSA加密实例 / RSA encryption instance</param>
         /// <exception cref="ArgumentNullException">参数为空时抛出 / Thrown when parameters are null</exception>
-        public TokenService(IOptions<JwtOptions> options, RSA rsa)
+        public TokenService(IOptions<JwtOptions> options, Microsoft.IdentityModel.Tokens.RsaSecurityKey signingKey)
         {
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-            _rsa = rsa ?? throw new ArgumentNullException(nameof(rsa), "RSA instance is required for JWT signing");
+            _signingKey = signingKey ?? throw new ArgumentNullException(nameof(signingKey), "RsaSecurityKey is required for JWT signing");
         }
 
         /// <summary>
@@ -48,6 +48,7 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, username), // JWT标准用户标识
+                new Claim(ClaimTypes.Name, username), // ensure Name claim so ClaimsIdentity.Name is populated
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // 令牌唯一ID
                 new Claim("client_id", clientId ?? "default"), // 客户端ID
                 new Claim(ClaimTypes.Role, "User") // 默认角色
@@ -61,7 +62,7 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
 
             // 核心修改：使用RSA非对称加密签名（替换原有的对称加密）
             var signingCreds = new SigningCredentials(
-                key: new RsaSecurityKey(_rsa), // RSA密钥
+                key: _signingKey,
                 algorithm: SecurityAlgorithms.RsaSha256 // RSA-SHA256签名算法
             );
 
@@ -77,9 +78,37 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
                 signingCredentials: signingCreds
             );
 
+            // Ensure kid present in header when signing key has KeyId
+            try
+            {
+                if (!token.Header.ContainsKey("kid") && !string.IsNullOrEmpty(_signingKey?.KeyId))
+                {
+                    token.Header["kid"] = _signingKey.KeyId;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to ensure kid in JWT header");
+            }
+
             // 序列化令牌为字符串
             var tokenHandler = new JwtSecurityTokenHandler();
             var accessToken = tokenHandler.WriteToken(token);
+
+            // Diagnostic logging: show full token and header/payload to help debug mismatches
+            try
+            {
+                var produced = tokenHandler.ReadJwtToken(accessToken);
+                Log.Information("[TOKEN DEBUG] full token: {Token}", accessToken);
+                Log.Information("[TOKEN DEBUG] produced token header alg={Alg}, kid={Kid}", produced.Header.Alg, produced.Header.Kid ?? "(none)");
+                Log.Information("[TOKEN DEBUG] produced token rawHeader={RawHeader}", produced.RawHeader);
+                Log.Information("[TOKEN DEBUG] produced token rawPayload={RawPayload}", produced.RawPayload);
+                Log.Information("[TOKEN DEBUG] signingKey KeyId={KeyId}, has RSA={HasRsa}", _signingKey?.KeyId ?? "(none)", _signingKey?.Rsa != null);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[TOKEN DEBUG] failed to read produced token header");
+            }
 
             Log.Information("RSA-signed token generated for user {Username}", username);
 
@@ -119,9 +148,9 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
                     RequireSignedTokens = true,
                     RequireExpirationTime = true,
 
-                    // 核心修改：使用RSA公钥验证签名
+                // 核心修改：使用注入的 signing key 验证签名
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new RsaSecurityKey(_rsa) // 与签名用的RSA实例一致（自动使用公钥验证）
+                    IssuerSigningKey = _signingKey
                 };
 
                 // 验证令牌并解析Claims

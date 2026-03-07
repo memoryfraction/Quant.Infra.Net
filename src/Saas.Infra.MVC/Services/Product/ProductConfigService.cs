@@ -31,21 +31,34 @@ public class ProductConfigService : IProductConfigService
             DbConnection? conn = _db.Database.GetDbConnection();
             await conn.OpenAsync();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT \"Id\", \"Name\", \"Url\", \"Description\" FROM \"Products\"";
+            // Read columns according to new schema. Use Code as public Id.
+            cmd.CommandText = "SELECT \"Code\", \"Name\", \"Description\", \"AllowedPaymentGateways\", \"Metadata\", \"IsActive\" FROM \"Products\" WHERE coalesce(\"IsActive\", true) = true";
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
-                var id = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                var code = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
                 var name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
-                var url = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
-                var desc = reader.FieldCount > 3 && !reader.IsDBNull(3) ? reader.GetString(3) : null;
+                var desc = reader.FieldCount > 2 && !reader.IsDBNull(2) ? reader.GetString(2) : null;
+
+                string[]? gateways = null;
+                if (reader.FieldCount > 3 && !reader.IsDBNull(3))
+                {
+                    try { gateways = reader.GetFieldValue<string[]>(3); } catch { gateways = null; }
+                }
+
+                string? metadata = null;
+                if (reader.FieldCount > 4 && !reader.IsDBNull(4))
+                {
+                    try { metadata = reader.GetFieldValue<string>(4); } catch { metadata = null; }
+                }
 
                 result.Add(new ProductInfo
                 {
-                    Id = id,
+                    Id = code,
                     Name = name,
-                    Url = url,
-                    Description = desc
+                    Description = desc,
+                    AllowedPaymentGateways = gateways,
+                    Metadata = metadata
                 });
             }
         }

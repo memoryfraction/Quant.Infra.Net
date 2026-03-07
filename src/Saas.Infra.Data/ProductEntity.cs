@@ -1,35 +1,66 @@
 using System;
+using System.Text.Json;
 
 namespace Saas.Infra.Data
 {
     /// <summary>
-    /// Product entity stored in database.
+    /// Product entity stored in database following product pricing schema.
     /// </summary>
     public class ProductEntity
     {
         /// <summary>
-        /// Product identifier (primary key), e.g., "cryptocycleai"
+        /// Primary key (UUID)
         /// </summary>
-        public string Id { get; set; } = string.Empty;
+        public Guid Id { get; set; }
 
         /// <summary>
-        /// Product display name
+        /// Business code (unique), used as public product identifier
+        /// </summary>
+        public string Code { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Display name
         /// </summary>
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Url to enter the product (can be absolute or relative)
-        /// </summary>
-        public string Url { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Optional icon url
-        /// </summary>
-        public string? IconUrl { get; set; }
-
-        /// <summary>
-        /// Optional description
+        /// Description (text)
         /// </summary>
         public string? Description { get; set; }
+
+        /// <summary>
+        /// Allowed payment gateways (text[])
+        /// </summary>
+        public string[]? AllowedPaymentGateways { get; set; }
+
+        /// <summary>
+        /// Whether product is active
+        /// </summary>
+        public bool IsActive { get; set; } = true;
+
+        /// <summary>
+        /// JSON metadata (jsonb)
+        /// </summary>
+        public JsonDocument? Metadata { get; set; }
+
+        /// <summary>
+        /// Created timestamp (with timezone)
+        /// </summary>
+        public DateTimeOffset CreatedTime { get; set; }
+
+        /// <summary>
+        /// Updated timestamp (with timezone)
+        /// </summary>
+        public DateTimeOffset? UpdatedTime { get; set; }
+
+        /// <summary>
+        /// Audit: created by user id
+        /// </summary>
+        public Guid? CreatedBy { get; set; }
+
+        /// <summary>
+        /// Audit: updated by user id
+        /// </summary>
+        public Guid? UpdatedBy { get; set; }
     }
 }

@@ -37,12 +37,22 @@ public class ProductInfo
     public string Url { get; set; } = string.Empty;
 
     /// <summary>
-    /// Optional product icon URL
+    /// Optional product description
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Optional product icon URL (not persisted in new schema; may be provided by metadata)
     /// </summary>
     public string? IconUrl { get; set; }
 
     /// <summary>
-    /// Optional product description
+    /// Allowed payment gateways (text[])
     /// </summary>
-    public string? Description { get; set; }
+    public string[]? AllowedPaymentGateways { get; set; }
+
+    /// <summary>
+    /// Raw JSON metadata
+    /// </summary>
+    public string? Metadata { get; set; }
 }

@@ -54,51 +54,33 @@ namespace Saas.Infra.MVC
                 if (!File.Exists(publicKeyPath))
                     throw new FileNotFoundException("RSA public key file not found", publicKeyPath);
 
-                // 读取并导入RSA公钥（仅用于此处的Token验证）
-                var rsaPublicKey = RSA.Create();
-                string publicKeyText = File.ReadAllText(publicKeyPath);
-                rsaPublicKey.ImportFromPem(publicKeyText); // 导入公钥（验证Token）
-
-                // ===================== 4. 注册JWT认证服务（替换为RSA签名） =====================
-                builder.Services.AddAuthentication(options =>
+                // We will use a custom JWT middleware (CustomJwtMiddleware) instead of the built-in JwtBearer handler.
+                // Register RSA private instance first (used by TokenService to sign tokens and by validation key below).
+                builder.Services.AddSingleton(sp =>
                 {
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidIssuer = jwtIssuer,
-                        ValidateAudience = true,
-                        ValidAudience = jwtAudience,
-                        ValidateIssuerSigningKey = true,
-                        // ✅ 核心修改：替换为RSA公钥验证签名
-                        IssuerSigningKey = new RsaSecurityKey(rsaPublicKey),
-                        ValidateLifetime = true,
-                        ClockSkew = TimeSpan.Zero, // 生产环境建议0偏移（严格过期）
-                        RequireSignedTokens = true,
-                        RequireExpirationTime = true
-                    };
-                    options.SaveToken = false; // 纯JWT，不存Cookie
-                    options.IncludeErrorDetails = builder.Environment.IsDevelopment();
+                    var configuration = sp.GetRequiredService<IConfiguration>();
+                    var keyPath = configuration["Jwt:PrivateKeyPath"]
+                        ?? throw new InvalidOperationException("Jwt:PrivateKeyPath is not configured.");
+                    if (!File.Exists(keyPath))
+                        throw new FileNotFoundException("RSA private key file not found", keyPath);
 
-                    // 替换Console为Serilog日志（同时输出到控制台+文件）
-                    options.Events = new JwtBearerEvents
-                    {
-                        OnAuthenticationFailed = context =>
-                        {
-                            Log.Error(context.Exception, "JWT authentication failed: {ErrorMessage}", context.Exception.Message);
-                            return Task.CompletedTask;
-                        },
-                        OnTokenValidated = context =>
-                        {
-                            var username = context.Principal?.Identity?.Name ?? "unknown user";
-                            Log.Information("JWT authentication succeeded for user: {Username}", username);
-                            return Task.CompletedTask;
-                        }
-                    };
+                    var keyText = File.ReadAllText(keyPath);
+                    var rsaInstance = RSA.Create();
+                    rsaInstance.ImportFromPem(keyText);
+                    Log.Information("RSA private key loaded successfully from {KeyPath}", keyPath);
+                    return rsaInstance;
+                });
+
+                // Register a single RsaSecurityKey based on the RSA singleton so TokenService and middleware share the same key.
+                builder.Services.AddSingleton(sp =>
+                {
+                    var rsa = sp.GetRequiredService<RSA>();
+                    var publicBytes = rsa.ExportSubjectPublicKeyInfo();
+                    using var shaForKid = System.Security.Cryptography.SHA256.Create();
+                    var kidBytes = shaForKid.ComputeHash(publicBytes);
+                    var keyId = Base64UrlEncoder.Encode(kidBytes);
+                    Log.Information("Computed JWT KeyId (kid): {KeyId}", keyId);
+                    return new RsaSecurityKey(rsa) { KeyId = keyId };
                 });
 
                 // ===================== 5. 注册RSA私钥实例到DI容器（供TokenService签发用） =====================
@@ -152,6 +134,13 @@ namespace Saas.Infra.MVC
 
                 // ===================== 7. 注册基础服务 =====================
                 builder.Services.AddAuthorization();
+                // Register a placeholder authentication handler for the "Bearer" scheme so
+                // the framework can issue proper challenges/forbids when [Authorize] fails.
+                builder.Services.AddAuthentication(options =>
+                {
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                })
+                .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, Saas.Infra.MVC.Middleware.DummyJwtAuthenticationHandler>(JwtBearerDefaults.AuthenticationScheme, options => { });
                 builder.Services.AddControllersWithViews();
                 builder.Services.AddLogging(); // 供异常中间件使用
 
@@ -240,6 +229,8 @@ namespace Saas.Infra.MVC
 
                 // 认证&授权
                 app.UseAuthentication();
+                // Custom JWT middleware performs token validation and sets HttpContext.User
+                app.UseMiddleware<CustomJwtMiddleware>();
                 app.UseAuthorization();
 
                 // Add antiforgery middleware
@@ -279,35 +270,8 @@ namespace Saas.Infra.MVC
                             Log.Information("Test user created: test@126.com");
                         }
 
-                        // Seed sample products if Products table is empty (useful for local development)
-                        try
-                        {
-                            if (!dbContext.Products.Any())
-                            {
-                                dbContext.Products.AddRange(
-                                    new Saas.Infra.Data.ProductEntity
-                                    {
-                                        Id = "product_alpha",
-                                        Name = "Product Alpha",
-                                        Url = "/alpha",
-                                        Description = "Sample product: Alpha"
-                                    },
-                                    new Saas.Infra.Data.ProductEntity
-                                    {
-                                        Id = "product_beta",
-                                        Name = "Product Beta",
-                                        Url = "/beta",
-                                        Description = "Sample product: Beta"
-                                    }
-                                );
-                                dbContext.SaveChanges();
-                                Log.Information("Seeded sample products into Products table");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Warning(ex, "Failed to seed sample products");
-                        }
+                        // Product seeding disabled to avoid schema mismatch with target database.
+                        // Use EF Core migrations or manual SQL scripts to create and seed Products table.
                     }
                     catch (Exception ex)
                     {

@@ -37,4 +37,13 @@
 	  <Folder Include="Components\Pages\" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Update="PublicKeys\sso_rsa_public.pem">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Secrets\sso_rsa_private.pem">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 </Project>

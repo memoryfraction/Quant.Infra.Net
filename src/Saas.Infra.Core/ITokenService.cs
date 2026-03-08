@@ -8,7 +8,11 @@ namespace Saas.Infra.Core
         /// <summary>
         /// 生成 JWT 访问令牌及刷新令牌。
         /// </summary>
-        JwtTokenResponse GenerateToken(string username, string? clientId = null, IEnumerable<Claim>? additionalClaims = null);
+        /// <param name="email">用户邮箱（稳定标识）。 / User email (stable identifier).</param>
+        /// <param name="clientId">客户端ID。 / Client ID.</param>
+        /// <param name="additionalClaims">附加声明。 / Additional claims.</param>
+        /// <returns>JWT令牌响应。 / JWT token response.</returns>
+        JwtTokenResponse GenerateToken(string email, string? clientId = null, IEnumerable<Claim>? additionalClaims = null);
 
         /// <summary>
         /// [新增] 验证 JWT 令牌并提取声明主体。

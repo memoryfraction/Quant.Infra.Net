@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Saas.Infra.Data
 {
@@ -49,5 +50,11 @@ namespace Saas.Infra.Data
         /// Created timestamp (with timezone).
         /// </summary>
         public DateTimeOffset CreatedTime { get; set; }
+
+        /// <summary>
+        /// 导航属性：该产品的所有价格方案。
+        /// Navigation property: All price plans for this product.
+        /// </summary>
+        public virtual ICollection<PriceEntity> Prices { get; set; } = new List<PriceEntity>();
     }
 }

@@ -1,0 +1,207 @@
+@page "/checkout/success"
+@layout MainLayout
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+@inject IConfiguration Configuration
+@inject BlazorTokenService TokenService
+
+@using Microsoft.AspNetCore.Components
+@using Saas.Infra.MVC.Models.Requests
+@using Saas.Infra.MVC.Models.Responses
+
+<PageTitle>Payment Success - Saas.Infra</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm text-center">
+                <div class="card-body p-5">
+                    @if (_isProcessing)
+                    {
+                        <div class="mb-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <h2 class="mb-3">Finalizing Payment</h2>
+                        <p class="lead text-muted mb-0">Please wait while your subscription is being activated.</p>
+                    }
+                    else if (_isSuccessful)
+                    {
+                        <div class="mb-4">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                        </div>
+                        <h2 class="mb-3">Payment Successful!</h2>
+                        <p class="lead text-muted mb-4">Thank you for your subscription. Your payment and subscription are completed.</p>
+
+                        @if (_subscriptionId.HasValue && _subscriptionId.Value != Guid.Empty)
+                        {
+                            <div class="alert alert-info" role="alert">
+                                <small>Subscription ID: <strong>@_subscriptionId</strong></small>
+                            </div>
+                        }
+
+                        <div class="d-grid gap-2">
+                            <a href="/subscriptions" class="btn btn-primary btn-lg">
+                                <i class="bi bi-list-check"></i> View My Subscriptions
+                            </a>
+                            <a href="/products" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Browse More Products
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-4">
+                            <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 5rem;"></i>
+                        </div>
+                        <h2 class="mb-3">Payment Received</h2>
+                        <p class="lead text-muted mb-4">@(_errorMessage ?? "Your payment was received, but subscription activation is still pending.")</p>
+
+                        <div class="d-grid gap-2">
+                            <a href="/subscriptions" class="btn btn-primary btn-lg">
+                                <i class="bi bi-list-check"></i> View My Subscriptions
+                            </a>
+                            <a href="/products" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Browse More Products
+                            </a>
+                        </div>
+                    }
+
+                    <div class="mt-4">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i>
+                            You will receive a confirmation email shortly.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    .card {
+        border: none;
+        animation: fadeInUp 0.5s ease-in-out;
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+@code {
+    /// <summary>
+    /// Stripe结账会话ID查询参数。
+    /// Stripe checkout session ID query parameter.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "session_id")]
+    public string? SessionId { get; set; }
+
+    /// <summary>
+    /// 价格ID查询参数。
+    /// Price ID query parameter.
+    /// </summary>
+    [SupplyParameterFromQuery]
+    public Guid PriceId { get; set; }
+
+    private bool _isProcessing = true;
+    private bool _isSuccessful;
+    private Guid? _subscriptionId;
+    private string? _errorMessage;
+
+    /// <summary>
+    /// 根据托管结账结果完成订阅创建。
+    /// Completes subscription creation from the hosted checkout result.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        if (!TokenService.IsAuthenticated || string.IsNullOrWhiteSpace(TokenService.AccessToken))
+        {
+            Nav.NavigateTo("/account/login?returnUrl=/checkout/success", forceLoad: true);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(SessionId) || PriceId == Guid.Empty)
+        {
+            _isProcessing = false;
+            _isSuccessful = false;
+            _errorMessage = "Checkout confirmation information is incomplete.";
+            return;
+        }
+
+        await ConfirmCheckoutSessionAsync().ConfigureAwait(false);
+    }
+
+    private async Task ConfirmCheckoutSessionAsync()
+    {
+        _isProcessing = true;
+        _errorMessage = null;
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var request = new ConfirmCheckoutSessionRequest
+            {
+                SessionId = SessionId ?? string.Empty,
+                PriceId = PriceId,
+                Gateway = "Stripe"
+            };
+
+            var response = await client.PostAsJsonAsync("/api/payment/confirm-checkout-session", request).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _isSuccessful = false;
+                _errorMessage = "The payment was received, but subscription activation could not be confirmed automatically.";
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<PaymentConfirmationDto>(new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            _isSuccessful = result?.Success == true;
+            _subscriptionId = result?.SubscriptionId;
+            _errorMessage = result?.Message;
+        }
+        catch (Exception ex)
+        {
+            _isSuccessful = false;
+            _errorMessage = $"An error occurred while finalizing payment: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private HttpClient CreateAuthorizedClient()
+    {
+        var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? Nav.BaseUri.TrimEnd('/');
+        var client = HttpClientFactory.CreateClient();
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenService.AccessToken);
+
+        return client;
+    }
+}

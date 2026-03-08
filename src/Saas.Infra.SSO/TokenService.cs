@@ -34,30 +34,60 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
         /// 生成RSA签名的JWT访问令牌及刷新令牌。
         /// Generates RSA-signed JWT access token and refresh token.
         /// </summary>
-        /// <param name="username">用户标识（必填）/ Username (required)</param>
+        /// <param name="email">用户邮箱（必填，稳定标识）/ Email (required, stable identifier)</param>
         /// <param name="clientId">客户端ID（可选）/ Client ID (optional)</param>
         /// <param name="additionalClaims">额外Claim（可选）/ Additional claims (optional)</param>
         /// <returns>RSA签名的令牌响应 / RSA-signed token response</returns>
-        /// <exception cref="ArgumentException">用户名为空时抛出 / Thrown when username is empty</exception>
-        public JwtTokenResponse GenerateToken(string username, string? clientId = null, IEnumerable<Claim>? additionalClaims = null)
+        /// <exception cref="ArgumentException">邮箱为空时抛出 / Thrown when email is empty</exception>
+        public JwtTokenResponse GenerateToken(string email, string? clientId = null, IEnumerable<Claim>? additionalClaims = null)
         {
-            if (string.IsNullOrWhiteSpace(username))
-                throw new ArgumentException("username must not be null or whitespace", nameof(username));
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentException("email must not be null or whitespace", nameof(email));
 
             // 构建Claim集合（保留原有逻辑，补充用户ID/角色）
             var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, username), // JWT标准用户标识
-                new Claim(ClaimTypes.Name, username), // ensure Name claim so ClaimsIdentity.Name is populated
+                new Claim(JwtRegisteredClaimNames.Sub, email), // JWT标准用户标识
+                new Claim(ClaimTypes.Name, email), // ensure Name claim so ClaimsIdentity.Name is populated
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // 令牌唯一ID
-                new Claim("client_id", clientId ?? "default"), // 客户端ID
-                new Claim(ClaimTypes.Role, "User") // 默认角色
+                new Claim("client_id", clientId ?? "default") // 客户端ID
             };
 
             // 添加额外Claim
             if (additionalClaims != null)
             {
                 claims.AddRange(additionalClaims.Where(c => c != null));
+            }
+
+            // 1. 先查找所有合法的 Role Claim
+            var existingRoleClaims = claims
+                .Where(c => c.Type == ClaimTypes.Role && !string.IsNullOrWhiteSpace(c.Value))
+                .ToList();
+
+            if (existingRoleClaims.Any())
+            {
+                // 2. 如果有多个角色，只取第一个（或按需处理）
+                var roleClaim = existingRoleClaims.First();
+
+                // 3. 把数据库中的 Code（如 "SUPER_ADMIN"）映射为 UserRole 枚举
+                if (Enum.TryParse<UserRole>(roleClaim.Value, ignoreCase: true, out var userRole))
+                {
+                    // 4. 可选：先移除旧的 Role Claim，再添加统一格式的枚举值（推荐，避免混合格式）
+                    claims.Remove(roleClaim);
+                    claims.Add(new Claim(ClaimTypes.Role, userRole.ToString()));
+                }
+                else
+                {
+                    // 处理未知角色：可以记录警告，或降级为 User
+                    // 这里先移除无效角色，再添加默认 User
+                    claims.Remove(roleClaim);
+                    claims.Add(new Claim(ClaimTypes.Role, UserRole.User.ToString()));
+                }
+            }
+            else
+            {
+                // 5. 没有任何合法 Role Claim，添加默认 User 角色
+                claims.Add(new Claim(ClaimTypes.Role, UserRole.User.ToString()));
             }
 
             // 核心修改：使用RSA非对称加密签名（替换原有的对称加密）
@@ -110,7 +140,7 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
                 Log.Warning(ex, "[TOKEN DEBUG] failed to read produced token header");
             }
 
-            Log.Information("RSA-signed token generated for user {Username}", username);
+            Log.Information("RSA-signed token generated for email {Email}", email);
 
             // 返回令牌响应（刷新令牌逻辑不变）
             return new JwtTokenResponse

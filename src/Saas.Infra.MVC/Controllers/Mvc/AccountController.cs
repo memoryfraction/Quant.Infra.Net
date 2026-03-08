@@ -13,6 +13,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 	/// 注意：这是MVC控制器，返回视图。不同于API控制器(SsoController)返回JSON。
 	/// Note: This is an MVC controller returning views. Different from API controller (SsoController) returning JSON.
 	/// </summary>
+	[NonController]
 	public class AccountController : Controller
 	{
 		/// <summary>

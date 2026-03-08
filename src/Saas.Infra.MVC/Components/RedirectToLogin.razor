@@ -1,0 +1,50 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Nav
+
+@code {
+	[CascadingParameter]
+	private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+	/// <summary>
+	/// Redirects anonymous users to the login page while preserving the current
+	/// relative URL as the return path. If the user is already authenticated or
+	/// is on the login page, no redirect is performed to avoid loops.
+	/// </summary>
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await AuthenticationStateTask.ConfigureAwait(false);
+		var user = authState.User;
+		var isAuth = user.Identity?.IsAuthenticated == true;
+		var currentUri = Nav.Uri;
+
+		Serilog.Log.Information("[BLAZOR NAV] RedirectToLogin invoked. IsAuthenticated={IsAuth}, Uri={Uri}", isAuth, currentUri);
+
+		if (isAuth)
+		{
+			// User is authenticated but still hit NotAuthorized; treat as forbidden
+			// and do not redirect back to login to avoid loops.
+			Serilog.Log.Information("[BLAZOR NAV] RedirectToLogin: user authenticated, skipping redirect.");
+			return;
+		}
+
+		// Compute app-relative return URL (e.g., "dashboard" or "subscriptions")
+		var relativePath = Nav.ToBaseRelativePath(currentUri) ?? string.Empty;
+		Serilog.Log.Information("[BLAZOR NAV] RedirectToLogin: computed relativePath={RelativePath}", relativePath);
+
+		if (relativePath.StartsWith("account/login", StringComparison.OrdinalIgnoreCase))
+		{
+			// Already on login page; nothing to do.
+			Serilog.Log.Information("[BLAZOR NAV] RedirectToLogin: already on login page, no redirect.");
+			return;
+		}
+
+		if (!relativePath.StartsWith("/", StringComparison.Ordinal))
+		{
+			relativePath = "/" + relativePath;
+		}
+
+		var returnUrl = Uri.EscapeDataString(relativePath);
+		Serilog.Log.Information("[BLAZOR NAV] RedirectToLogin: redirecting to /account/login?returnUrl={ReturnUrl}", returnUrl);
+		Nav.NavigateTo($"/account/login?returnUrl={returnUrl}", forceLoad: false);
+	}
+}

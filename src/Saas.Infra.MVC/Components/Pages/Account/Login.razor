@@ -1,0 +1,174 @@
+@page "/account/login"
+@layout AuthLayout
+@attribute [AllowAnonymous]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+@inject BlazorTokenService TokenService
+@inject BlazorAuthHandoffService AuthHandoff
+
+<PageTitle>Login - Saas.Infra</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-header">
+        <h1>Welcome Back</h1>
+        <p>Sign in to your account</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    }
+
+    <EditForm Model="_model" OnValidSubmit="HandleLogin">
+        <DataAnnotationsValidator />
+
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <InputText id="email" @bind-Value="_model.Email" type="email"
+                       placeholder="Enter your email address" class="form-control" />
+            <ValidationMessage For="@(() => _model.Email)" class="text-danger" />
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <InputText id="password" @bind-Value="_model.Password" type="password"
+                       placeholder="Enter your password" class="form-control" />
+            <ValidationMessage For="@(() => _model.Password)" class="text-danger" />
+        </div>
+
+        <div class="form-actions">
+            <div class="form-check">
+                <InputCheckbox id="rememberMe" @bind-Value="_model.RememberMe" />
+                <label for="rememberMe">Remember me</label>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-login" disabled="@_isSubmitting">
+            @(_isSubmitting ? "Signing in…" : "Sign In")
+        </button>
+    </EditForm>
+
+    <div class="signup-link">
+        Don't have an account? <a href="/account/register">Sign up</a>
+    </div>
+</div>
+
+<style>
+    .auth-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0,0,0,.2);
+        width: 100%;
+        max-width: 400px;
+        padding: 40px;
+    }
+    .auth-header { text-align: center; margin-bottom: 30px; }
+    .auth-header h1 { font-size: 28px; color: #333; margin-bottom: 10px; }
+    .auth-header p { color: #666; font-size: 14px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; font-size: 14px; }
+    .form-control {
+        width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px;
+        font-size: 14px; transition: border-color .3s;
+    }
+    .form-control:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,.1); }
+    .form-actions { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 20px; font-size: 14px; }
+    .form-check { display: flex; align-items: center; gap: 6px; }
+    .btn-login {
+        width: 100%; padding: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white; border: none; border-radius: 5px;
+        font-size: 16px; font-weight: 600; cursor: pointer;
+        transition: transform .2s, box-shadow .2s; margin-bottom: 15px;
+    }
+    .btn-login:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102,126,234,.4); }
+    .btn-login:disabled { opacity: .65; cursor: default; }
+    .signup-link { text-align: center; color: #666; font-size: 14px; }
+    .signup-link a { color: #667eea; text-decoration: none; font-weight: 600; }
+    .signup-link a:hover { color: #764ba2; }
+    .alert-danger { background: #fee; color: #c33; border: 1px solid #fcc; padding: 12px; border-radius: 5px; margin-bottom: 20px; font-size: 14px; }
+    .text-danger { color: #c33; font-size: 12px; display: block; margin-top: 4px; }
+</style>
+
+@code {
+    private readonly LoginViewModel _model = new();
+    private bool _isSubmitting;
+    private string? _errorMessage;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    /// <summary>Handles the login form submission by calling the SSO token endpoint.</summary>
+    private async Task HandleLogin()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Email))
+        {
+            _errorMessage = "Email is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_model.Password))
+        {
+            _errorMessage = "Password is required.";
+            return;
+        }
+
+        _isSubmitting = true;
+        _errorMessage = null;
+
+        try
+        {
+            Serilog.Log.Information("[BLAZOR LOGIN] HandleLogin started. Email={Email}, ReturnUrl={ReturnUrl}", _model.Email, ReturnUrl ?? "(none)");
+
+            var client = HttpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(Nav.BaseUri);
+
+            var loginPayload = new
+            {
+                email = _model.Email,
+                password = _model.Password,
+                clientId = "Saas.Infra.Clients"
+            };
+
+            var response = await client.PostAsJsonAsync("/sso/generate-token", loginPayload);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Serilog.Log.Information("[BLAZOR LOGIN] /sso/generate-token failed. StatusCode={StatusCode}", response.StatusCode);
+                var errorBody = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+                _errorMessage = errorBody?.TryGetValue("message", out var msg) == true
+                    ? msg?.ToString() ?? "Login failed. Please check your credentials."
+                    : "Login failed. Please check your credentials.";
+                return;
+            }
+
+            var tokenData = await response.Content.ReadFromJsonAsync<TokenResponse>(
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (tokenData == null || string.IsNullOrEmpty(tokenData.AccessToken))
+            {
+                Serilog.Log.Information("[BLAZOR LOGIN] /sso/generate-token returned no access token.");
+                _errorMessage = "An error occurred during login. Please try again.";
+                return;
+            }
+
+            // Store token in the circuit-scoped service for immediate use
+            TokenService.SetToken(tokenData.AccessToken);
+            Serilog.Log.Information("[BLAZOR LOGIN] Access token stored in BlazorTokenService.");
+
+            // Use the handoff service so the browser gets an HttpOnly cookie without JS
+            var code = AuthHandoff.CreateHandoff(tokenData.AccessToken);
+            var returnUrl = string.IsNullOrWhiteSpace(ReturnUrl) ? "/dashboard" : ReturnUrl;
+            Serilog.Log.Information("[BLAZOR LOGIN] Handoff created. Code={Code}, RedirectingTo={ReturnUrl}", code, returnUrl);
+            Nav.NavigateTo($"/blazor/establish-auth?code={Uri.EscapeDataString(code)}&return={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "[BLAZOR LOGIN] Unexpected error during login.");
+            _errorMessage = $"An unexpected error occurred: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

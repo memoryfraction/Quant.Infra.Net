@@ -1,0 +1,228 @@
+@page "/admin/subscriptions"
+@layout MainLayout
+@attribute [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+@using Microsoft.EntityFrameworkCore
+@using Serilog
+
+<PageTitle>Admin Subscriptions - Saas.Infra</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0"><i class="bi bi-list-check"></i> Subscription Management</h1>
+        <a class="btn btn-outline-secondary" href="/admin">
+            <i class="bi bi-arrow-left"></i> Back to Admin
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form class="row g-2" @onsubmit="OnFilterSubmitted">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" placeholder="Search by user/email/product..." @bind="_filterKeyword" />
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" @bind="_filterStatus">
+                        <option value="">All Status</option>
+                        <option value="0">Pending</option>
+                        <option value="1">Active</option>
+                        <option value="2">Cancelled</option>
+                        <option value="3">Expired</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-grid">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            @if (_isLoading)
+            {
+                <div class="p-4 text-center text-muted">Loading subscriptions...</div>
+            }
+            else if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="p-4 text-center text-danger">@_errorMessage</div>
+            }
+            else if (_model.Items != null && _model.Items.Count > 0)
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>User</th>
+                                <th>Product</th>
+                                <th>Plan</th>
+                                <th>Status</th>
+                                <th>Auto Renew</th>
+                                <th>Created</th>
+                                <th>ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in _model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@item.UserName</div>
+                                    <small class="text-muted">@item.UserEmail</small>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">@item.ProductName</div>
+                                    <small class="text-muted">@item.ProductCode</small>
+                                </td>
+                                <td>@item.PriceName</td>
+                                <td><span class="badge @GetStatusBadge(item.Status)">@GetStatusText(item.Status)</span></td>
+                                <td>@(item.AutoRenew ? "Yes" : "No")</td>
+                                <td>@item.CreatedTime.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td><code>@item.Id.ToString()[..8]</code></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="p-4 text-center text-muted">No subscriptions found.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly AdminSubscriptionsPageViewModel _model = new();
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _filterKeyword;
+    private string? _filterStatus;
+
+    [Inject]
+    private ApplicationDbContext DbContext { get; set; } = default!;
+
+    /// <summary>
+    /// Loads initial subscriptions list.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSubscriptionsAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles filter form submission.
+    /// </summary>
+    private async Task OnFilterSubmitted()
+    {
+        if (!string.IsNullOrWhiteSpace(_filterKeyword) && _filterKeyword.Length > 200)
+        {
+            _errorMessage = "Keyword length cannot exceed 200 characters.";
+            return;
+        }
+
+        short? parsedStatus = null;
+        if (!string.IsNullOrWhiteSpace(_filterStatus) && short.TryParse(_filterStatus, out var statusValue))
+        {
+            parsedStatus = statusValue;
+        }
+
+        _model.Keyword = string.IsNullOrWhiteSpace(_filterKeyword) ? null : _filterKeyword.Trim();
+        _model.Status = parsedStatus;
+
+        await LoadSubscriptionsAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Loads subscriptions from the database according to the current filter.
+    /// </summary>
+    private async Task LoadSubscriptionsAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var query = DbContext.Subscriptions
+                .AsNoTracking()
+                .Include(s => s.User)
+                .Include(s => s.Product)
+                .Include(s => s.Price)
+                .Where(s => !s.IsDeleted);
+
+            if (_model.Status.HasValue)
+            {
+                query = query.Where(s => s.Status == _model.Status.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(_model.Keyword))
+            {
+                var normalized = _model.Keyword.Trim().ToLowerInvariant();
+                query = query.Where(s =>
+                    (s.User != null && ((s.User.UserName != null && s.User.UserName.ToLower().Contains(normalized)) ||
+                                        (s.User.Email != null && s.User.Email.ToLower().Contains(normalized)))) ||
+                    (s.Product != null && ((s.Product.Code != null && s.Product.Code.ToLower().Contains(normalized)) ||
+                                           (s.Product.Name != null && s.Product.Name.ToLower().Contains(normalized)))) ||
+                    (s.Price != null && s.Price.Name != null && s.Price.Name.ToLower().Contains(normalized)));
+            }
+
+            var items = await query
+                .OrderByDescending(s => s.CreatedTime)
+                .Take(200)
+                .Select(s => new AdminSubscriptionItemViewModel
+                {
+                    Id = s.Id,
+                    UserName = s.User != null ? (s.User.UserName ?? string.Empty) : string.Empty,
+                    UserEmail = s.User != null ? (s.User.Email ?? string.Empty) : string.Empty,
+                    ProductCode = s.Product != null ? (s.Product.Code ?? string.Empty) : string.Empty,
+                    ProductName = s.Product != null ? (s.Product.Name ?? string.Empty) : string.Empty,
+                    PriceName = s.Price != null ? (s.Price.Name ?? string.Empty) : string.Empty,
+                    Status = s.Status,
+                    AutoRenew = s.AutoRenew,
+                    CreatedTime = s.CreatedTime
+                })
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            _model.Items = items;
+            Log.Information("Admin subscriptions (Blazor) loaded {Count} rows", items.Count);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error loading admin subscriptions in Blazor component");
+            _errorMessage = "An error occurred while loading subscriptions.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Gets display text for a subscription status.
+    /// </summary>
+    /// <param name="status">Status value.</param>
+    /// <returns>Status text.</returns>
+    private static string GetStatusText(short status) => status switch
+    {
+        0 => "Pending",
+        1 => "Active",
+        2 => "Cancelled",
+        3 => "Expired",
+        _ => "Unknown"
+    };
+
+    /// <summary>
+    /// Gets CSS class for a subscription status badge.
+    /// </summary>
+    /// <param name="status">Status value.</param>
+    /// <returns>CSS class string.</returns>
+    private static string GetStatusBadge(short status) => status switch
+    {
+        0 => "bg-warning text-dark",
+        1 => "bg-success",
+        2 => "bg-secondary",
+        3 => "bg-dark",
+        _ => "bg-light text-dark"
+    };
+}

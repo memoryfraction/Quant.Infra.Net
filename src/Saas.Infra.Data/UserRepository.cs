@@ -46,7 +46,7 @@ namespace Saas.Infra.Data
                 PasswordHash = user.PasswordHash,
                 Email = user.Email ?? string.Empty,
                 PhoneNumber = user.PhoneNumber,
-                Status = user.Status,
+                Status = (short)user.Status,
                 LastLoginTime = user.LastLoginTime,
                 CreatedTime = user.CreatedTime == default ? DateTimeOffset.UtcNow : user.CreatedTime,
                 UpdatedTime = user.UpdatedTime,
@@ -79,7 +79,7 @@ namespace Saas.Infra.Data
                 PasswordHash = u.PasswordHash,
                 Email = u.Email,
                 PhoneNumber = u.PhoneNumber,
-                Status = u.Status,
+                Status = (UserStatus)u.Status,
                 LastLoginTime = u.LastLoginTime,
                 CreatedTime = u.CreatedTime,
                 UpdatedTime = u.UpdatedTime,
@@ -109,7 +109,7 @@ namespace Saas.Infra.Data
                 PasswordHash = u.PasswordHash,
                 Email = u.Email,
                 PhoneNumber = u.PhoneNumber,
-                Status = u.Status,
+                Status = (UserStatus)u.Status,
                 LastLoginTime = u.LastLoginTime,
                 CreatedTime = u.CreatedTime,
                 UpdatedTime = u.UpdatedTime,
@@ -139,7 +139,7 @@ namespace Saas.Infra.Data
                 PasswordHash = u.PasswordHash,
                 Email = u.Email,
                 PhoneNumber = u.PhoneNumber,
-                Status = u.Status,
+                Status = (UserStatus)u.Status,
                 LastLoginTime = u.LastLoginTime,
                 CreatedTime = u.CreatedTime,
                 UpdatedTime = u.UpdatedTime,
@@ -168,6 +168,31 @@ namespace Saas.Infra.Data
 
             u.PasswordHash = newPasswordHash;
             await _db.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// 根据用户ID获取角色代码列表。
+        /// Gets role code list by user ID.
+        /// </summary>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <returns>角色代码列表。 / Role code list.</returns>
+        /// <exception cref="ArgumentException">当 userId 为空 GUID 时抛出。 / Thrown when userId is empty GUID.</exception>
+        public async Task<IReadOnlyList<string>> GetRoleCodesByUserIdAsync(Guid userId)
+        {
+            if (userId == Guid.Empty)
+                throw new ArgumentException("userId must be a valid UUID", nameof(userId));
+
+            var roleCodes = await _db.UserRoles
+                .AsNoTracking()
+                .Include(ur => ur.Role)
+                .Where(ur => ur.UserId == userId)
+                .Select(ur => ur.Role != null ? ur.Role.Code : null)
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .Select(code => code!)
+                .Distinct()
+                .ToListAsync();
+
+            return roleCodes;
         }
     }
 }

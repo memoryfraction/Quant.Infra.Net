@@ -9,6 +9,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 	/// 注意：这是MVC控制器，返回视图。需要有效的访问令牌。
 	/// Note: This is an MVC controller returning views. Requires valid access token.
 	/// </summary>
+	[NonController]
 	public class DashboardController : Controller
 	{
 		/// <summary>
@@ -99,6 +100,13 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 						Response.Cookies.Delete("AccessToken");
 						return RedirectToAction("Login", "Account");
 					}
+
+					return View(new Saas.Infra.MVC.Models.DashboardViewModel
+					{
+						Username = User.Identity?.Name ?? "User",
+						Email = User.Identity?.Name,
+						WarningMessage = "Failed to load account details."
+					});
 				}
 
 				var responseContent = await response.Content.ReadAsStringAsync();
@@ -117,8 +125,9 @@ namespace Saas.Infra.MVC.Controllers.Mvc
                 {
                     Id = userProfile.Id,
                     Username = userProfile.Username,
-                    Email = userProfile.GetType().GetProperty("Email") != null ? (string?)userProfile.GetType().GetProperty("Email")?.GetValue(userProfile) : null,
+                    Email = userProfile.Email,
                     CreatedAt = userProfile.CreatedAt,
+                    AccountStatus = userProfile.Status == 1 ? "Active" : "Disabled",
                     AccessToken = accessToken,
                     RefreshToken = HttpContext.Session.GetString("RefreshToken"),
                     ExpiresIn = HttpContext.Session.GetInt32("ExpiresIn") ?? 0
@@ -135,7 +144,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to load available products for user {Username}", userProfile.Username);
-                    dashboardModel.WarningMessage = "无法加载可用产品列表";
+					dashboardModel.WarningMessage = "Failed to load available products.";
                 }
 
                 _logger.LogInformation("Dashboard loaded for user: {Username}", userProfile.Username);
@@ -172,6 +181,12 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		/// Account creation time (backend often returns CreatedTime).
 		/// </summary>
 		public DateTime CreatedTime { get; set; }
+
+		/// <summary>
+		/// 账户状态（1=Active,0=Disabled）。
+		/// Account status (1=Active, 0=Disabled).
+		/// </summary>
+		public short Status { get; set; }
 
 		/// <summary>
 		/// 兼容属性：CreatedAt，返回 CreatedTime。

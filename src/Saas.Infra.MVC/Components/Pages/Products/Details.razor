@@ -1,0 +1,284 @@
+@page "/products/{Id:guid}"
+@layout MainLayout
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+@inject IConfiguration Configuration
+@inject Saas.Infra.MVC.Services.Blazor.BlazorTokenService TokenService
+
+@using Saas.Infra.MVC.Models.Responses
+
+<PageTitle>@(_product?.Name ?? "Product") - Saas.Infra</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="container py-5">
+        <p>Loading product...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="container py-5">
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    </div>
+}
+else if (_product is null)
+{
+    <div class="container py-5">
+        <div class="alert alert-warning" role="alert">Product not found.</div>
+    </div>
+}
+else
+{
+    <div class="container py-5">
+        <div class="mb-4">
+            <button type="button" class="btn btn-outline-secondary" @onclick="NavigateBack">
+                <i class="bi bi-arrow-left"></i> Back to Products
+            </button>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-start justify-content-between mb-3">
+                            <div>
+                                <h1 class="display-5 mb-2">@_product.Name</h1>
+                                <p class="text-muted mb-0">
+                                    <i class="bi bi-tag"></i> @_product.Code
+                                </p>
+                            </div>
+                            @if (_product.IsActive)
+                            {
+                                <span class="badge bg-success fs-6">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary fs-6">Inactive</span>
+                            }
+                        </div>
+
+                        <p class="lead">@(_product.Description ?? "No description available")</p>
+
+                        @if (!string.IsNullOrEmpty(_product.Metadata))
+                        {
+                            <div class="alert alert-info mt-3" role="alert">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Features:</strong> This product includes advanced features and capabilities.
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-4">Choose Your Plan</h2>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            @if (_prices.Count > 0)
+            {
+                @foreach (var price in _prices.OrderBy(p => p.Amount))
+                {
+                    var periodText = price.BillingPeriod.ToLowerInvariant() switch
+                    {
+                        "week" => "per week",
+                        "month" => "per month",
+                        "year" => "per year",
+                        _ => price.BillingPeriod
+                    };
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm pricing-card">
+                            <div class="card-body d-flex flex-column text-center">
+                                <h5 class="card-title mb-3">@price.Name</h5>
+
+                                <div class="mb-4">
+                                    <div class="display-4 fw-bold">
+                                        @price.Currency @((price.Amount / 100.0m).ToString("F2"))
+                                    </div>
+                                    <small class="text-muted">@periodText</small>
+                                </div>
+
+                                <ul class="list-unstyled text-start mb-4 flex-grow-1">
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                        Full product access
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                        24/7 Support
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                        Regular updates
+                                    </li>
+                                </ul>
+
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-primary btn-lg" @onclick="() => GoToCheckout(price.Id)">
+                                        Subscribe Now
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12">
+                    <div class="alert alert-warning text-center" role="alert">
+                        <i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>
+                        <h5>No pricing plans available</h5>
+                        <p class="mb-0">Please contact support for custom pricing.</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .pricing-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 2px solid #e9ecef;
+    }
+
+    .pricing-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
+        border-color: #667eea;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    .display-4 {
+        color: #667eea;
+    }
+
+    .bi-check-circle-fill {
+        margin-right: 0.5rem;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private ProductDto? _product;
+    private readonly List<PriceDto> _prices = new();
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!TokenService.IsAuthenticated || string.IsNullOrWhiteSpace(TokenService.AccessToken))
+        {
+            Nav.NavigateTo($"/account/login?returnUrl=/products/{Id}", forceLoad: true);
+            return;
+        }
+
+        if (Id == Guid.Empty)
+        {
+            _errorMessage = "Invalid product identifier.";
+            _isLoading = false;
+            return;
+        }
+
+        await LoadProductAndPricesAsync().ConfigureAwait(false);
+    }
+
+    private async Task LoadProductAndPricesAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _product = null;
+        _prices.Clear();
+
+        try
+        {
+            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? Nav.BaseUri.TrimEnd('/');
+            var client = HttpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenService.AccessToken);
+
+            var productResponse = await client.GetAsync($"/api/products/{Id}").ConfigureAwait(false);
+            if (!productResponse.IsSuccessStatusCode)
+            {
+                if (productResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    TokenService.ClearToken();
+                    Nav.NavigateTo($"/account/login?returnUrl=/products/{Id}", forceLoad: true);
+                    return;
+                }
+
+                _errorMessage = "Failed to load product.";
+                return;
+            }
+
+            _product = await productResponse.Content.ReadFromJsonAsync<ProductDto>(new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            if (_product is null)
+            {
+                _errorMessage = "Product not found.";
+                return;
+            }
+
+            var pricesResponse = await client.GetAsync($"/api/prices/product/{Id}").ConfigureAwait(false);
+            if (!pricesResponse.IsSuccessStatusCode)
+            {
+                _errorMessage = "Failed to load pricing plans.";
+                return;
+            }
+
+            var prices = await pricesResponse.Content.ReadFromJsonAsync<List<PriceDto>>(new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            if (prices != null)
+            {
+                _prices.AddRange(prices.Where(p => p.IsActive));
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while loading product: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Nav.NavigateTo("/products");
+    }
+
+    private void GoToCheckout(Guid priceId)
+    {
+        if (priceId == Guid.Empty)
+        {
+            return;
+        }
+
+        Nav.NavigateTo($"/checkout?priceId={priceId}", forceLoad: true);
+    }
+}

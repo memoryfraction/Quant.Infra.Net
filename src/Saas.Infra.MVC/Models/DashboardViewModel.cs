@@ -61,5 +61,11 @@ namespace Saas.Infra.MVC.Models
         /// Optional warning message
         /// </summary>
         public string? WarningMessage { get; set; }
+
+        /// <summary>
+        /// 账户状态文本。
+        /// Account status text.
+        /// </summary>
+        public string AccountStatus { get; set; } = "Unknown";
     }
 }

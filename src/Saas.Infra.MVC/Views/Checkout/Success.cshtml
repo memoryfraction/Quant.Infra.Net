@@ -14,16 +14,32 @@
                     </div>
 
                     <!-- 成功消息 -->
-                    <h2 class="mb-3">Payment Successful!</h2>
-                    <p class="lead text-muted mb-4">
-                        Thank you for your subscription. Your payment has been processed successfully.
-                    </p>
+                    @if (ViewBag.IsSubscriptionCreated == true)
+                    {
+                        <h2 class="mb-3">Payment Successful!</h2>
+                        <p class="lead text-muted mb-4">
+                            Thank you for your subscription. Your payment and subscription are completed.
+                        </p>
+                    }
+                    else
+                    {
+                        <h2 class="mb-3">Payment Received</h2>
+                        <p class="lead text-muted mb-4">
+                            Your payment is received, but subscription activation is still pending.
+                        </p>
+                    }
 
                     <!-- 订阅ID（如果有） -->
                     @if (ViewBag.SubscriptionId != null)
                     {
                         <div class="alert alert-info" role="alert">
                             <small>Subscription ID: <strong>@ViewBag.SubscriptionId</strong></small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <small>No subscription ID is available yet. Please contact support if this status does not change.</small>
                         </div>
                     }
 

@@ -84,6 +84,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
         {
             Log.Information("Payment success page accessed, subscription: {SubscriptionId}", subscriptionId);
             ViewBag.SubscriptionId = subscriptionId;
+            ViewBag.IsSubscriptionCreated = subscriptionId.HasValue && subscriptionId.Value != Guid.Empty;
             return View();
         }
     }

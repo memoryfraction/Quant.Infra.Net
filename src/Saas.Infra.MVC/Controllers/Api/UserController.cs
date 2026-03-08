@@ -60,7 +60,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                 return Unauthorized(new { message = "Invalid token: missing user identifier" });
             }
 
-            // 优先用ID查库；如果ID不是有效GUID（例如JWT的sub为非UUID的用户名），则退回按用户名查找
+            // 优先用ID查库；如果ID不是有效GUID（例如sub为email），则按email/username回退查找
             Saas.Infra.Core.User? user = null;
             if (!string.IsNullOrWhiteSpace(userId))
             {
@@ -70,14 +70,16 @@ namespace Saas.Infra.MVC.Controllers.Api
                 }
                 else
                 {
-                    // userId 不是GUID，可能是用户名（某些令牌将sub设置为username），尝试按用户名查找
-                    user = await _userRepository.GetByUsernameAsync(userId);
+                    // userId 不是GUID，可能是email或username
+                    user = await _userRepository.GetByEmailAsync(userId)
+                        ?? await _userRepository.GetByUsernameAsync(userId);
                 }
             }
 
             if (user == null && !string.IsNullOrWhiteSpace(username))
             {
-                user = await _userRepository.GetByUsernameAsync(username);
+                user = await _userRepository.GetByEmailAsync(username)
+                    ?? await _userRepository.GetByUsernameAsync(username);
             }
 
             if (user == null)
@@ -92,7 +94,8 @@ namespace Saas.Infra.MVC.Controllers.Api
                 user.Id,
                 user.Username,
                 user.Email, // 补充Email（按需）
-                user.CreatedTime
+                user.CreatedTime,
+                user.Status
             });
         }
 
@@ -124,8 +127,9 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             else
             {
-                // 如果claim中的userId不是GUID，尝试按用户名查找
-                user = await _userRepository.GetByUsernameAsync(userId);
+                // 如果claim中的userId不是GUID，尝试按email再按用户名查找
+                user = await _userRepository.GetByEmailAsync(userId)
+                    ?? await _userRepository.GetByUsernameAsync(userId);
             }
 
             if (user == null)

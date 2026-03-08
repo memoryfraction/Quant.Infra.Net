@@ -42,7 +42,7 @@ namespace Saas.Infra.Core
         /// 状态标志（1=正常，0=禁用）。
         /// Status flag (1=Active, 0=Disabled).
         /// </summary>
-        public short Status { get; set; }
+        public UserStatus Status { get; set; } = UserStatus.Enabled;
 
         /// <summary>
         /// 最后登录时间戳。

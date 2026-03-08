@@ -348,15 +348,15 @@
             </div>
             <div class="profile-item">
                 <span class="profile-label">User ID</span>
-                <span class="profile-value">@Model.Id</span>
+                <span class="profile-value">@(Model.Id == Guid.Empty ? "N/A" : Model.Id.ToString())</span>
             </div>
             <div class="profile-item">
                 <span class="profile-label">Account Created</span>
-                <span class="profile-value">@Model.CreatedAtFormatted</span>
+                <span class="profile-value">@(Model.CreatedAt == default ? "N/A" : Model.CreatedAtFormatted)</span>
             </div>
             <div class="profile-item">
                 <span class="profile-label">Account Status</span>
-                <span class="profile-value">Active</span>
+                <span class="profile-value">@Model.AccountStatus</span>
             </div>
         </div>
     </div>

@@ -70,6 +70,7 @@ namespace Saas.Infra.SSO
                 Username = username,
                 PasswordHash = _passwordHasher.HashPassword(password),
                 Email = email,
+                Status = UserStatus.Enabled,
                 CreatedTime = DateTime.UtcNow
             };
 

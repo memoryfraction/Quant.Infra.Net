@@ -1,39 +1,57 @@
 namespace Saas.Infra.Core
 {
     /// <summary>
-    /// 系统用户角色枚举。
+    /// ?????????
     /// System user role enumeration.
     /// </summary>
     public enum UserRole
     {
         Super_Admin = 1,
         Admin = 2,
-        User = 3    
+        User = 3
     }
 
     /// <summary>
-    /// 系统角色代码常量。
+    /// 用户状态
+    /// User status enumeration.
+    /// </summary>
+    public enum UserStatus : short
+    {
+        /// <summary>
+        /// Disabled
+        /// Disabled status.
+        /// </summary>
+        Disabled = 0,
+
+        /// <summary>
+        /// Enabled
+        /// Enabled status.
+        /// </summary>
+        Enabled = 1
+    }
+
+    /// <summary>
+    /// ?????????
     /// System role code constants.
     /// </summary>
     public static class RoleCodes
     {
         /// <summary>
-        /// 超级管理员角色代码。
+        /// SuperAdmin
         /// Super administrator role code.
         /// </summary>
         public const string SuperAdmin = "SUPER_ADMIN";
 
         /// <summary>
-        /// 管理员角色代码。
+        /// Admin
         /// Administrator role code.
         /// </summary>
         public const string Admin = "ADMIN";
 
         /// <summary>
-        /// 普通用户角色代码。
+        /// User
         /// Normal user role code.
         /// </summary>
         public const string User = "USER";
     }
-
 }

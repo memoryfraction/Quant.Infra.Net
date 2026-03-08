@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Saas.Infra.Data;
@@ -26,18 +27,37 @@ namespace Saas.Infra.MVC.Services.Payment
 
         /// <summary>
         /// 确认支付并创建订阅。
-        /// Confirms payment and creates subscription.
+        /// Confirms payment and creates a subscription.
         /// </summary>
         /// <param name="paymentIntentId">支付意图ID。 / Payment intent ID.</param>
         /// <param name="userId">用户ID。 / User ID.</param>
         /// <param name="priceId">价格ID。 / Price ID.</param>
         /// <param name="gateway">支付网关名称。 / Payment gateway name.</param>
         /// <returns>订阅ID。 / Subscription ID.</returns>
-        Task<Guid> ConfirmPaymentAndCreateSubscriptionAsync(
-            string paymentIntentId,
-            Guid userId,
-            Guid priceId,
-            string gateway);
+        Task<Guid> ConfirmPaymentAndCreateSubscriptionAsync(string paymentIntentId, Guid userId, Guid priceId, string gateway);
+
+        /// <summary>
+        /// 创建托管结账会话。
+        /// Creates a hosted checkout session.
+        /// </summary>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <param name="priceId">价格ID。 / Price ID.</param>
+        /// <param name="gateway">支付网关名称。 / Payment gateway name.</param>
+        /// <param name="successUrl">支付成功回调地址。 / Payment success callback URL.</param>
+        /// <param name="cancelUrl">支付取消回调地址。 / Payment cancel callback URL.</param>
+        /// <returns>托管结账会话结果。 / Hosted checkout session result.</returns>
+        Task<CheckoutSessionResult> CreateCheckoutSessionAsync(Guid userId, Guid priceId, string gateway, string successUrl, string cancelUrl);
+
+        /// <summary>
+        /// 根据结账会话确认支付并创建订阅。
+        /// Confirms payment and creates a subscription from a checkout session.
+        /// </summary>
+        /// <param name="sessionId">结账会话ID。 / Checkout session ID.</param>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <param name="priceId">价格ID。 / Price ID.</param>
+        /// <param name="gateway">支付网关名称。 / Payment gateway name.</param>
+        /// <returns>订阅ID。 / Subscription ID.</returns>
+        Task<Guid> ConfirmCheckoutSessionAsync(string sessionId, Guid userId, Guid priceId, string gateway);
     }
 
     /// <summary>
@@ -55,7 +75,7 @@ namespace Saas.Infra.MVC.Services.Payment
         /// </summary>
         /// <param name="gateways">所有可用的支付网关。 / All available payment gateways.</param>
         /// <param name="db">数据库上下文。 / Database context.</param>
-        /// <exception cref="ArgumentNullException">当参数为null时抛出。 / Thrown when parameters are null.</exception>
+        /// <exception cref="ArgumentNullException">当参数为null时抛出。 / Thrown when arguments are null.</exception>
         public PaymentService(IEnumerable<IPaymentGateway> gateways, ApplicationDbContext db)
         {
             _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
@@ -70,48 +90,17 @@ namespace Saas.Infra.MVC.Services.Payment
         /// <param name="priceId">价格ID。 / Price ID.</param>
         /// <param name="gateway">支付网关名称。 / Payment gateway name.</param>
         /// <returns>支付意图结果。 / Payment intent result.</returns>
-        /// <exception cref="ArgumentException">当参数无效时抛出。 / Thrown when parameters are invalid.</exception>
-        /// <exception cref="InvalidOperationException">当价格或网关未找到时抛出。 / Thrown when price or gateway not found.</exception>
-        public async Task<PaymentIntentResult> CreatePaymentIntentAsync(
-            Guid userId,
-            Guid priceId,
-            string gateway)
+        /// <exception cref="ArgumentException">当参数无效时抛出。 / Thrown when arguments are invalid.</exception>
+        /// <exception cref="InvalidOperationException">当价格或网关无效时抛出。 / Thrown when the price or gateway is invalid.</exception>
+        public async Task<PaymentIntentResult> CreatePaymentIntentAsync(Guid userId, Guid priceId, string gateway)
         {
-            if (userId == Guid.Empty)
-                throw new ArgumentException("Invalid user ID", nameof(userId));
-            if (priceId == Guid.Empty)
-                throw new ArgumentException("Invalid price ID", nameof(priceId));
-            if (string.IsNullOrWhiteSpace(gateway))
-                throw new ArgumentNullException(nameof(gateway));
+            ValidateUserId(userId);
+            ValidatePriceId(priceId);
+            ValidateGateway(gateway);
 
-            // 获取价格信息
-            var price = await _db.Prices
-                .Include(p => p.Product)
-                .FirstOrDefaultAsync(p => p.Id == priceId);
+            var price = await GetActivePriceAsync(priceId).ConfigureAwait(false);
+            var paymentGateway = GetPaymentGateway(gateway);
 
-            if (price == null)
-            {
-                Log.Warning("Price {PriceId} not found", priceId);
-                throw new InvalidOperationException("Price not found");
-            }
-
-            if (!price.IsActive)
-            {
-                Log.Warning("Price {PriceId} is not active", priceId);
-                throw new InvalidOperationException("Price is not active");
-            }
-
-            // 获取支付网关
-            var paymentGateway = _gateways.FirstOrDefault(g =>
-                g.GatewayName.Equals(gateway, StringComparison.OrdinalIgnoreCase));
-
-            if (paymentGateway == null)
-            {
-                Log.Warning("Payment gateway {Gateway} not found", gateway);
-                throw new InvalidOperationException($"Payment gateway '{gateway}' not supported");
-            }
-
-            // 创建元数据
             var metadata = new Dictionary<string, string>
             {
                 { "userId", userId.ToString() },
@@ -120,60 +109,44 @@ namespace Saas.Infra.MVC.Services.Payment
                 { "productCode", price.Product?.Code ?? "unknown" }
             };
 
-            // 调用网关创建支付意图
-            var result = await paymentGateway.CreatePaymentIntentAsync(
-                price.Amount,
-                price.Currency,
-                metadata);
+            var result = await paymentGateway.CreatePaymentIntentAsync(price.Amount, price.Currency, metadata).ConfigureAwait(false);
 
-            Log.Information("Payment intent created for user {UserId}, price {PriceId}, gateway {Gateway}",
-                userId, priceId, gateway);
-
+            Log.Information("Payment intent created for user {UserId}, price {PriceId}, gateway {Gateway}", userId, priceId, gateway);
             return result;
         }
 
         /// <summary>
         /// 确认支付并创建订阅。
-        /// Confirms payment and creates subscription.
+        /// Confirms payment and creates a subscription.
         /// </summary>
         /// <param name="paymentIntentId">支付意图ID。 / Payment intent ID.</param>
         /// <param name="userId">用户ID。 / User ID.</param>
         /// <param name="priceId">价格ID。 / Price ID.</param>
         /// <param name="gateway">支付网关名称。 / Payment gateway name.</param>
         /// <returns>订阅ID。 / Subscription ID.</returns>
-        /// <exception cref="ArgumentException">当参数无效时抛出。 / Thrown when parameters are invalid.</exception>
-        /// <exception cref="InvalidOperationException">当支付失败或数据错误时抛出。 / Thrown when payment fails or data is invalid.</exception>
-        public async Task<Guid> ConfirmPaymentAndCreateSubscriptionAsync(
-            string paymentIntentId,
-            Guid userId,
-            Guid priceId,
-            string gateway)
+        /// <exception cref="ArgumentException">当参数无效时抛出。 / Thrown when arguments are invalid.</exception>
+        /// <exception cref="InvalidOperationException">当支付失败或数据无效时抛出。 / Thrown when payment fails or data is invalid.</exception>
+        public async Task<Guid> ConfirmPaymentAndCreateSubscriptionAsync(string paymentIntentId, Guid userId, Guid priceId, string gateway)
         {
             if (string.IsNullOrWhiteSpace(paymentIntentId))
+            {
                 throw new ArgumentNullException(nameof(paymentIntentId));
-            if (userId == Guid.Empty)
-                throw new ArgumentException("Invalid user ID", nameof(userId));
-            if (priceId == Guid.Empty)
-                throw new ArgumentException("Invalid price ID", nameof(priceId));
-            if (string.IsNullOrWhiteSpace(gateway))
-                throw new ArgumentNullException(nameof(gateway));
+            }
 
-            // 获取价格信息
-            var price = await _db.Prices
-                .Include(p => p.Product)
-                .FirstOrDefaultAsync(p => p.Id == priceId);
+            ValidateUserId(userId);
+            ValidatePriceId(priceId);
+            ValidateGateway(gateway);
 
-            if (price == null)
-                throw new InvalidOperationException("Price not found");
+            var existingSubscriptionId = await FindExistingSubscriptionIdAsync(paymentIntentId, gateway).ConfigureAwait(false);
+            if (existingSubscriptionId != Guid.Empty)
+            {
+                Log.Information("Existing subscription {SubscriptionId} reused for payment intent {PaymentIntentId}", existingSubscriptionId, paymentIntentId);
+                return existingSubscriptionId;
+            }
 
-            // 获取支付网关并确认支付
-            var paymentGateway = _gateways.FirstOrDefault(g =>
-                g.GatewayName.Equals(gateway, StringComparison.OrdinalIgnoreCase));
-
-            if (paymentGateway == null)
-                throw new InvalidOperationException($"Payment gateway '{gateway}' not supported");
-
-            var paymentResult = await paymentGateway.ConfirmPaymentAsync(paymentIntentId);
+            var price = await GetActivePriceAsync(priceId).ConfigureAwait(false);
+            var paymentGateway = GetPaymentGateway(gateway);
+            var paymentResult = await paymentGateway.ConfirmPaymentAsync(paymentIntentId).ConfigureAwait(false);
 
             if (!paymentResult.Succeeded)
             {
@@ -181,18 +154,16 @@ namespace Saas.Infra.MVC.Services.Payment
                 throw new InvalidOperationException($"Payment failed: {paymentResult.ErrorMessage}");
             }
 
-            // 使用事务创建订阅和交易记录
-            using var transaction = await _db.Database.BeginTransactionAsync();
+            await using var transaction = await _db.Database.BeginTransactionAsync().ConfigureAwait(false);
             try
             {
-                // 1. 创建订阅
                 var subscription = new SubscriptionEntity
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     ProductId = price.ProductId,
                     PriceId = priceId,
-                    Status = 1, // Active
+                    Status = 1,
                     StartDate = DateTimeOffset.UtcNow,
                     EndDate = CalculateEndDate(price.BillingPeriod),
                     AutoRenew = true,
@@ -204,7 +175,6 @@ namespace Saas.Infra.MVC.Services.Payment
 
                 _db.Subscriptions.Add(subscription);
 
-                // 2. 创建交易记录
                 var transactionEntity = new TransactionEntity
                 {
                     Id = Guid.NewGuid(),
@@ -214,43 +184,185 @@ namespace Saas.Infra.MVC.Services.Payment
                     Currency = paymentResult.Currency,
                     Gateway = gateway,
                     ExternalTransactionId = paymentResult.ExternalTransactionId,
-                    Status = 1, // Success
+                    Status = 1,
+                    Metadata = JsonSerializer.Serialize(new
+                    {
+                        paymentIntentId,
+                        priceId,
+                        userId,
+                        externalTransactionId = paymentResult.ExternalTransactionId
+                    }),
                     CreatedTime = DateTimeOffset.UtcNow,
-                    Remarks = $"Payment via {gateway}"
+                    Remarks = $"PaymentIntent:{paymentIntentId}; Gateway:{gateway}"
                 };
 
                 _db.Transactions.Add(transactionEntity);
 
-                await _db.SaveChangesAsync();
-                await transaction.CommitAsync();
+                await _db.SaveChangesAsync().ConfigureAwait(false);
+                await transaction.CommitAsync().ConfigureAwait(false);
 
-                Log.Information("Subscription {SubscriptionId} created for user {UserId}, payment {PaymentIntentId}",
-                    subscription.Id, userId, paymentIntentId);
-
+                Log.Information("Subscription {SubscriptionId} created for user {UserId}, payment {PaymentIntentId}", subscription.Id, userId, paymentIntentId);
                 return subscription.Id;
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync().ConfigureAwait(false);
                 Log.Error(ex, "Error creating subscription for payment {PaymentIntentId}", paymentIntentId);
                 throw;
             }
         }
 
         /// <summary>
-        /// 根据计费周期计算订阅结束日期。
-        /// Calculates subscription end date based on billing period.
+        /// 创建托管结账会话。
+        /// Creates a hosted checkout session.
         /// </summary>
-        /// <param name="billingPeriod">计费周期（week/month/year）。 / Billing period (week/month/year).</param>
-        /// <returns>结束日期。 / End date.</returns>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <param name="priceId">价格ID。 / Price ID.</param>
+        /// <param name="gateway">支付网关名称。 / Payment gateway name.</param>
+        /// <param name="successUrl">支付成功回调地址。 / Payment success callback URL.</param>
+        /// <param name="cancelUrl">支付取消回调地址。 / Payment cancel callback URL.</param>
+        /// <returns>托管结账会话结果。 / Hosted checkout session result.</returns>
+        /// <exception cref="ArgumentException">当参数无效时抛出。 / Thrown when arguments are invalid.</exception>
+        /// <exception cref="InvalidOperationException">当价格或网关无效时抛出。 / Thrown when the price or gateway is invalid.</exception>
+        public async Task<CheckoutSessionResult> CreateCheckoutSessionAsync(Guid userId, Guid priceId, string gateway, string successUrl, string cancelUrl)
+        {
+            ValidateUserId(userId);
+            ValidatePriceId(priceId);
+            ValidateGateway(gateway);
+
+            if (string.IsNullOrWhiteSpace(successUrl))
+            {
+                throw new ArgumentNullException(nameof(successUrl));
+            }
+
+            if (string.IsNullOrWhiteSpace(cancelUrl))
+            {
+                throw new ArgumentNullException(nameof(cancelUrl));
+            }
+
+            var price = await GetActivePriceAsync(priceId).ConfigureAwait(false);
+            var paymentGateway = GetPaymentGateway(gateway);
+
+            return await paymentGateway.CreateCheckoutSessionAsync(
+                priceId,
+                price.Amount,
+                price.Currency,
+                price.Product?.Name ?? "Product",
+                successUrl,
+                cancelUrl).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 根据结账会话确认支付并创建订阅。
+        /// Confirms payment and creates a subscription from a checkout session.
+        /// </summary>
+        /// <param name="sessionId">结账会话ID。 / Checkout session ID.</param>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <param name="priceId">价格ID。 / Price ID.</param>
+        /// <param name="gateway">支付网关名称。 / Payment gateway name.</param>
+        /// <returns>订阅ID。 / Subscription ID.</returns>
+        /// <exception cref="ArgumentException">当参数无效时抛出。 / Thrown when arguments are invalid.</exception>
+        /// <exception cref="InvalidOperationException">当会话或网关无效时抛出。 / Thrown when the session or gateway is invalid.</exception>
+        public async Task<Guid> ConfirmCheckoutSessionAsync(string sessionId, Guid userId, Guid priceId, string gateway)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException(nameof(sessionId));
+            }
+
+            ValidateUserId(userId);
+            ValidatePriceId(priceId);
+            ValidateGateway(gateway);
+
+            var paymentGateway = GetPaymentGateway(gateway);
+            var paymentIntentId = await paymentGateway.GetCheckoutSessionPaymentIntentIdAsync(sessionId).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(paymentIntentId))
+            {
+                throw new InvalidOperationException("Payment intent was not found for the checkout session");
+            }
+
+            return await ConfirmPaymentAndCreateSubscriptionAsync(paymentIntentId, userId, priceId, gateway).ConfigureAwait(false);
+        }
+
+        private static void ValidateUserId(Guid userId)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("Invalid user ID", nameof(userId));
+            }
+        }
+
+        private static void ValidatePriceId(Guid priceId)
+        {
+            if (priceId == Guid.Empty)
+            {
+                throw new ArgumentException("Invalid price ID", nameof(priceId));
+            }
+        }
+
+        private static void ValidateGateway(string gateway)
+        {
+            if (string.IsNullOrWhiteSpace(gateway))
+            {
+                throw new ArgumentNullException(nameof(gateway));
+            }
+        }
+
+        private async Task<Guid> FindExistingSubscriptionIdAsync(string paymentIntentId, string gateway)
+        {
+            return await _db.Transactions
+                .AsNoTracking()
+                .Where(t => t.SubscriptionId.HasValue
+                            && t.Gateway == gateway
+                            && t.Remarks != null
+                            && t.Remarks.Contains(paymentIntentId))
+                .Select(t => t.SubscriptionId ?? Guid.Empty)
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
+        }
+
+        private IPaymentGateway GetPaymentGateway(string gateway)
+        {
+            var paymentGateway = _gateways.FirstOrDefault(g => g.GatewayName.Equals(gateway, StringComparison.OrdinalIgnoreCase));
+            if (paymentGateway == null)
+            {
+                Log.Warning("Payment gateway {Gateway} not found", gateway);
+                throw new InvalidOperationException($"Payment gateway '{gateway}' not supported");
+            }
+
+            return paymentGateway;
+        }
+
+        private async Task<PriceEntity> GetActivePriceAsync(Guid priceId)
+        {
+            var price = await _db.Prices
+                .Include(p => p.Product)
+                .FirstOrDefaultAsync(p => p.Id == priceId)
+                .ConfigureAwait(false);
+
+            if (price == null)
+            {
+                Log.Warning("Price {PriceId} not found", priceId);
+                throw new InvalidOperationException("Price not found");
+            }
+
+            if (!price.IsActive || price.Product == null || !price.Product.IsActive)
+            {
+                Log.Warning("Price {PriceId} is not active", priceId);
+                throw new InvalidOperationException("Price is not active");
+            }
+
+            return price;
+        }
+
         private static DateTimeOffset CalculateEndDate(string billingPeriod)
         {
-            return billingPeriod.ToLower() switch
+            return billingPeriod.ToLowerInvariant() switch
             {
                 "week" => DateTimeOffset.UtcNow.AddDays(7),
                 "month" => DateTimeOffset.UtcNow.AddMonths(1),
                 "year" => DateTimeOffset.UtcNow.AddYears(1),
-                _ => DateTimeOffset.UtcNow.AddMonths(1) // 默认1个月
+                _ => DateTimeOffset.UtcNow.AddMonths(1)
             };
         }
     }

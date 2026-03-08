@@ -1,24 +1,27 @@
+@using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Nav
 
-<Router AppAssembly="typeof(App).Assembly">
-    <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
-            <NotAuthorized>
-                <RedirectToLogin />
-            </NotAuthorized>
-        </AuthorizeRouteView>
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="typeof(MainLayout)">
-            <div class="container py-5">
-                <div class="alert alert-warning text-center">
-                    <h4>Page Not Found</h4>
-                    <p>Sorry, there's nothing at this address.</p>
-                    <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="typeof(MainLayout)">
+                <div class="container py-5">
+                    <div class="alert alert-warning text-center">
+                        <h4>Page Not Found</h4>
+                        <p>Sorry, there's nothing at this address.</p>
+                        <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                    </div>
                 </div>
-            </div>
-        </LayoutView>
-    </NotFound>
-</Router>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

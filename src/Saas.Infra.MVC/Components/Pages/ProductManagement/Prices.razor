@@ -1,6 +1,6 @@
 @page "/product-management/prices/{ProductId:guid}"
 @layout MainLayout
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Nav
 @inject IConfiguration Configuration

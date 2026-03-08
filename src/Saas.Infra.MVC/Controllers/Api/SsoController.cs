@@ -65,9 +65,9 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (InvalidOperationException ex)
             {
-                // 3. 处理预期的业务异常 (如：用户名密码不匹配、账号锁定等)
+                // 3. 处理预期的业务异常（返回具体的错误消息）
                 Log.Warning("Login failed for email: {Email}. Reason: {Reason}", request.Email, ex.Message);
-                return Unauthorized(new { message = "Invalid email or password" });
+                return Unauthorized(new { message = ex.Message });
             }
             catch (Exception ex)
             {

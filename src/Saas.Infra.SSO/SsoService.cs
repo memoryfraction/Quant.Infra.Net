@@ -84,9 +84,9 @@ namespace Saas.Infra.SSO
             {
                 UserId = newUser.Id,
                 TokenHash = refreshHash,
-                ExpiresAt = DateTime.UtcNow.AddDays(JwtConstants.RefreshTokenExpirationDays),
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(JwtConstants.RefreshTokenExpirationDays),
                 Revoked = false,
-                CreatedTime = DateTime.UtcNow,
+                CreatedTime = DateTimeOffset.UtcNow,
                 CreatedBy = newUser.Id
             };
             await _refreshTokenRepository.AddAsync(record);
@@ -97,8 +97,17 @@ namespace Saas.Infra.SSO
 
         /// <summary>
         /// 验证用户凭据并生成RSA签名的JWT令牌
+        /// </summary>
+        /// 验证用户凭据并生成RSA签名的JWT令牌
         /// Validate user credentials and generate RSA-signed JWT tokens
         /// </summary>
+        /// <param name="email">邮箱地址。 / Email address.</param>
+        /// <param name="password">密码。 / Password.</param>
+        /// <param name="clientId">客户端ID。 / Client ID.</param>
+        /// <returns>JWT令牌响应的任务。 / Task containing JWT token response.</returns>
+        /// <exception cref="ArgumentException">当email为null或空白时抛出。 / Thrown when email is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">当password为null时抛出。 / Thrown when password is null.</exception>
+        /// <exception cref="InvalidOperationException">当用户不存在或密码错误时抛出。 / Thrown when user does not exist or password is incorrect.</exception>
         public async Task<JwtTokenResponse> GenerateTokensAsync(string email, string password, string clientId)
         {
             if (string.IsNullOrWhiteSpace(email))
@@ -108,11 +117,18 @@ namespace Saas.Infra.SSO
 
             var user = await _userRepository.GetByEmailAsync(email);
 
-            // 验证用户存在性和密码
-            if (user == null || !_passwordHasher.VerifyPassword(user.PasswordHash, password))
+            // 用户不存在
+            if (user == null)
             {
-                Log.Warning("Login failed for email: {Email} (invalid credentials)", email);
-                throw new InvalidOperationException("Invalid credentials.");
+                Log.Warning("Login failed for email: {Email} (user does not exist)", email);
+                throw new InvalidOperationException("User does not exist.");
+            }
+
+            // 密码错误
+            if (!_passwordHasher.VerifyPassword(user.PasswordHash, password))
+            {
+                Log.Warning("Login failed for email: {Email} (incorrect password)", email);
+                throw new InvalidOperationException("Incorrect password.");
             }
 
             // 生成RSA签名的Token
@@ -135,7 +151,7 @@ namespace Saas.Infra.SSO
             var record = await _refreshTokenRepository.GetByHashAsync(hash);
 
             // 验证刷新令牌有效性
-            if (record == null || record.Revoked || record.ExpiresAt <= DateTime.UtcNow)
+            if (record == null || record.Revoked || record.ExpiresAt <= DateTimeOffset.UtcNow)
             {
                 Log.Warning("Invalid refresh token (hash: {Hash})", hash);
                 throw new InvalidOperationException("Invalid refresh token.");
@@ -161,9 +177,9 @@ namespace Saas.Infra.SSO
             {
                 UserId = user.Id,
                 TokenHash = newHash,
-                ExpiresAt = DateTime.UtcNow.AddDays(JwtConstants.RefreshTokenExpirationDays),
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(JwtConstants.RefreshTokenExpirationDays),
                 Revoked = false,
-                CreatedTime = DateTime.UtcNow,
+                CreatedTime = DateTimeOffset.UtcNow,
                 CreatedBy = user.Id
             };
 

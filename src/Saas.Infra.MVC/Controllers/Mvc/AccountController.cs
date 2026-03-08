@@ -105,13 +105,13 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 			if (!ModelState.IsValid)
 			{
-                Log.Warning("Invalid model state for login");
+				Log.Warning("Invalid model state for login");
 				return View(model);
 			}
 
 			try
 			{
-                Log.Information("Login attempt for email: {Email}", model.Email);
+				Log.Information("Login attempt for email: {Email}", model.Email);
 
 				var client = _httpClientFactory.CreateClient();
 				var loginRequest = new
@@ -132,8 +132,28 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 				if (!response.IsSuccessStatusCode)
 				{
-                    Log.Warning("Login failed for email: {Email}", model.Email);
-					ModelState.AddModelError(string.Empty, "Invalid email or password");
+					// Parse error message from API response
+					var errorContent = await response.Content.ReadAsStringAsync();
+					string errorMessage = "An error occurred during login";
+
+					try
+					{
+						var errorResponse = JsonSerializer.Deserialize<Dictionary<string, object>>(
+							errorContent,
+							new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+						if (errorResponse != null && errorResponse.ContainsKey("message"))
+						{
+							errorMessage = errorResponse["message"]?.ToString() ?? errorMessage;
+						}
+					}
+					catch
+					{
+						// If JSON parsing fails, use default error message
+					}
+
+					Log.Warning("Login failed for email: {Email}. Error: {Error}", model.Email, errorMessage);
+					ModelState.AddModelError(string.Empty, errorMessage);
 					return View(model);
 				}
 
@@ -144,29 +164,15 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
 				if (tokenResponse == null)
 				{
-                    Log.Error("Failed to deserialize token response");
+					Log.Error("Failed to deserialize token response");
 					ModelState.AddModelError(string.Empty, "An error occurred during login");
 					return View(model);
 				}
 
 				// Validate redirect URL
 				var validationResult = await _redirectValidator.ValidateAsync(redirectUrl);
-				var availableProducts = await _productConfigService.GetAvailableProductsAsync(model.Email);
 
-				// Build login success response
-				var loginSuccessResponse = new LoginSuccessResponse
-				{
-					Success = true,
-					AccessToken = tokenResponse.AccessToken,
-					RefreshToken = tokenResponse.RefreshToken,
-					ExpiresIn = tokenResponse.ExpiresIn,
-					RedirectUrl = validationResult.IsValid ? validationResult.ValidatedPath : null,
-					ShowProductSelection = !validationResult.IsValid || string.IsNullOrEmpty(validationResult.ValidatedPath),
-					AvailableProducts = availableProducts,
-					WarningMessage = validationResult.IsValid ? null : "登录成功，但跳转地址无效"
-				};
-
-				// Store tokens in session (for backward compatibility)
+				// Store tokens in session
 				HttpContext.Session.SetString("AccessToken", tokenResponse.AccessToken);
 				HttpContext.Session.SetString("RefreshToken", tokenResponse.RefreshToken);
 				HttpContext.Session.SetInt32("ExpiresIn", tokenResponse.ExpiresIn);
@@ -190,10 +196,17 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 						});
 				}
 
-                Log.Information("Login successful for email: {Email}", model.Email);
-				
-				// Return JSON response for AJAX/API clients
-				return Json(loginSuccessResponse);
+				Log.Information("Login successful for email: {Email}", model.Email);
+
+				// Redirect to dashboard or specified redirect URL
+				if (validationResult.IsValid && !string.IsNullOrEmpty(validationResult.ValidatedPath))
+				{
+					return Redirect(validationResult.ValidatedPath);
+				}
+				else
+				{
+					return RedirectToAction("Index", "Dashboard");
+				}
 			}
 			catch (Exception ex)
 			{

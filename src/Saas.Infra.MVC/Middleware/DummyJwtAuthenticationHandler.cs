@@ -33,12 +33,21 @@ namespace Saas.Infra.MVC.Middleware
         }
 
         /// <summary>
-        /// 处理认证请求。不声明任何身份，由CustomJwtMiddleware设置HttpContext.User。
-        /// Handles authentication request. Does not claim any identity; CustomJwtMiddleware will set HttpContext.User.
+        /// 处理认证请求。从CustomJwtMiddleware设置的HttpContext.User读取身份。
+        /// Handles authentication request. Reads identity from HttpContext.User set by CustomJwtMiddleware.
         /// </summary>
         /// <returns>认证结果任务。 / Task containing authentication result.</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            // CustomJwtMiddleware已经设置了HttpContext.User
+            // 如果User已认证，返回成功结果
+            if (Context.User?.Identity?.IsAuthenticated == true)
+            {
+                var ticket = new AuthenticationTicket(Context.User, Scheme.Name);
+                return Task.FromResult(AuthenticateResult.Success(ticket));
+            }
+
+            // 否则返回NoResult，让其他认证方案处理
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 

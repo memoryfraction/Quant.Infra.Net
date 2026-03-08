@@ -6,7 +6,7 @@ namespace Saas.Infra.Data
 {
     /// <summary>
     /// 注册 Mapster 映射配置，负责 Data Entity 与 Domain DTO 之间的转换。
-    /// Register Mapster mapping configurations which handle conversions between Data Entities and Domain DTOs.
+    /// Registers Mapster mapping configurations which handle conversions between Data Entities and Domain DTOs.
     /// </summary>
     public static class MapsterSetup
     {
@@ -18,6 +18,7 @@ namespace Saas.Infra.Data
         {
             var config = TypeAdapterConfig.GlobalSettings;
 
+            // UserEntity -> User mapping
             config.NewConfig<UserEntity, Saas.Infra.Core.User>()
                 .Map(dest => dest.Id, src => src.Id)
                 .Map(dest => dest.Username, src => src.UserName)
@@ -25,13 +26,13 @@ namespace Saas.Infra.Data
                 .Map(dest => dest.Email, src => src.Email)
                 .Map(dest => dest.PhoneNumber, src => src.PhoneNumber)
                 .Map(dest => dest.Status, src => src.Status)
+                .Map(dest => dest.LastLoginTime, src => src.LastLoginTime)
                 .Map(dest => dest.CreatedTime, src => src.CreatedTime)
                 .Map(dest => dest.UpdatedTime, src => src.UpdatedTime)
-                .Map(dest => dest.CreatedBy, src => src.CreatedBy)
-                .Map(dest => dest.UpdatedBy, src => src.UpdatedBy)
                 .Map(dest => dest.IsDeleted, src => src.IsDeleted)
                 .IgnoreNullValues(true);
 
+            // User -> UserEntity mapping
             config.NewConfig<Saas.Infra.Core.User, UserEntity>()
                 .Map(dest => dest.Id, src => src.Id)
                 .Map(dest => dest.UserName, src => src.Username)
@@ -39,10 +40,9 @@ namespace Saas.Infra.Data
                 .Map(dest => dest.Email, src => src.Email ?? string.Empty)
                 .Map(dest => dest.PhoneNumber, src => src.PhoneNumber)
                 .Map(dest => dest.Status, src => src.Status)
-                .Map(dest => dest.CreatedTime, src => src.CreatedTime == default ? DateTime.UtcNow : src.CreatedTime)
+                .Map(dest => dest.LastLoginTime, src => src.LastLoginTime)
+                .Map(dest => dest.CreatedTime, src => src.CreatedTime == default ? DateTimeOffset.UtcNow : src.CreatedTime)
                 .Map(dest => dest.UpdatedTime, src => src.UpdatedTime)
-                .Map(dest => dest.CreatedBy, src => src.CreatedBy)
-                .Map(dest => dest.UpdatedBy, src => src.UpdatedBy)
                 .Map(dest => dest.IsDeleted, src => src.IsDeleted)
                 .IgnoreNullValues(true);
         }

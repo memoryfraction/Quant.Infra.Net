@@ -293,17 +293,13 @@
                     {
                         <div class="col-md-4" style="margin-bottom:12px;">
                             <div class="card h-100" style="padding:12px;">
-                                @if (!string.IsNullOrEmpty(product.IconUrl))
-                                {
-                                    <img src="@product.IconUrl" alt="@product.Name" style="width:100%; height:120px; object-fit:cover; border-radius:6px;" />
-                                }
                                 <div style="padding-top:8px;">
                                     <h5>@product.Name</h5>
                                     @if (!string.IsNullOrEmpty(product.Description))
                                     {
                                         <p style="color:#666; font-size:14px;">@product.Description</p>
                                     }
-                                    <a class="btn btn-primary" href="@product.Url">Enter</a>
+                                    <a class="btn btn-primary" href="#">View Details</a>
                                 </div>
                             </div>
                         </div>

@@ -227,10 +227,12 @@ namespace Saas.Infra.MVC
                     });
                 }
 
+                // Custom JWT middleware performs token validation and sets HttpContext.User
+                // Must run BEFORE UseAuthentication to properly set the user context
+                app.UseMiddleware<CustomJwtMiddleware>();
+
                 // 认证&授权
                 app.UseAuthentication();
-                // Custom JWT middleware performs token validation and sets HttpContext.User
-                app.UseMiddleware<CustomJwtMiddleware>();
                 app.UseAuthorization();
 
                 // Add antiforgery middleware
@@ -241,41 +243,27 @@ namespace Saas.Infra.MVC
                     pattern: "{controller=Account}/{action=Login}/{id?}");
 
                 Log.Information("Saas.Infra.MVC started, listening on: {Urls}", string.Join("; ", app.Urls));
-                
-                // Initialize database and seed test data
+
+                // Verify database connection on startup
                 using (var scope = app.Services.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<Saas.Infra.Data.ApplicationDbContext>();
                     try
                     {
-                        // Ensure database is created
-                        dbContext.Database.EnsureCreated();
-                        Log.Information("Database initialized successfully");
-                        
-                        // Seed test user if not exists
-                        var userRepository = scope.ServiceProvider.GetRequiredService<Saas.Infra.Core.IUserRepository>();
-                        var passwordHasher = scope.ServiceProvider.GetRequiredService<Saas.Infra.Core.IPasswordHasher>();
-                        
-                        var testUser = userRepository.GetByEmailAsync("test@126.com").Result;
-                        if (testUser == null)
+                        // Verify database is accessible
+                        var canConnect = dbContext.Database.CanConnect();
+                        if (canConnect)
                         {
-                            var newUser = new Saas.Infra.Core.User
-                            {
-                                Username = "test_user",
-                                Email = "test@126.com",
-                                PasswordHash = passwordHasher.HashPassword("Test@123456"),
-                                CreatedTime = DateTime.UtcNow
-                            };
-                            userRepository.AddAsync(newUser).Wait();
-                            Log.Information("Test user created: test@126.com");
+                            Log.Information("Database connection verified successfully");
                         }
-
-                        // Product seeding disabled to avoid schema mismatch with target database.
-                        // Use EF Core migrations or manual SQL scripts to create and seed Products table.
+                        else
+                        {
+                            Log.Warning("Database connection verification failed");
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Log.Error(ex, "Error during database initialization");
+                        Log.Error(ex, "Error during database connection verification");
                     }
                 }
                 

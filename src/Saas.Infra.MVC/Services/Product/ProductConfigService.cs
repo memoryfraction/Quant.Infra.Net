@@ -1,12 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Saas.Infra.Data;
-using System.Data.Common;
 
 namespace Saas.Infra.MVC.Services.Product;
 
 /// <summary>
-/// 产品配置服务，从数据库读取可用产品信息。使用安全的原始查询以避免可选列缺失时的失败。
-/// Product configuration service that reads available products from the database using safe raw queries to avoid failures when optional columns are missing.
+/// 产品配置服务，从数据库读取可用产品信息。
+/// Product configuration service that reads available products from the database.
 /// </summary>
 public class ProductConfigService : IProductConfigService
 {
@@ -24,8 +23,8 @@ public class ProductConfigService : IProductConfigService
     }
 
     /// <summary>
-    /// 获取用户所有可用的产品列表。读取最小列集（Id, Name, Url, Description）并映射到ProductInfo。避免数据库中不存在可选列（如IconUrl）时的错误。
-    /// Gets all available products for the user. Reads a minimal set of columns and maps to ProductInfo to avoid errors when optional columns are missing.
+    /// 获取用户所有可用的产品列表。
+    /// Gets all available products for the user.
     /// </summary>
     /// <param name="userId">用户标识。 / User identifier.</param>
     /// <returns>产品信息列表的任务。 / Task containing list of product information.</returns>
@@ -39,46 +38,24 @@ public class ProductConfigService : IProductConfigService
 
         try
         {
-            DbConnection? conn = _db.Database.GetDbConnection();
-            await conn.OpenAsync();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT \"Code\", \"Name\", \"Description\", \"AllowedPaymentGateways\", \"Metadata\", \"IsActive\" FROM \"Products\" WHERE coalesce(\"IsActive\", true) = true";
-            using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                var code = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
-                var name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
-                var desc = reader.FieldCount > 2 && !reader.IsDBNull(2) ? reader.GetString(2) : null;
-
-                string[]? gateways = null;
-                if (reader.FieldCount > 3 && !reader.IsDBNull(3))
+            var products = await _db.Products
+                .Where(p => p.IsActive)
+                .Select(p => new ProductInfo
                 {
-                    try { gateways = reader.GetFieldValue<string[]>(3); } catch { gateways = null; }
-                }
+                    Id = p.Code,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Metadata = p.Metadata
+                })
+                .ToListAsync();
 
-                string? metadata = null;
-                if (reader.FieldCount > 4 && !reader.IsDBNull(4))
-                {
-                    try { metadata = reader.GetFieldValue<string>(4); } catch { metadata = null; }
-                }
-
-                result.Add(new ProductInfo
-                {
-                    Id = code,
-                    Name = name,
-                    Description = desc,
-                    AllowedPaymentGateways = gateways,
-                    Metadata = metadata
-                });
-            }
+            return products;
         }
         catch (Exception ex)
         {
             Serilog.Log.Warning(ex, "Failed to load available products for user {UserId}", userId);
             return new List<ProductInfo>();
         }
-
-        return result;
     }
 
     /// <summary>
@@ -95,38 +72,23 @@ public class ProductConfigService : IProductConfigService
 
         try
         {
-            DbConnection? conn = _db.Database.GetDbConnection();
-            await conn.OpenAsync();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT \"Id\", \"Name\", \"Url\", \"Description\" FROM \"Products\" WHERE \"Id\" = @id";
-            var param = cmd.CreateParameter();
-            param.ParameterName = "@id";
-            param.Value = productId;
-            cmd.Parameters.Add(param);
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                var id = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
-                var name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
-                var url = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
-                var desc = reader.FieldCount > 3 && !reader.IsDBNull(3) ? reader.GetString(3) : null;
-
-                return new ProductInfo
+            var product = await _db.Products
+                .Where(p => p.Code.ToLower() == productId.ToLower())
+                .Select(p => new ProductInfo
                 {
-                    Id = id,
-                    Name = name,
-                    Url = url,
-                    Description = desc
-                };
-            }
+                    Id = p.Code,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Metadata = p.Metadata
+                })
+                .FirstOrDefaultAsync();
+
+            return product;
         }
         catch (Exception ex)
         {
             Serilog.Log.Warning(ex, "Failed to load product {ProductId}", productId);
             return null;
         }
-
-        return null;
     }
 }

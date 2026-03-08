@@ -11,6 +11,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
     /// 订阅管理MVC控制器（用户端）。
     /// Subscription management MVC controller (User side).
     /// </summary>
+    [NonController]
     [Authorize]
     public class SubscriptionsController : Controller
     {

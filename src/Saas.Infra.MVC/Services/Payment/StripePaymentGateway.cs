@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Stripe;
+using Stripe.Checkout;
 using Serilog;
 
 namespace Saas.Infra.MVC.Services.Payment
@@ -173,6 +174,96 @@ namespace Saas.Infra.MVC.Services.Payment
             {
                 Log.Warning(ex, "Stripe webhook signature verification failed: {ErrorMessage}", ex.Message);
                 return Task.FromResult(false);
+            }
+        }
+
+        /// <summary>
+        /// 创建Stripe Checkout Session，将支付页面托管在Stripe。
+        /// Creates a Stripe Checkout Session, hosting the payment page on Stripe.
+        /// </summary>
+        /// <param name="priceId">价格ID（存入元数据）。 / Price ID (stored in metadata).</param>
+        /// <param name="amount">金额（以分为单位）。 / Amount in cents.</param>
+        /// <param name="currency">货币代码。 / Currency code.</param>
+        /// <param name="productName">产品名称。 / Product display name.</param>
+        /// <param name="successUrl">支付成功回调URL，可包含{CHECKOUT_SESSION_ID}占位符。 / Success redirect URL, may contain {CHECKOUT_SESSION_ID} placeholder.</param>
+        /// <param name="cancelUrl">取消支付回调URL。 / Cancel redirect URL.</param>
+        /// <returns>包含Session ID与托管支付URL的结果。 / Result containing Session ID and hosted payment URL.</returns>
+        /// <exception cref="ArgumentException">当参数无效时抛出。 / Thrown when parameters are invalid.</exception>
+        public async Task<CheckoutSessionResult> CreateCheckoutSessionAsync(
+            Guid priceId, long amount, string currency, string productName,
+            string successUrl, string cancelUrl)
+        {
+            if (priceId == Guid.Empty) throw new ArgumentException("priceId must not be empty", nameof(priceId));
+            if (amount <= 0) throw new ArgumentException("Amount must be positive", nameof(amount));
+            if (string.IsNullOrWhiteSpace(currency)) throw new ArgumentNullException(nameof(currency));
+            if (string.IsNullOrWhiteSpace(successUrl)) throw new ArgumentNullException(nameof(successUrl));
+            if (string.IsNullOrWhiteSpace(cancelUrl)) throw new ArgumentNullException(nameof(cancelUrl));
+
+            try
+            {
+                var options = new SessionCreateOptions
+                {
+                    PaymentMethodTypes = new List<string> { "card" },
+                    LineItems = new List<SessionLineItemOptions>
+                    {
+                        new SessionLineItemOptions
+                        {
+                            PriceData = new SessionLineItemPriceDataOptions
+                            {
+                                Currency = currency.ToLower(),
+                                UnitAmount = amount,
+                                ProductData = new SessionLineItemPriceDataProductDataOptions
+                                {
+                                    Name = string.IsNullOrWhiteSpace(productName) ? "Subscription" : productName
+                                }
+                            },
+                            Quantity = 1
+                        }
+                    },
+                    Mode = "payment",
+                    SuccessUrl = successUrl,
+                    CancelUrl = cancelUrl,
+                    Metadata = new Dictionary<string, string> { { "priceId", priceId.ToString() } }
+                };
+
+                var service = new SessionService();
+                var session = await service.CreateAsync(options);
+
+                Log.Information("Stripe Checkout Session created: {SessionId}", session.Id);
+                return new CheckoutSessionResult { SessionId = session.Id, Url = session.Url };
+            }
+            catch (StripeException ex)
+            {
+                Log.Error(ex, "Stripe error creating Checkout Session: {ErrorMessage}", ex.Message);
+                throw new InvalidOperationException($"Stripe error: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 从Stripe Checkout Session中获取PaymentIntent ID。
+        /// Gets the PaymentIntent ID from a Stripe Checkout Session.
+        /// </summary>
+        /// <param name="sessionId">Session ID。 / Session ID.</param>
+        /// <returns>PaymentIntent ID，或null。 / PaymentIntent ID, or null.</returns>
+        /// <exception cref="ArgumentNullException">当sessionId为null或空白时抛出。 / Thrown when sessionId is null or whitespace.</exception>
+        public async Task<string?> GetCheckoutSessionPaymentIntentIdAsync(string sessionId)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+                throw new ArgumentNullException(nameof(sessionId));
+
+            try
+            {
+                var service = new SessionService();
+                var session = await service.GetAsync(sessionId);
+                Log.Information("Retrieved Checkout Session {SessionId}, PaymentIntentId: {PaymentIntentId}",
+                    sessionId, session.PaymentIntentId);
+                return session.PaymentIntentId;
+            }
+            catch (StripeException ex)
+            {
+                Log.Error(ex, "Stripe error retrieving Checkout Session {SessionId}: {ErrorMessage}",
+                    sessionId, ex.Message);
+                return null;
             }
         }
     }

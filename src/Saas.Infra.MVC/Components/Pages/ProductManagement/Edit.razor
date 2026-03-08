@@ -1,0 +1,367 @@
+@page "/product-management/edit/{Id:guid}"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+@inject IConfiguration Configuration
+@inject BlazorTokenService TokenService
+
+@using Saas.Infra.MVC.Models.Requests
+@using Saas.Infra.MVC.Models.Responses
+
+<PageTitle>Edit Product - Saas.Infra</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="container py-4">
+        <p>Loading product...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="container py-4">
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="mb-4">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="NavigateBack">
+                        <i class="bi bi-arrow-left"></i> Back to Products
+                    </button>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-pencil"></i> Edit Product
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="_form" OnValidSubmit="HandleValidSubmitAsync">
+                            <DataAnnotationsValidator />
+
+                            <input type="hidden" value="@_productId" />
+
+                            <div class="mb-3">
+                                <label class="form-label">Product Code</label>
+                                <input type="text" class="form-control" value="@_productCode" disabled />
+                                <div class="form-text">Product code cannot be changed</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                                <InputText id="name"
+                                           class="form-control"
+                                           @bind-Value="_form.Name" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <InputTextArea id="description"
+                                               class="form-control"
+                                               @bind-Value="_form.Description"
+                                               rows="4"
+                                               maxlength="1000" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="metadata" class="form-label">Metadata (JSON)</label>
+                                <InputTextArea id="metadata"
+                                               class="form-control font-monospace"
+                                               @bind-Value="_metadataRaw"
+                                               rows="5" />
+                                @if (!string.IsNullOrEmpty(_metadataError))
+                                {
+                                    <div class="text-danger">@_metadataError</div>
+                                }
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <InputCheckbox id="isActive" class="form-check-input" @bind-Value="_isActive" />
+                                    <label class="form-check-label" for="isActive">
+                                        Active (visible to users)
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-warning" role="alert">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Warning:</strong> Deactivating a product will hide it from users, but existing subscriptions will remain active.
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(_errorMessage))
+                            {
+                                <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                            }
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-secondary" @onclick="NavigateBack">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                                    @if (_isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                        <span class="ms-2">Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>
+                                            <i class="bi bi-check-circle"></i>
+                                            <span>Save Changes</span>
+                                        </span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-4">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-3 text-muted">Product Information</h6>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">Product ID:</dt>
+                            <dd class="col-sm-9"><code>@_productId</code></dd>
+
+                            <dt class="col-sm-3">Created:</dt>
+                            <dd class="col-sm-9">@_createdTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</dd>
+
+                            <dt class="col-sm-3">Actions:</dt>
+                            <dd class="col-sm-9">
+                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="NavigateToPrices">
+                                    <i class="bi bi-tags"></i> Manage Prices
+                                </button>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .card-header.bg-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+</style>
+
+@code {
+    /// <summary>
+    /// Route parameter for the product identifier.
+    /// </summary>
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private readonly UpdateProductRequest _form = new();
+    private Guid _productId;
+    private string _productCode = string.Empty;
+    private DateTimeOffset _createdTime;
+    private string? _metadataRaw;
+    private string? _metadataError;
+    private string? _errorMessage;
+    private bool _isSubmitting;
+    private bool _isLoading = true;
+    private bool _isActive;
+
+    /// <summary>
+    /// Loads product details for editing.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        if (!TokenService.IsAuthenticated || string.IsNullOrWhiteSpace(TokenService.AccessToken))
+        {
+            Nav.NavigateTo("/account/login?returnUrl=/product-management", forceLoad: true);
+            return;
+        }
+
+        if (Id == Guid.Empty)
+        {
+            _errorMessage = "Invalid product identifier.";
+            _isLoading = false;
+            return;
+        }
+
+        await LoadProductAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Loads the product from the backend API.
+    /// </summary>
+    private async Task LoadProductAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var response = await client.GetAsync($"/api/products/{Id}").ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    TokenService.ClearToken();
+                    Nav.NavigateTo("/account/login?returnUrl=/product-management", forceLoad: true);
+                    return;
+                }
+
+                _errorMessage = "Failed to load product.";
+                return;
+            }
+
+            var product = await response.Content.ReadFromJsonAsync<ProductDto>(new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            if (product == null)
+            {
+                _errorMessage = "Product not found.";
+                return;
+            }
+
+            _productId = product.Id;
+            _productCode = product.Code ?? string.Empty;
+            _createdTime = product.CreatedTime;
+            _form.Name = product.Name;
+            _form.Description = product.Description;
+            _metadataRaw = product.Metadata;
+            _isActive = product.IsActive;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while loading product: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Handles a valid form submission to update the product.
+    /// </summary>
+    private async Task HandleValidSubmitAsync()
+    {
+        if (_productId == Guid.Empty)
+        {
+            _errorMessage = "Invalid product identifier.";
+            return;
+        }
+
+        _errorMessage = null;
+        _metadataError = null;
+
+        if (!string.IsNullOrWhiteSpace(_form.Name))
+        {
+            _form.Name = _form.Name.Trim();
+        }
+
+        _form.Description = string.IsNullOrWhiteSpace(_form.Description) ? null : _form.Description.Trim();
+
+        if (!string.IsNullOrWhiteSpace(_metadataRaw))
+        {
+            try
+            {
+                System.Text.Json.JsonDocument.Parse(_metadataRaw);
+                _form.Metadata = _metadataRaw;
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                _metadataError = "Invalid JSON format";
+                return;
+            }
+        }
+        else
+        {
+            _form.Metadata = null;
+        }
+
+        _form.IsActive = _isActive;
+        _isSubmitting = true;
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var response = await client.PutAsJsonAsync($"/api/products/{_productId}", _form, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    TokenService.ClearToken();
+                    Nav.NavigateTo("/account/login?returnUrl=/product-management", forceLoad: true);
+                    return;
+                }
+
+                _errorMessage = "Failed to update product.";
+                return;
+            }
+
+            Nav.NavigateTo("/product-management");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while updating product: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    /// <summary>
+    /// Creates an authorized HTTP client for API calls.
+    /// </summary>
+    /// <returns>Configured HTTP client.</returns>
+    private HttpClient CreateAuthorizedClient()
+    {
+        var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? Nav.BaseUri.TrimEnd('/');
+        var client = HttpClientFactory.CreateClient();
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenService.AccessToken);
+
+        return client;
+    }
+
+    /// <summary>
+    /// Navigates back to the product management list.
+    /// </summary>
+    private void NavigateBack()
+    {
+        Nav.NavigateTo("/product-management");
+    }
+
+    /// <summary>
+    /// Navigates to the price management page for this product.
+    /// </summary>
+    private void NavigateToPrices()
+    {
+        if (_productId == Guid.Empty)
+        {
+            return;
+        }
+
+        Nav.NavigateTo($"/product-management/prices/{_productId}");
+    }
+}

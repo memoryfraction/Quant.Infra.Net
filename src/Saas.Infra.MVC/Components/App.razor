@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <title>Saas.Infra</title>
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/site.css" />
+    <HeadOutlet @rendermode="@InteractiveServer" />
+</head>
+<body>
+    <Routes @rendermode="@InteractiveServer" />
+    @* blazor.server.js is the Blazor framework's own transport — required for Blazor Server to function. *@
+    <script src="_framework/blazor.server.js"></script>
+</body>
+</html>
+
+@code {
+    [Inject] private BlazorTokenService TokenService { get; set; } = default!;
+    [Inject] private IHttpContextAccessor HttpContextAccessor { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            var ctx = HttpContextAccessor.HttpContext;
+            if (ctx != null && !TokenService.IsAuthenticated)
+            {
+                // During the initial HTTP connection the cookie is available via HttpContext.
+                var token = ctx.Request.Cookies["AccessToken"];
+                Serilog.Log.Information("[BLAZOR APP] OnInitialized. HttpContext available={HasContext}, HasAccessTokenCookie={HasCookie}, TokenService.IsAuthenticated(before)={IsAuth}",
+                    ctx != null,
+                    !string.IsNullOrEmpty(token),
+                    TokenService.IsAuthenticated);
+
+                if (!string.IsNullOrEmpty(token))
+                {
+                    TokenService.SetToken(token);
+                    Serilog.Log.Information("[BLAZOR APP] AccessToken cookie applied to BlazorTokenService.");
+                }
+            }
+        }
+        catch
+        {
+            // HttpContext is not available after the circuit is established via SignalR.
+        }
+    }
+}

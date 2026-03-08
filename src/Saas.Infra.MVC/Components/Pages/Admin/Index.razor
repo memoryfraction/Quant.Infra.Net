@@ -1,0 +1,130 @@
+@page "/admin"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.EntityFrameworkCore
+@using Serilog
+
+<PageTitle>Admin Dashboard - Saas.Infra</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="container-fluid py-4">
+        <p>Loading admin dashboard...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="container-fluid py-4">
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-6"><i class="bi bi-speedometer2"></i> Admin Dashboard</h1>
+                <p class="text-muted">Overview of products, subscriptions and payments.</p>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted">Products</h6>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <h2 class="mb-0">@_model.TotalProducts</h2>
+                            <span class="badge bg-success">Active: @_model.ActiveProducts</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted">Subscriptions</h6>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <h2 class="mb-0">@_model.TotalSubscriptions</h2>
+                            <span class="badge bg-primary">Active: @_model.ActiveSubscriptions</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted">Transactions</h6>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <h2 class="mb-0">@_model.TotalTransactions</h2>
+                            <span class="badge bg-info text-dark">Success: @_model.SuccessfulTransactions</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <a href="/product-management" class="card text-decoration-none shadow-sm h-100">
+                    <div class="card-body">
+                        <h5><i class="bi bi-box-seam"></i> Product Management</h5>
+                        <p class="text-muted mb-0">Create and manage product definitions and pricing.</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="/admin/subscriptions" class="card text-decoration-none shadow-sm h-100">
+                    <div class="card-body">
+                        <h5><i class="bi bi-list-check"></i> Subscription Management</h5>
+                        <p class="text-muted mb-0">View all user subscriptions and status.</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="/admin/transactions" class="card text-decoration-none shadow-sm h-100">
+                    <div class="card-body">
+                        <h5><i class="bi bi-cash-coin"></i> Transaction Monitoring</h5>
+                        <p class="text-muted mb-0">Filter and review payment transactions.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly AdminDashboardViewModel _model = new();
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    /// <summary>
+    /// Loads admin dashboard statistics from the database.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _model.TotalProducts = await DbContext.Products.AsNoTracking().CountAsync().ConfigureAwait(false);
+            _model.ActiveProducts = await DbContext.Products.AsNoTracking().CountAsync(p => p.IsActive).ConfigureAwait(false);
+            _model.TotalSubscriptions = await DbContext.Subscriptions.AsNoTracking().CountAsync(s => !s.IsDeleted).ConfigureAwait(false);
+            _model.ActiveSubscriptions = await DbContext.Subscriptions.AsNoTracking().CountAsync(s => !s.IsDeleted && s.Status == 1).ConfigureAwait(false);
+            _model.TotalTransactions = await DbContext.Transactions.AsNoTracking().CountAsync().ConfigureAwait(false);
+            _model.SuccessfulTransactions = await DbContext.Transactions.AsNoTracking().CountAsync(t => t.Status == 1).ConfigureAwait(false);
+
+            Log.Information("Admin dashboard (Blazor) loaded successfully");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error loading admin dashboard in Blazor component");
+            _errorMessage = "Failed to load admin dashboard.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    [Inject]
+    private ApplicationDbContext DbContext { get; set; } = default!;
+}

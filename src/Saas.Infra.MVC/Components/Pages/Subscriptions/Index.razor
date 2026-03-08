@@ -1,0 +1,319 @@
+@page "/subscriptions"
+@layout MainLayout
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+@inject IConfiguration Configuration
+@inject Saas.Infra.MVC.Services.Blazor.BlazorTokenService TokenService
+
+@using Saas.Infra.MVC.Models.Responses
+
+<PageTitle>My Subscriptions - Saas.Infra</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="container py-5">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading your subscriptions...</p>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="container py-5">
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    </div>
+}
+else
+{
+    <div class="container py-5">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-5 mb-2">My Subscriptions</h1>
+                <p class="text-muted">Manage your active subscriptions</p>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="btn-group" role="group">
+                    <button type="button"
+                            class="btn btn-outline-primary @(!_activeOnly ? "active" : string.Empty)"
+                            @onclick="() => ChangeFilter(false)">
+                        All Subscriptions
+                    </button>
+                    <button type="button"
+                            class="btn btn-outline-primary @_activeOnlyClass"
+                            @onclick="() => ChangeFilter(true)">
+                        Active Only
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @if (_subscriptions.Count == 0)
+        {
+            <div class="alert alert-info text-center" role="alert">
+                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                <h5>No subscriptions found</h5>
+                <p class="mb-3">You don't have any subscriptions yet.</p>
+                <a href="/products" class="btn btn-primary">Browse Products</a>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @foreach (var sub in _subscriptions)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h5 class="card-title mb-0">@(sub.ProductName ?? "Product")</h5>
+                                    @StatusBadge(sub.Status)
+                                </div>
+
+                                <p class="text-muted mb-2">@(sub.PriceName ?? "Plan")</p>
+                                <p class="mb-1"><strong>@sub.FormattedAmount</strong></p>
+                                @if (sub.RemainingDays is not null && sub.Status == 1)
+                                {
+                                    <small class="text-muted"><i class="bi bi-clock"></i> @sub.RemainingDays days remaining</small>
+                                }
+
+                                <hr />
+
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewDetails(sub.Id)">
+                                        <i class="bi bi-eye"></i> View Details
+                                    </button>
+                                    @if (sub.Status == 1)
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => CancelSubscription(sub.Id)">
+                                            <i class="bi bi-x-circle"></i> Cancel
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                            <div class="card-footer text-muted">
+                                <small>Started: @sub.StartDate.LocalDateTime.ToString("yyyy-MM-dd")</small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .btn-outline-primary {
+        border-color: #667eea;
+        color: #667eea;
+    }
+
+    .btn-outline-primary:hover,
+    .btn-outline-primary.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+    }
+
+    .card {
+        transition: transform 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+    }
+</style>
+
+@code {
+    private readonly List<SubscriptionDto> _subscriptions = new();
+    private bool _isLoading = true;
+    private bool _activeOnly;
+    private string? _errorMessage;
+
+    private string _activeOnlyClass => _activeOnly ? "active" : string.Empty;
+
+    /// <summary>
+    /// Loads the current user's subscriptions on initialization.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        if (!TokenService.IsAuthenticated || string.IsNullOrWhiteSpace(TokenService.AccessToken))
+        {
+            Nav.NavigateTo("/account/login?returnUrl=/subscriptions", forceLoad: true);
+            return;
+        }
+
+        await LoadSubscriptionsAsync(activeOnly: false);
+    }
+
+    /// <summary>
+    /// Changes the active filter and reloads subscriptions.
+    /// </summary>
+    /// <param name="activeOnly">Whether to show only active subscriptions.</param>
+    private async Task ChangeFilter(bool activeOnly)
+    {
+        _activeOnly = activeOnly;
+        await LoadSubscriptionsAsync(activeOnly);
+    }
+
+    /// <summary>
+    /// Loads subscriptions from the backend API using the current token.
+    /// </summary>
+    /// <param name="activeOnly">Whether to request only active subscriptions.</param>
+    private async Task LoadSubscriptionsAsync(bool activeOnly)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _subscriptions.Clear();
+
+        try
+        {
+            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? Nav.BaseUri.TrimEnd('/');
+            var client = HttpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenService.AccessToken);
+
+            var response = await client.GetAsync($"/api/subscriptions/my?activeOnly={activeOnly.ToString().ToLowerInvariant()}");
+            if (!response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    TokenService.ClearToken();
+                    Nav.NavigateTo("/account/login?returnUrl=/subscriptions", forceLoad: true);
+                    return;
+                }
+
+                _errorMessage = "Failed to load subscriptions. Please try again.";
+                return;
+            }
+
+            var items = await response.Content.ReadFromJsonAsync<List<SubscriptionDto>>(new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (items != null)
+            {
+                _subscriptions.AddRange(items);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while loading subscriptions: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Navigates to the subscription details page.
+    /// </summary>
+    /// <param name="id">Subscription identifier.</param>
+    private void ViewDetails(Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return;
+        }
+
+        Nav.NavigateTo($"/subscriptions/{id}");
+    }
+
+    /// <summary>
+    /// Cancels the specified subscription via the API.
+    /// </summary>
+    /// <param name="id">Subscription identifier.</param>
+    private async Task CancelSubscription(Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return;
+        }
+
+        var confirm = await ConfirmAsync("Are you sure you want to cancel this subscription?");
+        if (!confirm)
+        {
+            return;
+        }
+
+        try
+        {
+            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? Nav.BaseUri.TrimEnd('/');
+            var client = HttpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenService.AccessToken);
+
+            var response = await client.PostAsync($"/api/subscriptions/{id}/cancel", content: null);
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Failed to cancel subscription. Please try again.";
+                return;
+            }
+
+            await LoadSubscriptionsAsync(_activeOnly);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while cancelling subscription: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Simple confirmation wrapper so the logic stays in C#.
+    /// </summary>
+    /// <param name="message">Confirmation message.</param>
+    /// <returns>Always returns true currently.</returns>
+    private Task<bool> ConfirmAsync(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return Task.FromResult(false);
+        }
+
+        // Without JS interop, always assume confirmation.
+        // This keeps the flow deterministic and JS-free.
+        return Task.FromResult(true);
+    }
+
+    /// <summary>
+    /// Renders a status badge for the subscription.
+    /// </summary>
+    /// <param name="status">Status value.</param>
+    /// <returns>RenderFragment for badge.</returns>
+    private RenderFragment StatusBadge(short status) => builder =>
+    {
+        var css = status switch
+        {
+            0 => "badge bg-warning text-dark",
+            1 => "badge bg-success",
+            2 => "badge bg-secondary",
+            3 => "badge bg-dark",
+            _ => "badge bg-light text-dark"
+        };
+
+        var text = status switch
+        {
+            0 => "Pending",
+            1 => "Active",
+            2 => "Cancelled",
+            3 => "Expired",
+            _ => "Unknown"
+        };
+
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", css);
+        builder.AddContent(2, text);
+        builder.CloseElement();
+    };
+}

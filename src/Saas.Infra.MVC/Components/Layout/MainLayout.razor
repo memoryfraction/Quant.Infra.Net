@@ -1,0 +1,132 @@
+@inherits LayoutComponentBase
+@inject BlazorTokenService TokenService
+@inject NavigationManager Nav
+@inject BlazorAuthHandoffService AuthHandoff
+
+<style>
+    .navbar-brand {
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .nav-link { color: #666 !important; font-weight: 500; }
+    .nav-link:hover { color: #667eea !important; }
+    .dropdown-menu.show { display: block; }
+</style>
+
+<header>
+    <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="bi bi-box-seam"></i> Saas.Infra
+            </a>
+            <button class="navbar-toggler" type="button" @onclick="ToggleNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="navbar-collapse @(_navbarOpen ? "" : "collapse") d-sm-inline-flex justify-content-between">
+                <ul class="navbar-nav flex-grow-1">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="bi bi-house"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/products">
+                            <i class="bi bi-grid"></i> Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/subscriptions">
+                            <i class="bi bi-list-check"></i> My Subscriptions
+                        </a>
+                    </li>
+                    @if (TokenService.IsInRole("ADMIN") || TokenService.IsInRole("SUPER_ADMIN"))
+                    {
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button"
+                               @onclick:preventDefault="true" @onclick="ToggleAdminDropdown">
+                                <i class="bi bi-shield-lock"></i> Admin
+                            </a>
+                            <ul class="dropdown-menu @(_adminDropdownOpen ? "show" : "")">
+                                <li>
+                                    <a class="dropdown-item" href="/admin">
+                                        <i class="bi bi-speedometer2"></i> Dashboard
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/product-management">
+                                        <i class="bi bi-box-seam"></i> Products
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/admin/subscriptions">
+                                        <i class="bi bi-list-check"></i> Subscriptions
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/admin/transactions">
+                                        <i class="bi bi-cash-coin"></i> Transactions
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    }
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                           @onclick:preventDefault="true" @onclick="ToggleUserDropdown">
+                            <i class="bi bi-person-circle"></i> @TokenService.UserName
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end @(_userDropdownOpen ? "show" : "")">
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
+                            <li><hr class="dropdown-divider" /></li>
+                            <li>
+                                <button class="dropdown-item" @onclick="HandleLogout">
+                                    <i class="bi bi-box-arrow-right"></i> Logout
+                                </button>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<div class="container-fluid px-0">
+    @Body
+</div>
+
+@code {
+    private bool _navbarOpen;
+    private bool _userDropdownOpen;
+    private bool _adminDropdownOpen;
+
+    /// <summary>Toggles the mobile navbar collapse state.</summary>
+    private void ToggleNavbar() => _navbarOpen = !_navbarOpen;
+
+    /// <summary>Toggles the user profile dropdown.</summary>
+    private void ToggleUserDropdown()
+    {
+        _userDropdownOpen = !_userDropdownOpen;
+        _adminDropdownOpen = false;
+    }
+
+    /// <summary>Toggles the admin dropdown.</summary>
+    private void ToggleAdminDropdown()
+    {
+        _adminDropdownOpen = !_adminDropdownOpen;
+        _userDropdownOpen = false;
+    }
+
+    /// <summary>Clears the token and navigates to the clear-auth endpoint which deletes the cookie.</summary>
+    private void HandleLogout()
+    {
+        Serilog.Log.Information("[BLAZOR NAV] Logout clicked. Clearing token and navigating to /blazor/clear-auth.");
+        TokenService.ClearToken();
+        Nav.NavigateTo("/blazor/clear-auth", forceLoad: true);
+    }
+}

@@ -1,0 +1,216 @@
+@page "/admin/transactions"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.EntityFrameworkCore
+@using Serilog
+
+<PageTitle>Admin Transactions - Saas.Infra</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0"><i class="bi bi-cash-coin"></i> Transaction Monitoring</h1>
+        <a class="btn btn-outline-secondary" href="/admin">
+            <i class="bi bi-arrow-left"></i> Back to Admin
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form class="row g-2" @onsubmit="OnFilterSubmitted">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" placeholder="Gateway e.g. Stripe" @bind="_filterGateway" />
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" @bind="_filterStatus">
+                        <option value="">All Status</option>
+                        <option value="0">Pending</option>
+                        <option value="1">Success</option>
+                        <option value="2">Failed</option>
+                        <option value="3">Refunded</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-grid">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            @if (_isLoading)
+            {
+                <div class="p-4 text-center text-muted">Loading transactions...</div>
+            }
+            else if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="p-4 text-center text-danger">@_errorMessage</div>
+            }
+            else if (_model.Items != null && _model.Items.Count > 0)
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>User</th>
+                                <th>Amount</th>
+                                <th>Gateway</th>
+                                <th>Status</th>
+                                <th>External ID</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in _model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@item.UserName</div>
+                                    <small class="text-muted">@item.UserEmail</small>
+                                </td>
+                                <td>@item.Currency @((item.Amount / 100.0m).ToString("F2"))</td>
+                                <td>@item.Gateway</td>
+                                <td><span class="badge @GetStatusBadge(item.Status)">@GetStatusText(item.Status)</span></td>
+                                <td><small>@(item.ExternalTransactionId ?? "-")</small></td>
+                                <td>@item.CreatedTime.ToString("yyyy-MM-dd HH:mm")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="p-4 text-center text-muted">No transactions found.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly AdminTransactionsPageViewModel _model = new();
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _filterGateway;
+    private string? _filterStatus;
+
+    [Inject]
+    private ApplicationDbContext DbContext { get; set; } = default!;
+
+    /// <summary>
+    /// Loads initial transactions list.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTransactionsAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles filter form submission.
+    /// </summary>
+    private async Task OnFilterSubmitted()
+    {
+        if (!string.IsNullOrWhiteSpace(_filterGateway) && _filterGateway.Length > 50)
+        {
+            _errorMessage = "Gateway length cannot exceed 50 characters.";
+            return;
+        }
+
+        short? parsedStatus = null;
+        if (!string.IsNullOrWhiteSpace(_filterStatus) && short.TryParse(_filterStatus, out var statusValue))
+        {
+            parsedStatus = statusValue;
+        }
+
+        _model.Gateway = string.IsNullOrWhiteSpace(_filterGateway) ? null : _filterGateway.Trim();
+        _model.Status = parsedStatus;
+
+        await LoadTransactionsAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Loads transactions from the database according to the current filter.
+    /// </summary>
+    private async Task LoadTransactionsAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var query = DbContext.Transactions
+                .AsNoTracking()
+                .Include(t => t.User)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(_model.Gateway))
+            {
+                var gateway = _model.Gateway.Trim().ToLowerInvariant();
+                query = query.Where(t => t.Gateway.ToLower() == gateway);
+            }
+
+            if (_model.Status.HasValue)
+            {
+                query = query.Where(t => t.Status == _model.Status.Value);
+            }
+
+            var items = await query
+                .OrderByDescending(t => t.CreatedTime)
+                .Take(300)
+                .Select(t => new AdminTransactionItemViewModel
+                {
+                    Id = t.Id,
+                    UserName = t.User != null ? (t.User.UserName ?? string.Empty) : string.Empty,
+                    UserEmail = t.User != null ? (t.User.Email ?? string.Empty) : string.Empty,
+                    Amount = t.Amount,
+                    Currency = t.Currency,
+                    Gateway = t.Gateway,
+                    Status = t.Status,
+                    ExternalTransactionId = t.ExternalTransactionId,
+                    CreatedTime = t.CreatedTime
+                })
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            _model.Items = items;
+            Log.Information("Admin transactions (Blazor) loaded {Count} rows", items.Count);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error loading admin transactions in Blazor component");
+            _errorMessage = "An error occurred while loading transactions.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Gets display text for a transaction status.
+    /// </summary>
+    /// <param name="status">Status value.</param>
+    /// <returns>Status text.</returns>
+    private static string GetStatusText(short status) => status switch
+    {
+        0 => "Pending",
+        1 => "Success",
+        2 => "Failed",
+        3 => "Refunded",
+        _ => "Unknown"
+    };
+
+    /// <summary>
+    /// Gets CSS class for a transaction status badge.
+    /// </summary>
+    /// <param name="status">Status value.</param>
+    /// <returns>CSS class string.</returns>
+    private static string GetStatusBadge(short status) => status switch
+    {
+        0 => "bg-warning text-dark",
+        1 => "bg-success",
+        2 => "bg-danger",
+        3 => "bg-info text-dark",
+        _ => "bg-light text-dark"
+    };
+}

@@ -43,16 +43,22 @@ namespace Saas.Infra.MVC.Middleware
         {
             if (context == null) throw new ArgumentNullException(nameof(context));
 
-            var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
+            // Prefer Authorization header (API calls from Blazor),
+            // but also fall back to the AccessToken cookie for initial
+            // document requests (e.g., GET /dashboard after login).
+            string? token = null;
 
-            if (string.IsNullOrEmpty(authHeader) ||
-                !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
+            if (!string.IsNullOrEmpty(authHeader) &&
+                authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
-                await _next(context);
-                return;
+                token = authHeader["Bearer ".Length..].Trim();
+            }
+            else if (context.Request.Cookies.TryGetValue("AccessToken", out var cookieToken))
+            {
+                token = cookieToken;
             }
 
-            var token = authHeader["Bearer ".Length..].Trim();
             if (string.IsNullOrWhiteSpace(token))
             {
                 await _next(context);
@@ -66,17 +72,20 @@ namespace Saas.Infra.MVC.Middleware
                 JwtSecurityToken? jwtToken = null;
                 try
                 {
-                    Serilog.Log.Information("[JWT DEBUG] Incoming raw token: {Token}", token);
+                    // Detailed JWT diagnostics are useful during development but too noisy for
+                    // normal console output. Log them at Debug level so they can be enabled
+                    // via configuration when needed.
+                    Serilog.Log.Debug("[JWT DEBUG] Incoming raw token: {Token}", token);
 
                     jwtToken = tokenHandler.ReadJwtToken(token);
-                    Serilog.Log.Information("[JWT DEBUG] Token header alg={Alg}, kid={Kid}, typ={Typ}", 
+                    Serilog.Log.Debug("[JWT DEBUG] Token header alg={Alg}, kid={Kid}, typ={Typ}",
                         jwtToken.Header.Alg, jwtToken.Header.Kid ?? "(none)", jwtToken.Header.Typ ?? "(none)");
-                    Serilog.Log.Information("[JWT DEBUG] Token rawHeader={RawHeader}", jwtToken.RawHeader);
-                    Serilog.Log.Information("[JWT DEBUG] Token rawPayload={RawPayload}", jwtToken.RawPayload);
+                    Serilog.Log.Debug("[JWT DEBUG] Token rawHeader={RawHeader}", jwtToken.RawHeader);
+                    Serilog.Log.Debug("[JWT DEBUG] Token rawPayload={RawPayload}", jwtToken.RawPayload);
                 }
                 catch (Exception rex)
                 {
-                    Serilog.Log.Warning(rex, "[JWT DEBUG] Failed to read incoming token");
+                    Serilog.Log.Debug(rex, "[JWT DEBUG] Failed to read incoming token");
                 }
 
                 var validationParameters = new TokenValidationParameters
@@ -84,7 +93,7 @@ namespace Saas.Infra.MVC.Middleware
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKeyResolver = (tokenString, securityToken, kid, parameters) =>
                     {
-                        Serilog.Log.Information("[JWT DEBUG] IssuerSigningKeyResolver called. Token kid={Kid}, ValidationKey KeyId={KeyId}", 
+                        Serilog.Log.Debug("[JWT DEBUG] IssuerSigningKeyResolver called. Token kid={Kid}, ValidationKey KeyId={KeyId}", 
                             kid ?? "(none)", _validationKey?.KeyId ?? "(none)");
                         return new[] { _validationKey };
                     },
@@ -101,12 +110,12 @@ namespace Saas.Infra.MVC.Middleware
                 {
                     var keysCount = validationParameters.IssuerSigningKeys?.Count() ?? 0;
                     var hasResolver = validationParameters.IssuerSigningKeyResolver != null;
-                    Serilog.Log.Information("[JWT DEBUG] ValidationParameters: IssuerSigningKeysCount={Count}, HasResolver={HasResolver}, ValidationKey KeyId={KeyId}", 
+                    Serilog.Log.Debug("[JWT DEBUG] ValidationParameters: IssuerSigningKeysCount={Count}, HasResolver={HasResolver}, ValidationKey KeyId={KeyId}",
                         keysCount, hasResolver, _validationKey?.KeyId ?? "(none)");
                 }
                 catch (Exception lx)
                 {
-                    Serilog.Log.Warning(lx, "[JWT DEBUG] Failed to log ValidationParameters details");
+                    Serilog.Log.Debug(lx, "[JWT DEBUG] Failed to log ValidationParameters details");
                 }
 
                 var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
@@ -121,7 +130,7 @@ namespace Saas.Infra.MVC.Middleware
 
                     context.User = new ClaimsPrincipal(authenticatedIdentity);
 
-                    Serilog.Log.Information(
+                    Serilog.Log.Debug(
                         "[JWT DEBUG] JWT validation success. User Name={Name}, IsAuthenticated={IsAuth}, AuthenticationType={AuthType}",
                         context.User.Identity?.Name ?? "(unknown)",
                         context.User.Identity?.IsAuthenticated,

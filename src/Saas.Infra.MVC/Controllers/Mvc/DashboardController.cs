@@ -9,6 +9,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 	/// 注意：这是MVC控制器，返回视图。需要有效的访问令牌。
 	/// Note: This is an MVC controller returning views. Requires valid access token.
 	/// </summary>
+	[NonController]
 	public class DashboardController : Controller
 	{
 		/// <summary>

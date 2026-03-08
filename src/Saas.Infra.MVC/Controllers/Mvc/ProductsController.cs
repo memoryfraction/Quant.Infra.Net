@@ -12,6 +12,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
     /// 产品展示MVC控制器（用户端）。
     /// Product display MVC controller (User side).
     /// </summary>
+    [NonController]
     [Authorize]
     public class ProductsController : Controller
     {

@@ -12,6 +12,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
     /// 支付结账MVC控制器。
     /// Checkout MVC controller.
     /// </summary>
+    [NonController]
     [Authorize]
     public class CheckoutController : Controller
     {

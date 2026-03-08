@@ -1,0 +1,259 @@
+@page "/product-management/create"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+@inject IConfiguration Configuration
+@inject BlazorTokenService TokenService
+
+@using Saas.Infra.MVC.Models.Requests
+@using Saas.Infra.MVC.Models.Responses
+
+<PageTitle>Create Product - Saas.Infra</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="mb-4">
+                <button type="button" class="btn btn-outline-secondary" @onclick="NavigateBack">
+                    <i class="bi bi-arrow-left"></i> Back to Products
+                </button>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-plus-circle"></i> Create New Product
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_form" OnValidSubmit="HandleValidSubmitAsync">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label for="code" class="form-label">Product Code <span class="text-danger">*</span></label>
+                            <InputText id="code"
+                                       class="form-control"
+                                       @bind-Value="_form.Code"
+                                       minlength="1"
+                                       maxlength="50"
+                                       pattern="[A-Z0-9_]+"
+                                       title="Only uppercase letters, numbers and underscores" />
+                            <div class="form-text">Unique identifier for the product (uppercase, numbers, underscores only)</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                            <InputText id="name"
+                                       class="form-control"
+                                       @bind-Value="_form.Name"
+                                       maxlength="100" />
+                            <div class="form-text">Display name for the product</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <InputTextArea id="description"
+                                           class="form-control"
+                                           @bind-Value="_form.Description"
+                                           rows="4"
+                                           maxlength="1000" />
+                            <div class="form-text">Brief description of the product (max 1000 characters)</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="metadata" class="form-label">Metadata (JSON)</label>
+                            <InputTextArea id="metadata"
+                                           class="form-control font-monospace"
+                                           @bind-Value="_metadataRaw"
+                                           rows="5"
+                                           placeholder='{"features":["Feature 1","Feature 2"],"category":"AI Tools"}' />
+                            <div class="form-text">Optional JSON metadata for the product</div>
+                            @if (!string.IsNullOrEmpty(_metadataError))
+                            {
+                                <div class="text-danger">@_metadataError</div>
+                            }
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <InputCheckbox id="isActive" class="form-check-input" @bind-Value="_form.IsActive" />
+                                <label class="form-check-label" for="isActive">
+                                    Active (visible to users)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Note:</strong> After creating the product, you can add pricing plans from the product management page.
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(_errorMessage))
+                        {
+                            <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                        }
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-secondary" @onclick="NavigateBack">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                                @if (_isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                    <span class="ms-2">Creating...</span>
+                                }
+                                else
+                                {
+                                    <span><i class="bi bi-check-circle"></i> Create Product</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card-header.bg-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+</style>
+
+@code {
+    private readonly CreateProductRequest _form = new();
+    private string? _metadataRaw;
+    private string? _metadataError;
+    private string? _errorMessage;
+    private bool _isSubmitting;
+
+    /// <summary>
+    /// Ensures the user is authenticated before using the page.
+    /// </summary>
+    protected override Task OnInitializedAsync()
+    {
+        if (!TokenService.IsAuthenticated || string.IsNullOrWhiteSpace(TokenService.AccessToken))
+        {
+            Nav.NavigateTo("/account/login?returnUrl=/product-management/create", forceLoad: true);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Handles a valid form submission to create a product.
+    /// </summary>
+    private async Task HandleValidSubmitAsync()
+    {
+        _errorMessage = null;
+        _metadataError = null;
+
+        if (string.IsNullOrWhiteSpace(_form.Code) || string.IsNullOrWhiteSpace(_form.Name))
+        {
+            _errorMessage = "Product code and name are required.";
+            return;
+        }
+
+        _form.Code = _form.Code.Trim().ToUpperInvariant();
+        _form.Name = _form.Name.Trim();
+        _form.Description = string.IsNullOrWhiteSpace(_form.Description) ? null : _form.Description.Trim();
+
+        if (!string.IsNullOrWhiteSpace(_metadataRaw))
+        {
+            try
+            {
+                System.Text.Json.JsonDocument.Parse(_metadataRaw);
+                _form.Metadata = _metadataRaw;
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                _metadataError = "Invalid JSON format";
+                return;
+            }
+        }
+        else
+        {
+            _form.Metadata = null;
+        }
+
+        _isSubmitting = true;
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var response = await client.PostAsJsonAsync("/api/products", _form, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    TokenService.ClearToken();
+                    Nav.NavigateTo("/account/login?returnUrl=/product-management/create", forceLoad: true);
+                    return;
+                }
+
+                _errorMessage = "Failed to create product.";
+                return;
+            }
+
+            var created = await response.Content.ReadFromJsonAsync<ProductDto>(new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            if (created == null)
+            {
+                _errorMessage = "Failed to read created product.";
+                return;
+            }
+
+            Nav.NavigateTo($"/product-management/prices/{created.Id}");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while creating product: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    /// <summary>
+    /// Creates an authorized HTTP client for API calls.
+    /// </summary>
+    /// <returns>Configured HTTP client.</returns>
+    private HttpClient CreateAuthorizedClient()
+    {
+        var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? Nav.BaseUri.TrimEnd('/');
+        var client = HttpClientFactory.CreateClient();
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenService.AccessToken);
+
+        return client;
+    }
+
+    /// <summary>
+    /// Navigates back to the product management list.
+    /// </summary>
+    private void NavigateBack()
+    {
+        Nav.NavigateTo("/product-management");
+    }
+}

@@ -1,0 +1,242 @@
+@page "/account/register"
+@layout AuthLayout
+@attribute [AllowAnonymous]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+@inject IConfiguration Configuration
+
+@using Saas.Infra.MVC.Controllers.Mvc
+
+<PageTitle>Register - Saas.Infra</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-header">
+        <h1>Create Account</h1>
+        <p>Join us today</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    }
+
+    <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
+        <DataAnnotationsValidator />
+
+        <div class="form-group">
+            <label for="email">Email Address <span style="color:#c33;">*</span></label>
+            <InputText id="email" @bind-Value="_model.Email" type="email" placeholder="Enter your email address" class="form-control-input" />
+            <ValidationMessage For="() => _model.Email" class="text-danger" />
+        </div>
+
+        <div class="form-group">
+            <label for="username">Username <span style="color:#999;">(Optional)</span></label>
+            <InputText id="username" @bind-Value="_model.Username" type="text" placeholder="Leave blank to auto-generate" class="form-control-input" />
+            <ValidationMessage For="() => _model.Username" class="text-danger" />
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <InputText id="password" @bind-Value="_model.Password" type="password" placeholder="Create a strong password" class="form-control-input" />
+            <ValidationMessage For="() => _model.Password" class="text-danger" />
+        </div>
+
+        <div class="form-group">
+            <label for="confirmPassword">Confirm Password</label>
+            <InputText id="confirmPassword" @bind-Value="_model.ConfirmPassword" type="password" placeholder="Confirm your password" class="form-control-input" />
+            <ValidationMessage For="() => _model.ConfirmPassword" class="text-danger" />
+        </div>
+
+        <button type="submit" class="btn-register" disabled="@_isSubmitting">
+            @if (_isSubmitting)
+            {
+                <span>Creating...</span>
+            }
+            else
+            {
+                <span>Create Account</span>
+            }
+        </button>
+    </EditForm>
+
+    <div class="login-link">
+        Already have an account? <a href="/account/login">Sign in</a>
+    </div>
+</div>
+
+<style>
+    .auth-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        max-width: 400px;
+        padding: 40px;
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .auth-header h1 {
+        font-size: 28px;
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .auth-header p {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .form-control-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+    }
+
+    .form-control-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-register {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        margin-bottom: 15px;
+    }
+
+    .btn-register:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-register:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .login-link {
+        text-align: center;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .login-link a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s;
+    }
+
+    .login-link a:hover {
+        color: #764ba2;
+    }
+
+    .alert-danger {
+        background-color: #fee;
+        color: #c33;
+        border: 1px solid #fcc;
+        padding: 12px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    .text-danger {
+        color: #c33;
+        font-size: 12px;
+        display: block;
+        margin-top: 4px;
+    }
+</style>
+
+@code {
+    private readonly RegisterViewModel _model = new();
+    private bool _isSubmitting;
+    private string? _errorMessage;
+
+    protected override Task OnInitializedAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleRegisterAsync()
+    {
+        _errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_model.Email) || string.IsNullOrWhiteSpace(_model.Password) || string.IsNullOrWhiteSpace(_model.ConfirmPassword))
+        {
+            _errorMessage = "Email and password are required.";
+            return;
+        }
+
+        if (!_model.Password.Equals(_model.ConfirmPassword, StringComparison.Ordinal))
+        {
+            _errorMessage = "Passwords do not match.";
+            return;
+        }
+
+        _isSubmitting = true;
+
+        try
+        {
+            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? Nav.BaseUri.TrimEnd('/');
+            var client = HttpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(apiBaseUrl);
+
+            var payload = new
+            {
+                email = _model.Email,
+                username = _model.Username,
+                password = _model.Password,
+                clientId = "Saas.Infra.Client"
+            };
+
+            var response = await client.PostAsJsonAsync("/api/users/register", payload, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Registration failed. Email may already exist.";
+                return;
+            }
+
+            Nav.NavigateTo("/account/login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred during registration: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

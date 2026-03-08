@@ -14,6 +14,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
     /// 产品管理MVC控制器（管理员端）。
     /// Product management MVC controller (Admin side).
     /// </summary>
+    [NonController]
     [AuthorizeRole(UserRole.Admin)]
     public class ProductManagementController : Controller
     {

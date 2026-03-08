@@ -26,17 +26,12 @@
 		<!-- RSA 加密相关 -->
 		<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.3" />
 		<!-- Stripe 支付网关 -->
-		<PackageReference Include="Stripe.net" Version="47.4.0" />
+		<PackageReference Include="Stripe.net" Version="50.4.1" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Saas.Infra.SSO\Saas.Infra.SSO.csproj" />
 		<ProjectReference Include="..\Saas.Infra.Data\Saas.Infra.Data.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Components\Layout\" />
-	  <Folder Include="Components\Pages\" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -46,6 +41,18 @@
 	  <None Update="Secrets\sso_rsa_private.pem">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Views\Account\" />
+	  <Folder Include="Views\Admin\" />
+	  <Folder Include="Views\Checkout\" />
+	  <Folder Include="Views\Dashboard\" />
+	  <Folder Include="Views\ProductManagement\" />
+	  <Folder Include="Views\Products\" />
+	  <Folder Include="Views\Shared\" />
+	  <Folder Include="Views\Subscriptions\" />
+	  <Folder Include="wwwroot\js\" />
 	</ItemGroup>
 
 </Project>

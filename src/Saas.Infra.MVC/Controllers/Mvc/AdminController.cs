@@ -16,6 +16,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
     /// 管理后台MVC控制器。
     /// Admin MVC controller.
     /// </summary>
+    [NonController]
     [AuthorizeRole(UserRole.Admin)]
     public class AdminController : Controller
     {

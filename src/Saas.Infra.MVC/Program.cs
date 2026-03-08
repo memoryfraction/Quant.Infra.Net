@@ -132,7 +132,7 @@ namespace Saas.Infra.MVC
                     });
                 });
 
-                // ===================== 7. 注册基础服务 =====================
+                // ===================== 7. 注册基础服务（API + Blazor 纯前端） =====================
                 builder.Services.AddAuthorization();
                 // Register a placeholder authentication handler for the "Bearer" scheme so
                 // the framework can issue proper challenges/forbids when [Authorize] fails.
@@ -141,10 +141,26 @@ namespace Saas.Infra.MVC
                     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 })
                 .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, Saas.Infra.MVC.Middleware.DummyJwtAuthenticationHandler>(JwtBearerDefaults.AuthenticationScheme, options => { });
-                builder.Services.AddControllersWithViews();
+
+                // API only – no Razor views. UI is implemented via Blazor components.
+                builder.Services.AddControllers();
+
+                // Blazor Server configuration
+                builder.Services.AddRazorComponents()
+                    .AddInteractiveServerComponents();
+
+                // Blazor auth/token services (circuit scoped)
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Blazor.BlazorTokenService>();
+                builder.Services.AddSingleton<Saas.Infra.MVC.Services.Blazor.BlazorAuthHandoffService>();
+                builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, Saas.Infra.MVC.Services.Blazor.BlazorAuthStateProvider>();
+                builder.Services.AddHttpContextAccessor();
+
                 builder.Services.AddLogging(); // 供异常中间件使用
 
-                // Add session support for MVC
+                // Add in-memory distributed cache (required by session middleware)
+                builder.Services.AddDistributedMemoryCache();
+
+                // Add session support
                 builder.Services.AddSession(options =>
                 {
                     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -224,6 +240,7 @@ namespace Saas.Infra.MVC
                 }
 
                 app.UseHttpsRedirection();
+                app.UseStaticFiles();
                 app.UseRouting();
 
                 // Add session middleware
@@ -251,9 +268,12 @@ namespace Saas.Infra.MVC
                 // Add antiforgery middleware
                 app.UseAntiforgery();
 
-                app.MapControllerRoute(
-                    name: "default",
-                    pattern: "{controller=Account}/{action=Login}/{id?}");
+                // Map attribute-routed API controllers (under /api/* etc.)
+                app.MapControllers();
+
+                // Map Blazor components as the primary UI (no MVC views).
+                app.MapRazorComponents<Saas.Infra.MVC.Components.App>()
+                    .AddInteractiveServerRenderMode();
 
                 Log.Information("Saas.Infra.MVC started, listening on: {Urls}", string.Join("; ", app.Urls));
 

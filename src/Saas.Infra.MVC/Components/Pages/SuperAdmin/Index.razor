@@ -133,7 +133,7 @@ else
             _adminCount = await DbContext.UserRoles
                 .AsNoTracking()
                 .Join(DbContext.Roles.AsNoTracking(), userRole => userRole.RoleId, role => role.Id, (userRole, role) => new { userRole.UserId, role.Code })
-                .CountAsync(item => item.Code == "ADMIN" || item.Code == "SUPER_ADMIN")
+                .CountAsync(item => item.Code == global::Saas.Infra.Core.RoleCodes.Admin || item.Code == global::Saas.Infra.Core.RoleCodes.SuperAdmin)
                 .ConfigureAwait(false);
 
             _model.TotalProducts = await DbContext.Products.AsNoTracking().CountAsync().ConfigureAwait(false);

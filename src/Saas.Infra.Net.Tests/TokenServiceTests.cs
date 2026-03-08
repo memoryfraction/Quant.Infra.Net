@@ -28,8 +28,8 @@ public class TokenServiceTests
     }
 
     /// <summary>
-    /// 无额外角色时应注入默认用户角色。
-    /// Should inject default user role when no additional role exists.
+    /// 无额外角色时应注入默认用户角色代码。
+    /// Should inject default user role code when no additional role exists.
     /// </summary>
     [TestMethod]
     public void GenerateToken_ShouldSetDefaultUserRole_WhenNoRoleClaimProvided()
@@ -40,12 +40,12 @@ public class TokenServiceTests
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(response.AccessToken);
 
         var role = jwt.Claims.First(c => c.Type == ClaimTypes.Role).Value;
-        Assert.AreEqual(UserRole.User.ToString(), role);
+        Assert.AreEqual(RoleCodes.User, role);
     }
 
     /// <summary>
-    /// 角色代码为SUPER_ADMIN时应映射为枚举格式。
-    /// Should map SUPER_ADMIN role code to enum string format.
+    /// 角色代码为SUPER_ADMIN时应保留系统角色代码格式。
+    /// Should keep the SUPER_ADMIN role in canonical role code format.
     /// </summary>
     [TestMethod]
     public void GenerateToken_ShouldMapRoleCode_WhenAdditionalRoleClaimProvided()
@@ -57,7 +57,7 @@ public class TokenServiceTests
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(response.AccessToken);
 
         var role = jwt.Claims.First(c => c.Type == ClaimTypes.Role).Value;
-        Assert.AreEqual(UserRole.Super_Admin.ToString(), role);
+        Assert.AreEqual(RoleCodes.SuperAdmin, role);
     }
 
     /// <summary>

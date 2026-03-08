@@ -69,25 +69,13 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
                 // 2. 如果有多个角色，只取第一个（或按需处理）
                 var roleClaim = existingRoleClaims.First();
 
-                // 3. 把数据库中的 Code（如 "SUPER_ADMIN"）映射为 UserRole 枚举
-                if (Enum.TryParse<UserRole>(roleClaim.Value, ignoreCase: true, out var userRole))
-                {
-                    // 4. 可选：先移除旧的 Role Claim，再添加统一格式的枚举值（推荐，避免混合格式）
-                    claims.Remove(roleClaim);
-                    claims.Add(new Claim(ClaimTypes.Role, userRole.ToString()));
-                }
-                else
-                {
-                    // 处理未知角色：可以记录警告，或降级为 User
-                    // 这里先移除无效角色，再添加默认 User
-                    claims.Remove(roleClaim);
-                    claims.Add(new Claim(ClaimTypes.Role, UserRole.User.ToString()));
-                }
+                claims.Remove(roleClaim);
+                claims.Add(new Claim(ClaimTypes.Role, NormalizeRoleCode(roleClaim.Value)));
             }
             else
             {
-                // 5. 没有任何合法 Role Claim，添加默认 User 角色
-                claims.Add(new Claim(ClaimTypes.Role, UserRole.User.ToString()));
+                // 5. 没有任何合法 Role Claim，添加默认 User 角色代码
+                claims.Add(new Claim(ClaimTypes.Role, RoleCodes.User));
             }
 
             // 核心修改：使用RSA非对称加密签名（替换原有的对称加密）
@@ -218,6 +206,41 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
                 Log.Error(ex, "Unexpected error during RSA token validation");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// 规范化角色代码为系统统一格式。
+        /// Normalizes a role code to the system-wide canonical format.
+        /// </summary>
+        /// <param name="roleValue">角色值。 / Role value.</param>
+        /// <returns>规范化角色代码。 / Normalized role code.</returns>
+        /// <exception cref="ArgumentNullException">当 roleValue 为空时抛出。 / Thrown when roleValue is null or whitespace.</exception>
+        public static string NormalizeRoleCode(string roleValue)
+        {
+            if (string.IsNullOrWhiteSpace(roleValue))
+                throw new ArgumentNullException(nameof(roleValue));
+
+            var normalized = roleValue.Trim();
+
+            if (string.Equals(normalized, RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, UserRole.Super_Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                return RoleCodes.SuperAdmin;
+            }
+
+            if (string.Equals(normalized, RoleCodes.Admin, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                return RoleCodes.Admin;
+            }
+
+            if (string.Equals(normalized, RoleCodes.User, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                return RoleCodes.User;
+            }
+
+            return RoleCodes.User;
         }
     }
 }

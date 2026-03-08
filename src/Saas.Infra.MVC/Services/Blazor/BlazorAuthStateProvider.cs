@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Components.Authorization;
+using Saas.Infra.SSO;
 
 namespace Saas.Infra.MVC.Services.Blazor
 {
@@ -52,7 +53,7 @@ namespace Saas.Infra.MVC.Services.Blazor
             var otherClaims = rawClaims.Where(c => c.Type != "role" && c.Type != ClaimTypes.Role);
             var roleClaims = rawClaims
                 .Where(c => c.Type == "role" || c.Type == ClaimTypes.Role)
-                .Select(c => new Claim(ClaimTypes.Role, c.Value));
+                .Select(c => new Claim(ClaimTypes.Role, TokenService.NormalizeRoleCode(c.Value)));
 
             var identity = new ClaimsIdentity(otherClaims.Concat(roleClaims), "jwt");
             var user = new ClaimsPrincipal(identity);

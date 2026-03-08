@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Saas.Infra.Core;
 using Saas.Infra.Data;
 using Saas.Infra.MVC.Models;
+using Saas.Infra.MVC.Models.Requests;
+using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.MVC.Security;
 using Serilog;
 using System.Security.Claims;
@@ -12,7 +14,7 @@ namespace Saas.Infra.MVC.Controllers.Api
 {
     /// <summary>
     /// 提供用户相关的受保护 API（个人资料、修改密码等），需验证RSA签名的JWT令牌。
-    /// Protected user management endpoints (profile, change password, ...) requiring RSA-signed JWT token validation.
+    /// Protected user management endpoints (profile, change password, and admin management) requiring RSA-signed JWT token validation.
     /// </summary>
     [ApiController]
     [Route("api/users")]
@@ -47,20 +49,17 @@ namespace Saas.Infra.MVC.Controllers.Api
         [HttpGet("me")]
         public async Task<IActionResult> Me()
         {
-            // 适配RSA JWT的Claim读取：优先读Sub（JWT标准），再读Name
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
             var username = User.FindFirstValue(ClaimTypes.Name)
                 ?? User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.PreferredUsername);
 
-            // 双重校验：确保用户标识存在
             if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(username))
             {
                 Log.Warning("Me endpoint called but no user identifier claim present (userId/username)");
                 return Unauthorized(new { message = "Invalid token: missing user identifier" });
             }
 
-            // 优先用ID查库；如果ID不是有效GUID（例如sub为email），则按email/username回退查找
             Saas.Infra.Core.User? user = null;
             if (!string.IsNullOrWhiteSpace(userId))
             {
@@ -70,7 +69,6 @@ namespace Saas.Infra.MVC.Controllers.Api
                 }
                 else
                 {
-                    // userId 不是GUID，可能是email或username
                     user = await _userRepository.GetByEmailAsync(userId)
                         ?? await _userRepository.GetByUsernameAsync(userId);
                 }
@@ -88,15 +86,296 @@ namespace Saas.Infra.MVC.Controllers.Api
                 return NotFound(new { message = "User not found" });
             }
 
-            // 返回安全的用户信息DTO
             return Ok(new
             {
                 user.Id,
                 user.Username,
-                user.Email, // 补充Email（按需）
+                user.Email,
                 user.CreatedTime,
                 user.Status
             });
+        }
+
+        /// <summary>
+        /// 获取可管理的用户列表。
+        /// Gets the list of users manageable by the current operator.
+        /// </summary>
+        /// <param name="includeDeleted">是否包含已删除用户。 / Whether to include deleted users.</param>
+        /// <returns>用户管理列表。 / User management list.</returns>
+        [HttpGet("management")]
+        [AuthorizeRole(UserRole.Admin)]
+        public async Task<IActionResult> GetManageableUsers([FromQuery] bool includeDeleted = false)
+        {
+            var currentRoleCode = GetCurrentOperatorRoleCode();
+            var currentUserId = GetCurrentUserId();
+            var isSuperAdmin = string.Equals(currentRoleCode, RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase);
+
+            var usersQuery = _db.Users
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (!includeDeleted)
+            {
+                usersQuery = usersQuery.Where(u => !u.IsDeleted);
+            }
+
+            var users = await usersQuery
+                .OrderBy(u => u.CreatedTime)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.UserName,
+                    u.Email,
+                    u.Status,
+                    u.CreatedTime,
+                    u.IsDeleted
+                })
+                .ToListAsync();
+
+            var userRoleLookup = await _db.UserRoles
+                .AsNoTracking()
+                .Join(
+                    _db.Roles.AsNoTracking(),
+                    userRole => userRole.RoleId,
+                    role => role.Id,
+                    (userRole, role) => new
+                    {
+                        userRole.UserId,
+                        role.Code
+                    })
+                .ToListAsync();
+
+            var roleMap = userRoleLookup
+                .GroupBy(item => item.UserId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .OrderByDescending(item => GetRoleLevel(item.Code))
+                        .Select(item => item.Code)
+                        .FirstOrDefault() ?? RoleCodes.User);
+
+            var result = users
+                .Select(user =>
+                {
+                    var roleCode = roleMap.TryGetValue(user.Id, out var code) ? code : RoleCodes.User;
+                    return new UserManagementDto
+                    {
+                        Id = user.Id,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        Status = user.Status,
+                        StatusText = user.IsDeleted ? "Deleted" : user.Status == (short)UserStatus.Enabled ? "Enabled" : "Disabled",
+                        RoleCode = roleCode,
+                        RoleDisplayName = GetRoleDisplayName(roleCode),
+                        CreatedTime = user.CreatedTime,
+                        CanManage = CanManageTarget(currentRoleCode, roleCode),
+                        IsDeleted = user.IsDeleted,
+                        IsCurrentUser = currentUserId == user.Id
+                    };
+                })
+                .Where(user => isSuperAdmin || string.Equals(user.RoleCode, RoleCodes.User, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(user => user.CreatedTime)
+                .ToList();
+
+            Log.Information("User management list loaded by {Operator}, role {RoleCode}, count {Count}", User.Identity?.Name, currentRoleCode, result.Count);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// 切换用户启用状态。
+        /// Toggles a user's enabled status.
+        /// </summary>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <returns>操作结果。 / Operation result.</returns>
+        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        [HttpPost("{userId:guid}/toggle-status")]
+        [AuthorizeRole(UserRole.Admin)]
+        public async Task<IActionResult> ToggleUserStatus(Guid userId)
+        {
+            if (userId == Guid.Empty)
+                throw new ArgumentException("userId must be a valid UUID", nameof(userId));
+
+            var currentRoleCode = GetCurrentOperatorRoleCode();
+            var targetUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
+            if (targetUser == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            var targetRoleCode = await GetUserRoleCodeAsync(userId);
+            if (!CanManageTarget(currentRoleCode, targetRoleCode))
+            {
+                Log.Warning("Operator {Operator} with role {CurrentRole} attempted to manage user {UserId} with role {TargetRole}", User.Identity?.Name, currentRoleCode, userId, targetRoleCode);
+                return Forbid();
+            }
+
+            targetUser.Status = targetUser.Status == (short)UserStatus.Enabled
+                ? (short)UserStatus.Disabled
+                : (short)UserStatus.Enabled;
+            targetUser.UpdatedTime = DateTimeOffset.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            Log.Information("User {UserId} status changed to {Status} by {Operator}", userId, targetUser.Status, User.Identity?.Name);
+            return Ok(new
+            {
+                message = "User status updated successfully",
+                status = targetUser.Status
+            });
+        }
+
+        /// <summary>
+        /// 更新可管理用户的基本信息。
+        /// Updates the basic information of a manageable user.
+        /// </summary>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <param name="request">更新请求。 / Update request.</param>
+        /// <returns>操作结果。 / Operation result.</returns>
+        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        [HttpPut("{userId:guid}")]
+        [AuthorizeRole(UserRole.Admin)]
+        public async Task<IActionResult> UpdateManagedUser(Guid userId, [FromBody] UpdateManagedUserRequest request)
+        {
+            if (userId == Guid.Empty)
+                throw new ArgumentException("userId must be a valid UUID", nameof(userId));
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+            if (string.IsNullOrWhiteSpace(request.UserName))
+                return BadRequest(new { message = "User name is required" });
+            if (string.IsNullOrWhiteSpace(request.Email))
+                return BadRequest(new { message = "Email is required" });
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var currentRoleCode = GetCurrentOperatorRoleCode();
+            var targetUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
+            if (targetUser == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            var targetRoleCode = await GetUserRoleCodeAsync(userId);
+            if (!CanManageTarget(currentRoleCode, targetRoleCode))
+            {
+                Log.Warning("Operator {Operator} with role {CurrentRole} attempted to edit user {UserId} with role {TargetRole}", User.Identity?.Name, currentRoleCode, userId, targetRoleCode);
+                return Forbid();
+            }
+
+            var normalizedUserName = request.UserName.Trim();
+            var normalizedEmail = request.Email.Trim();
+
+            var duplicateUserName = await _db.Users
+                .AsNoTracking()
+                .AnyAsync(u => !u.IsDeleted && u.Id != userId && u.UserName == normalizedUserName);
+            if (duplicateUserName)
+            {
+                return Conflict(new { message = "User name already exists" });
+            }
+
+            var duplicateEmail = await _db.Users
+                .AsNoTracking()
+                .AnyAsync(u => !u.IsDeleted && u.Id != userId && u.Email == normalizedEmail);
+            if (duplicateEmail)
+            {
+                return Conflict(new { message = "Email already exists" });
+            }
+
+            targetUser.UserName = normalizedUserName;
+            targetUser.Email = normalizedEmail;
+            targetUser.Status = request.Status;
+            targetUser.UpdatedTime = DateTimeOffset.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            Log.Information("User {UserId} updated by {Operator}", userId, User.Identity?.Name);
+            return Ok(new { message = "User updated successfully" });
+        }
+
+        /// <summary>
+        /// 删除可管理用户。
+        /// Deletes a manageable user.
+        /// </summary>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <returns>操作结果。 / Operation result.</returns>
+        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        [HttpDelete("{userId:guid}")]
+        [AuthorizeRole(UserRole.Admin)]
+        public async Task<IActionResult> DeleteManagedUser(Guid userId)
+        {
+            if (userId == Guid.Empty)
+                throw new ArgumentException("userId must be a valid UUID", nameof(userId));
+
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == userId)
+            {
+                return BadRequest(new { message = "You cannot delete the current user" });
+            }
+
+            var currentRoleCode = GetCurrentOperatorRoleCode();
+            var targetUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
+            if (targetUser == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            var targetRoleCode = await GetUserRoleCodeAsync(userId);
+            if (!CanManageTarget(currentRoleCode, targetRoleCode))
+            {
+                Log.Warning("Operator {Operator} with role {CurrentRole} attempted to delete user {UserId} with role {TargetRole}", User.Identity?.Name, currentRoleCode, userId, targetRoleCode);
+                return Forbid();
+            }
+
+            if (string.Equals(targetRoleCode, RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { message = "Super admin users cannot be deleted" });
+            }
+
+            targetUser.IsDeleted = true;
+            targetUser.Status = (short)UserStatus.Disabled;
+            targetUser.UpdatedTime = DateTimeOffset.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            Log.Information("User {UserId} deleted by {Operator}", userId, User.Identity?.Name);
+            return Ok(new { message = "User deleted successfully" });
+        }
+
+        /// <summary>
+        /// 恢复已删除的可管理用户。
+        /// Restores a deleted manageable user.
+        /// </summary>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <returns>操作结果。 / Operation result.</returns>
+        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        [HttpPost("{userId:guid}/restore")]
+        [AuthorizeRole(UserRole.Admin)]
+        public async Task<IActionResult> RestoreManagedUser(Guid userId)
+        {
+            if (userId == Guid.Empty)
+                throw new ArgumentException("userId must be a valid UUID", nameof(userId));
+
+            var currentRoleCode = GetCurrentOperatorRoleCode();
+            var targetUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsDeleted);
+            if (targetUser == null)
+            {
+                return NotFound(new { message = "Deleted user not found" });
+            }
+
+            var targetRoleCode = await GetUserRoleCodeAsync(userId);
+            if (!CanManageTarget(currentRoleCode, targetRoleCode))
+            {
+                Log.Warning("Operator {Operator} with role {CurrentRole} attempted to restore user {UserId} with role {TargetRole}", User.Identity?.Name, currentRoleCode, userId, targetRoleCode);
+                return Forbid();
+            }
+
+            targetUser.IsDeleted = false;
+            targetUser.Status = (short)UserStatus.Enabled;
+            targetUser.UpdatedTime = DateTimeOffset.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            Log.Information("User {UserId} restored by {Operator}", userId, User.Identity?.Name);
+            return Ok(new { message = "User restored successfully" });
         }
 
         /// <summary>
@@ -111,7 +390,6 @@ namespace Saas.Infra.MVC.Controllers.Api
             if (string.IsNullOrWhiteSpace(request.NewPassword)) return BadRequest("New password is required.");
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            // 读取JWT中的用户标识
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
             if (string.IsNullOrWhiteSpace(userId))
@@ -127,7 +405,6 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             else
             {
-                // 如果claim中的userId不是GUID，尝试按email再按用户名查找
                 user = await _userRepository.GetByEmailAsync(userId)
                     ?? await _userRepository.GetByUsernameAsync(userId);
             }
@@ -138,14 +415,12 @@ namespace Saas.Infra.MVC.Controllers.Api
                 return NotFound(new { message = "User not found" });
             }
 
-            // 验证旧密码
             if (!_passwordHasher.VerifyPassword(user.PasswordHash, request.OldPassword))
             {
                 Log.Warning("ChangePassword: invalid old password for UserId={UserId}", userId);
                 return BadRequest(new { message = "Old password is incorrect" });
             }
 
-            // 更新密码
             var newHash = _passwordHasher.HashPassword(request.NewPassword);
             await _userRepository.UpdatePasswordAsync(user.Id, newHash);
 
@@ -161,7 +436,6 @@ namespace Saas.Infra.MVC.Controllers.Api
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            // 参数有效性校验
             if (request == null) throw new ArgumentNullException(nameof(request));
             if (string.IsNullOrWhiteSpace(request.Email)) return BadRequest("Email is required.");
             if (string.IsNullOrWhiteSpace(request.Password)) return BadRequest("Password is required.");
@@ -176,7 +450,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                 var tokenResponse = await _ssoService.RegisterUserAsync(
                     request.Email,
                     request.Password,
-                    request.Username ?? request.Email.Split('@')[0], // 用户名默认值
+                    request.Username ?? request.Email.Split('@')[0],
                     request.ClientId ?? "default");
 
                 Log.Information("User registered successfully (Email={Email}), RSA token generated", request.Email);
@@ -184,7 +458,6 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (InvalidOperationException ex)
             {
-                // 如：用户已存在
                 Log.Warning(ex, "Register failed for email: {Email}", request.Email);
                 return Conflict(new { message = ex.Message });
             }
@@ -209,13 +482,25 @@ namespace Saas.Infra.MVC.Controllers.Api
             if (userId == Guid.Empty)
                 throw new ArgumentException("userId must be a valid UUID", nameof(userId));
 
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == userId)
+            {
+                return BadRequest(new { message = "You cannot change the current user's admin role" });
+            }
+
             var userExists = await _db.Users.AsNoTracking().AnyAsync(u => u.Id == userId);
             if (!userExists)
             {
                 return NotFound(new { message = "User not found" });
             }
 
-            var adminRole = await _db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Code == "ADMIN");
+            var currentRoleCode = await GetUserRoleCodeAsync(userId);
+            if (string.Equals(currentRoleCode, RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { message = "SUPER_ADMIN role cannot be changed" });
+            }
+
+            var adminRole = await _db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Code == RoleCodes.Admin);
             if (adminRole == null)
             {
                 return NotFound(new { message = "ADMIN role not found" });
@@ -254,7 +539,13 @@ namespace Saas.Infra.MVC.Controllers.Api
             if (userId == Guid.Empty)
                 throw new ArgumentException("userId must be a valid UUID", nameof(userId));
 
-            var adminRole = await _db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Code == "ADMIN");
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == userId)
+            {
+                return BadRequest(new { message = "You cannot revoke the current user's admin role" });
+            }
+
+            var adminRole = await _db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Code == RoleCodes.Admin);
             if (adminRole == null)
             {
                 return NotFound(new { message = "ADMIN role not found" });
@@ -271,6 +562,93 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             Log.Information("ADMIN role revoked from user {UserId} by {Operator}", userId, User.Identity?.Name);
             return Ok(new { message = "ADMIN role revoked successfully" });
+        }
+
+        private string GetCurrentOperatorRoleCode()
+        {
+            if (User.Claims.Any(c => c.Type == ClaimTypes.Role && string.Equals(c.Value, RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase)))
+            {
+                return RoleCodes.SuperAdmin;
+            }
+
+            if (User.Claims.Any(c => c.Type == ClaimTypes.Role && string.Equals(c.Value, RoleCodes.Admin, StringComparison.OrdinalIgnoreCase)))
+            {
+                return RoleCodes.Admin;
+            }
+
+            return RoleCodes.User;
+        }
+
+        private async Task<string> GetUserRoleCodeAsync(Guid userId)
+        {
+            var roleCodes = await _db.UserRoles
+                .AsNoTracking()
+                .Where(ur => ur.UserId == userId)
+                .Join(
+                    _db.Roles.AsNoTracking(),
+                    userRole => userRole.RoleId,
+                    role => role.Id,
+                    (userRole, role) => role.Code)
+                .ToListAsync();
+
+            return roleCodes
+                .OrderByDescending(GetRoleLevel)
+                .FirstOrDefault() ?? RoleCodes.User;
+        }
+
+        private static bool CanManageTarget(string currentRoleCode, string targetRoleCode)
+        {
+            if (string.Equals(currentRoleCode, RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (string.Equals(currentRoleCode, RoleCodes.Admin, StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Equals(targetRoleCode, RoleCodes.User, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
+        }
+
+        private Guid GetCurrentUserId()
+        {
+            var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+
+            return Guid.TryParse(claimValue, out var userId)
+                ? userId
+                : Guid.Empty;
+        }
+
+        private static int GetRoleLevel(string roleCode)
+        {
+            if (string.Equals(roleCode, RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+            {
+                return 3;
+            }
+
+            if (string.Equals(roleCode, RoleCodes.Admin, StringComparison.OrdinalIgnoreCase))
+            {
+                return 2;
+            }
+
+            return 1;
+        }
+
+        private static string GetRoleDisplayName(string roleCode)
+        {
+            if (string.Equals(roleCode, RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Super Admin";
+            }
+
+            if (string.Equals(roleCode, RoleCodes.Admin, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Admin";
+            }
+
+            return "User";
         }
     }
 }

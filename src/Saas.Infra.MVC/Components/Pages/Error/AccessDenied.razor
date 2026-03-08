@@ -1,0 +1,37 @@
+@page "/access-denied"
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Access Denied - Saas.Infra</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-5 text-center">
+                    <div class="mb-4 text-warning">
+                        <i class="bi bi-shield-exclamation" style="font-size: 4rem;"></i>
+                    </div>
+                    <h1 class="h2 mb-3">Access Denied</h1>
+                    <p class="lead text-muted mb-4">@DisplayMessage</p>
+                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                        <a class="btn btn-primary" href="/account/login">Back to Login</a>
+                        <a class="btn btn-outline-secondary" href="/dashboard">Go to Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// 页面消息查询参数。
+    /// Page message query parameter.
+    /// </summary>
+    [SupplyParameterFromQuery]
+    public string? Message { get; set; }
+
+    private string DisplayMessage => string.IsNullOrWhiteSpace(Message)
+        ? "You do not have permission to access the requested page."
+        : Message;
+}

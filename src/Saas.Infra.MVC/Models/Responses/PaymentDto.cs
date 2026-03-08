@@ -63,23 +63,4 @@ namespace Saas.Infra.MVC.Models.Responses
         /// </summary>
         public string Message { get; set; } = string.Empty;
     }
-
-    /// <summary>
-    /// 托管结账会话响应DTO。
-    /// Hosted checkout session response DTO.
-    /// </summary>
-    public class CheckoutSessionDto
-    {
-        /// <summary>
-        /// 结账会话ID。
-        /// Checkout session ID.
-        /// </summary>
-        public string SessionId { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Stripe托管支付页面地址。
-        /// Stripe-hosted payment page URL.
-        /// </summary>
-        public string Url { get; set; } = string.Empty;
-    }
 }

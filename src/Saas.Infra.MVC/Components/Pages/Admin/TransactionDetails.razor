@@ -1,0 +1,221 @@
+@page "/admin/transactions/{Id:guid}"
+@layout MainLayout
+@attribute [Authorize(Roles = global::Saas.Infra.Core.RoleCodes.AdminOrSuperAdmin)]
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Transaction Details - Saas.Infra</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="container py-4">
+        <p>Loading transaction details...</p>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="container py-4">
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    </div>
+}
+else if (_transaction == null)
+{
+    <div class="container py-4">
+        <div class="alert alert-warning" role="alert">Transaction was not found.</div>
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0"><i class="bi bi-receipt"></i> Transaction Details</h1>
+            <a class="btn btn-outline-secondary" href="/admin/transactions">
+                <i class="bi bi-arrow-left"></i> Back to Transactions
+            </a>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Core Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Transaction ID</dt>
+                            <dd class="col-sm-8"><code>@_transaction.Id</code></dd>
+
+                            <dt class="col-sm-4">User</dt>
+                            <dd class="col-sm-8">@_transaction.UserName <br /><small class="text-muted">@_transaction.UserEmail</small></dd>
+
+                            <dt class="col-sm-4">Amount</dt>
+                            <dd class="col-sm-8">@_transaction.Currency @((_transaction.Amount / 100.0m).ToString("F2"))</dd>
+
+                            <dt class="col-sm-4">Gateway</dt>
+                            <dd class="col-sm-8">@_transaction.Gateway</dd>
+
+                            <dt class="col-sm-4">Status</dt>
+                            <dd class="col-sm-8"><span class="badge @GetStatusBadge(_transaction.Status)">@GetStatusText(_transaction.Status)</span></dd>
+
+                            <dt class="col-sm-4">External ID</dt>
+                            <dd class="col-sm-8">@(_transaction.ExternalTransactionId ?? "-")</dd>
+
+                            <dt class="col-sm-4">Created</dt>
+                            <dd class="col-sm-8">@_transaction.CreatedTime.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+
+                            <dt class="col-sm-4">Updated</dt>
+                            <dd class="col-sm-8">@(_transaction.UpdatedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Related Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Subscription ID</dt>
+                            <dd class="col-sm-8">
+                                @if (_transaction.SubscriptionId.HasValue)
+                                {
+                                    <a href="@($"/subscriptions/{_transaction.SubscriptionId.Value}")">@_transaction.SubscriptionId.Value</a>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Remarks</dt>
+                            <dd class="col-sm-8">@(_transaction.Remarks ?? "-")</dd>
+                        </dl>
+
+                        <div class="mt-4">
+                            <label class="form-label fw-semibold">Metadata</label>
+                            <pre class="border rounded p-3 bg-light" style="white-space: pre-wrap; word-break: break-word; max-height: 280px; overflow: auto;">@(_transaction.Metadata ?? "-")</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// 交易ID路由参数。
+    /// Transaction ID route parameter.
+    /// </summary>
+    [Parameter]
+    public Guid Id { get; set; }
+
+    [Inject]
+    private ApplicationDbContext DbContext { get; set; } = default!;
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private TransactionDetailViewModel? _transaction;
+
+    /// <summary>
+    /// Loads the transaction details.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == Guid.Empty)
+        {
+            _errorMessage = "Invalid transaction identifier.";
+            _isLoading = false;
+            return;
+        }
+
+        await LoadTransactionAsync().ConfigureAwait(false);
+    }
+
+    private async Task LoadTransactionAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _transaction = await DbContext.Transactions
+                .AsNoTracking()
+                .Include(t => t.User)
+                .Where(t => t.Id == Id)
+                .Select(t => new TransactionDetailViewModel
+                {
+                    Id = t.Id,
+                    UserName = t.User != null ? (t.User.UserName ?? string.Empty) : string.Empty,
+                    UserEmail = t.User != null ? (t.User.Email ?? string.Empty) : string.Empty,
+                    SubscriptionId = t.SubscriptionId,
+                    Amount = t.Amount,
+                    Currency = t.Currency,
+                    Gateway = t.Gateway,
+                    ExternalTransactionId = t.ExternalTransactionId,
+                    Status = t.Status,
+                    Metadata = t.Metadata,
+                    Remarks = t.Remarks,
+                    CreatedTime = t.CreatedTime,
+                    UpdatedTime = t.UpdatedTime
+                })
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while loading the transaction details: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static string GetStatusText(short status) => status switch
+    {
+        0 => "Pending",
+        1 => "Success",
+        2 => "Failed",
+        3 => "Refunded",
+        _ => "Unknown"
+    };
+
+    private static string GetStatusBadge(short status) => status switch
+    {
+        0 => "bg-warning text-dark",
+        1 => "bg-success",
+        2 => "bg-danger",
+        3 => "bg-info text-dark",
+        _ => "bg-light text-dark"
+    };
+
+    private sealed class TransactionDetailViewModel
+    {
+        public Guid Id { get; set; }
+
+        public string UserName { get; set; } = string.Empty;
+
+        public string UserEmail { get; set; } = string.Empty;
+
+        public Guid? SubscriptionId { get; set; }
+
+        public long Amount { get; set; }
+
+        public string Currency { get; set; } = string.Empty;
+
+        public string Gateway { get; set; } = string.Empty;
+
+        public string? ExternalTransactionId { get; set; }
+
+        public short Status { get; set; }
+
+        public string? Metadata { get; set; }
+
+        public string? Remarks { get; set; }
+
+        public DateTimeOffset CreatedTime { get; set; }
+
+        public DateTimeOffset? UpdatedTime { get; set; }
+    }
+}

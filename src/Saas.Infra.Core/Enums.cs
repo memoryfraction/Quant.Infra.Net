@@ -1,7 +1,7 @@
 namespace Saas.Infra.Core
 {
     /// <summary>
-    /// ?????????
+    /// UserRole
     /// System user role enumeration.
     /// </summary>
     public enum UserRole
@@ -31,7 +31,7 @@ namespace Saas.Infra.Core
     }
 
     /// <summary>
-    /// ?????????
+    /// RoleCodes
     /// System role code constants.
     /// </summary>
     public static class RoleCodes
@@ -53,5 +53,17 @@ namespace Saas.Infra.Core
         /// Normal user role code.
         /// </summary>
         public const string User = "USER";
+
+        /// <summary>
+        /// SuperAdminOnly
+        /// Super administrator only role expression.
+        /// </summary>
+        public const string SuperAdminOnly = SuperAdmin;
+
+        /// <summary>
+        /// AdminOrSuperAdmin
+        /// Admin or super administrator role expression.
+        /// </summary>
+        public const string AdminOrSuperAdmin = Admin + "," + SuperAdmin;
     }
 }

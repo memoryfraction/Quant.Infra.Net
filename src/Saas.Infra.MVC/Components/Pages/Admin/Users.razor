@@ -1,0 +1,441 @@
+@page "/admin/users"
+@layout MainLayout
+@attribute [Authorize(Roles = global::Saas.Infra.Core.RoleCodes.AdminOrSuperAdmin)]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+@inject IConfiguration Configuration
+@inject Saas.Infra.MVC.Services.Blazor.BlazorTokenService TokenService
+
+@using Saas.Infra.MVC.Models.Requests
+@using Saas.Infra.MVC.Models.Responses
+
+<PageTitle>User Management - Saas.Infra</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0"><i class="bi bi-people"></i> @(IsSuperAdmin ? "Super Admin User Management" : "Admin User Management")</h1>
+            <p class="text-muted mb-0">@(IsSuperAdmin ? "Manage super admins, admins, and users." : "Manage ordinary users only.")</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="@(IsSuperAdmin ? "/super-admin" : "/admin")">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <div class="form-check mb-0">
+                <input id="includeDeletedUsers" class="form-check-input" type="checkbox" checked="@_includeDeleted" @onchange="ToggleIncludeDeletedAsync" />
+                <label class="form-check-label" for="includeDeletedUsers">Show Deleted Users</label>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (_isLoading)
+            {
+                <div class="p-4 text-center text-muted">Loading users...</div>
+            }
+            else if (_users.Count == 0)
+            {
+                <div class="p-4 text-center text-muted">No users found.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in _users)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@user.UserName</div>
+                                        <small class="text-muted">@user.Email</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetRoleBadgeCss(user.RoleCode)">@user.RoleDisplayName</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge @(user.IsDeleted ? "bg-danger" : user.Status == 1 ? "bg-success" : "bg-secondary")">@user.StatusText</span>
+                                    </td>
+                                    <td>@user.CreatedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm flex-wrap justify-content-end">
+                                            @if (user.CanManage)
+                                            {
+                                                @if (user.IsDeleted)
+                                                {
+                                                    <button type="button" class="btn btn-outline-success" @onclick="() => RestoreUserAsync(user)">Restore</button>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button" class="btn btn-outline-secondary" @onclick="() => OpenEditDialog(user)">Edit</button>
+                                                    <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleStatusAsync(user)">@(user.Status == 1 ? "Disable" : "Enable")</button>
+                                                    @if (!user.IsCurrentUser && !string.Equals(user.RoleCode, global::Saas.Infra.Core.RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+                                                    {
+                                                        <button type="button" class="btn btn-outline-danger" @onclick="() => DeleteUserAsync(user)">Delete</button>
+                                                    }
+                                                }
+                                            }
+
+                                            @if (IsSuperAdmin && user.CanManage && !user.IsDeleted && user.RoleCode == "USER")
+                                            {
+                                                <button type="button" class="btn btn-outline-success" @onclick="() => ChangeAdminRoleAsync(user, true)">Grant Admin</button>
+                                            }
+
+                                            @if (IsSuperAdmin && user.CanManage && !user.IsDeleted && user.RoleCode == "ADMIN")
+                                            {
+                                                <button type="button" class="btn btn-outline-warning" @onclick="() => ChangeAdminRoleAsync(user, false)">Revoke Admin</button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (_showEditDialog && _editModel is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit User</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">User Name</label>
+                        <InputText class="form-control" @bind-Value="_editModel.UserName" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <InputText class="form-control" @bind-Value="_editModel.Email" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <InputSelect class="form-select" @bind-Value="_editModel.Status">
+                            <option value="1">Enabled</option>
+                            <option value="0">Disabled</option>
+                        </InputSelect>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseEditDialog">Cancel</button>
+                    <button type="button" class="btn btn-primary" disabled="@_isSavingEdit" @onclick="SaveUserAsync">
+                        @if (_isSavingEdit)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                            <span class="ms-2">Saving...</span>
+                        }
+                        else
+                        {
+                            <span>Save</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<UserManagementDto> _users = new();
+    private bool _isLoading = true;
+    private bool _showEditDialog;
+    private bool _isSavingEdit;
+    private bool _includeDeleted;
+    private string? _errorMessage;
+    private EditUserModel? _editModel;
+
+    private bool IsSuperAdmin => TokenService.IsInRole("SUPER_ADMIN");
+
+    /// <summary>
+    /// 加载用户管理列表。
+    /// Loads the user management list.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        if (!TokenService.IsAuthenticated || string.IsNullOrWhiteSpace(TokenService.AccessToken))
+        {
+            Nav.NavigateTo("/account/login?returnUrl=/admin/users", forceLoad: true);
+            return;
+        }
+
+        await LoadUsersAsync().ConfigureAwait(false);
+    }
+
+    private async Task ToggleIncludeDeletedAsync(ChangeEventArgs args)
+    {
+        _includeDeleted = args?.Value is bool boolValue && boolValue;
+        await LoadUsersAsync().ConfigureAwait(false);
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _users.Clear();
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var response = await client.GetAsync($"/api/users/management?includeDeleted={_includeDeleted.ToString().ToLowerInvariant()}").ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Failed to load users.";
+                return;
+            }
+
+            var users = await response.Content.ReadFromJsonAsync<List<UserManagementDto>>(new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            if (users != null)
+            {
+                _users.AddRange(users);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while loading users: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void OpenEditDialog(UserManagementDto user)
+    {
+        if (user == null || user.Id == Guid.Empty)
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        _editModel = new EditUserModel
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            Email = user.Email,
+            Status = user.Status
+        };
+        _showEditDialog = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        _showEditDialog = false;
+        _isSavingEdit = false;
+        _editModel = null;
+    }
+
+    private async Task SaveUserAsync()
+    {
+        if (_editModel == null || _editModel.Id == Guid.Empty)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_editModel.UserName))
+        {
+            _errorMessage = "User name is required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_editModel.Email))
+        {
+            _errorMessage = "Email is required.";
+            return;
+        }
+
+        _isSavingEdit = true;
+        _errorMessage = null;
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var request = new UpdateManagedUserRequest
+            {
+                UserName = _editModel.UserName.Trim(),
+                Email = _editModel.Email.Trim(),
+                Status = _editModel.Status
+            };
+
+            var response = await client.PutAsJsonAsync($"/api/users/{_editModel.Id}", request).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Failed to update user.";
+                return;
+            }
+
+            CloseEditDialog();
+            await LoadUsersAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while updating the user: {ex.Message}";
+        }
+        finally
+        {
+            _isSavingEdit = false;
+        }
+    }
+
+    private async Task ToggleStatusAsync(UserManagementDto user)
+    {
+        if (user == null || user.Id == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var response = await client.PostAsync($"/api/users/{user.Id}/toggle-status", null).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Failed to update user status.";
+                return;
+            }
+
+            await LoadUsersAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while updating user status: {ex.Message}";
+        }
+    }
+
+    private async Task ChangeAdminRoleAsync(UserManagementDto user, bool grantAdmin)
+    {
+        if (user == null || user.Id == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var endpoint = grantAdmin ? $"/api/users/{user.Id}/grant-admin" : $"/api/users/{user.Id}/revoke-admin";
+            var response = await client.PostAsync(endpoint, null).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = grantAdmin ? "Failed to grant admin role." : "Failed to revoke admin role.";
+                return;
+            }
+
+            await LoadUsersAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while updating the admin role: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteUserAsync(UserManagementDto user)
+    {
+        if (user == null || user.Id == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var response = await client.DeleteAsync($"/api/users/{user.Id}").ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Failed to delete user.";
+                return;
+            }
+
+            await LoadUsersAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while deleting the user: {ex.Message}";
+        }
+    }
+
+    private async Task RestoreUserAsync(UserManagementDto user)
+    {
+        if (user == null || user.Id == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var response = await client.PostAsync($"/api/users/{user.Id}/restore", null).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = "Failed to restore user.";
+                return;
+            }
+
+            await LoadUsersAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred while restoring the user: {ex.Message}";
+        }
+    }
+
+    private HttpClient CreateAuthorizedClient()
+    {
+        var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? Nav.BaseUri.TrimEnd('/');
+        var client = HttpClientFactory.CreateClient();
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenService.AccessToken);
+
+        return client;
+    }
+
+    private static string GetRoleBadgeCss(string roleCode)
+    {
+        if (string.Equals(roleCode, "SUPER_ADMIN", StringComparison.OrdinalIgnoreCase))
+        {
+            return "bg-danger";
+        }
+
+        if (string.Equals(roleCode, "ADMIN", StringComparison.OrdinalIgnoreCase))
+        {
+            return "bg-primary";
+        }
+
+        return "bg-secondary";
+    }
+
+    private sealed class EditUserModel
+    {
+        public Guid Id { get; set; }
+
+        public string UserName { get; set; } = string.Empty;
+
+        public string Email { get; set; } = string.Empty;
+
+        public short Status { get; set; }
+    }
+}

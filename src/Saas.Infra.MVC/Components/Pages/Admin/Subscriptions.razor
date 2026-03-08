@@ -1,6 +1,7 @@
 @page "/admin/subscriptions"
 @layout MainLayout
-@attribute [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+@attribute [Authorize(Roles = global::Saas.Infra.Core.RoleCodes.AdminOrSuperAdmin)]
+@inject NavigationManager Nav
 @using Microsoft.EntityFrameworkCore
 @using Serilog
 
@@ -29,12 +30,33 @@
                         <option value="3">Expired</option>
                     </select>
                 </div>
-                <div class="col-md-3 d-grid">
+                <div class="col-md-2 d-flex align-items-center">
+                    <div class="form-check">
+                        <input id="includeDeleted" class="form-check-input" type="checkbox" @bind="_includeDeleted" />
+                        <label class="form-check-label" for="includeDeleted">Show Deleted</label>
+                    </div>
+                </div>
+                <div class="col-md-1 d-grid">
                     <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Filter</button>
                 </div>
             </form>
         </div>
     </div>
+
+    @if (_model.Items != null && _model.Items.Count > 0)
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="text-muted">Selected: @_selectedSubscriptionIds.Count</div>
+                <div class="btn-group btn-group-sm flex-wrap">
+                    <button type="button" class="btn btn-outline-warning" @onclick="BulkCancelAsync">Bulk Cancel</button>
+                    <button type="button" class="btn btn-outline-danger" @onclick="BulkDeleteAsync">Bulk Delete</button>
+                    <button type="button" class="btn btn-outline-success" @onclick="BulkRestoreAsync">Bulk Restore</button>
+                    <button type="button" class="btn btn-outline-primary" @onclick="BulkReopenAsync">Bulk Reopen</button>
+                </div>
+            </div>
+        </div>
+    }
 
     <div class="card shadow-sm">
         <div class="card-body p-0">
@@ -52,6 +74,9 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
+                                <th>
+                                    <input type="checkbox" class="form-check-input" checked="@AllVisibleSelected" @onchange="ToggleSelectAll" />
+                                </th>
                                 <th>User</th>
                                 <th>Product</th>
                                 <th>Plan</th>
@@ -59,12 +84,16 @@
                                 <th>Auto Renew</th>
                                 <th>Created</th>
                                 <th>ID</th>
+                                 <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                         @foreach (var item in _model.Items)
                         {
                             <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input" checked="@_selectedSubscriptionIds.Contains(item.Id)" @onchange="args => ToggleSelection(item.Id, args)" />
+                                </td>
                                 <td>
                                     <div class="fw-semibold">@item.UserName</div>
                                     <small class="text-muted">@item.UserEmail</small>
@@ -74,10 +103,29 @@
                                     <small class="text-muted">@item.ProductCode</small>
                                 </td>
                                 <td>@item.PriceName</td>
-                                <td><span class="badge @GetStatusBadge(item.Status)">@GetStatusText(item.Status)</span></td>
+                                <td><span class="badge @(item.IsDeleted ? "bg-danger" : GetStatusBadge(item.Status))">@(item.IsDeleted ? "Deleted" : GetStatusText(item.Status))</span></td>
                                 <td>@(item.AutoRenew ? "Yes" : "No")</td>
                                 <td>@item.CreatedTime.ToString("yyyy-MM-dd HH:mm")</td>
                                 <td><code>@item.Id.ToString()[..8]</code></td>
+                                 <td class="text-end">
+                                     <div class="btn-group btn-group-sm">
+                                         <button type="button" class="btn btn-outline-secondary" @onclick="() => ViewDetails(item.Id)">Details</button>
+                                          @if (item.IsDeleted)
+                                          {
+                                              <button type="button" class="btn btn-outline-success" @onclick="() => RestoreSubscriptionAsync(item.Id)">Restore</button>
+                                          }
+                                          else
+                                          {
+                                              <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleAutoRenewAsync(item.Id)">Auto Renew</button>
+                                              @if (item.Status != 1)
+                                              {
+                                                  <button type="button" class="btn btn-outline-success" @onclick="() => ReopenSubscriptionAsync(item.Id)">Reopen</button>
+                                              }
+                                              <button type="button" class="btn btn-outline-warning" @onclick="() => CancelSubscriptionAsync(item.Id)">Cancel</button>
+                                              <button type="button" class="btn btn-outline-danger" @onclick="() => DeleteSubscriptionAsync(item.Id)">Delete</button>
+                                          }
+                                     </div>
+                                 </td>
                             </tr>
                         }
                         </tbody>
@@ -98,6 +146,8 @@
     private string? _errorMessage;
     private string? _filterKeyword;
     private string? _filterStatus;
+    private bool _includeDeleted;
+    private readonly HashSet<Guid> _selectedSubscriptionIds = new();
 
     [Inject]
     private ApplicationDbContext DbContext { get; set; } = default!;
@@ -129,6 +179,7 @@
 
         _model.Keyword = string.IsNullOrWhiteSpace(_filterKeyword) ? null : _filterKeyword.Trim();
         _model.Status = parsedStatus;
+        _model.IncludeDeleted = _includeDeleted;
 
         await LoadSubscriptionsAsync().ConfigureAwait(false);
     }
@@ -148,7 +199,12 @@
                 .Include(s => s.User)
                 .Include(s => s.Product)
                 .Include(s => s.Price)
-                .Where(s => !s.IsDeleted);
+                .AsQueryable();
+
+            if (!_model.IncludeDeleted)
+            {
+                query = query.Where(s => !s.IsDeleted);
+            }
 
             if (_model.Status.HasValue)
             {
@@ -179,12 +235,15 @@
                     PriceName = s.Price != null ? (s.Price.Name ?? string.Empty) : string.Empty,
                     Status = s.Status,
                     AutoRenew = s.AutoRenew,
+                    EndDate = s.EndDate,
+                    IsDeleted = s.IsDeleted,
                     CreatedTime = s.CreatedTime
                 })
                 .ToListAsync()
                 .ConfigureAwait(false);
 
             _model.Items = items;
+            _selectedSubscriptionIds.IntersectWith(items.Select(item => item.Id));
             Log.Information("Admin subscriptions (Blazor) loaded {Count} rows", items.Count);
         }
         catch (Exception ex)
@@ -225,4 +284,364 @@
         3 => "bg-dark",
         _ => "bg-light text-dark"
     };
+
+    /// <summary>
+    /// Navigates to the subscription details page.
+    /// </summary>
+    /// <param name="id">Subscription identifier.</param>
+    private void ViewDetails(Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return;
+        }
+
+        Nav.NavigateTo($"/subscriptions/{id}");
+    }
+
+    /// <summary>
+    /// Cancels a subscription from the admin monitoring page.
+    /// </summary>
+    /// <param name="id">Subscription identifier.</param>
+    private async Task CancelSubscriptionAsync(Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            var subscription = await DbContext.Subscriptions.FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted).ConfigureAwait(false);
+            if (subscription == null)
+            {
+                _errorMessage = "Subscription was not found.";
+                return;
+            }
+
+            subscription.Status = 2;
+            subscription.AutoRenew = false;
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+
+            await LoadSubscriptionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error cancelling subscription {SubscriptionId} from admin page", id);
+            _errorMessage = "An error occurred while cancelling the subscription.";
+        }
+    }
+
+    /// <summary>
+    /// Toggles auto-renew for a subscription from the admin monitoring page.
+    /// </summary>
+    /// <param name="id">Subscription identifier.</param>
+    private async Task ToggleAutoRenewAsync(Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            var subscription = await DbContext.Subscriptions.FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted).ConfigureAwait(false);
+            if (subscription == null)
+            {
+                _errorMessage = "Subscription was not found.";
+                return;
+            }
+
+            subscription.AutoRenew = !subscription.AutoRenew;
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+
+            await LoadSubscriptionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error toggling auto renew for subscription {SubscriptionId} from admin page", id);
+            _errorMessage = "An error occurred while updating auto renew.";
+        }
+    }
+
+    /// <summary>
+    /// Soft deletes a subscription from the admin monitoring page.
+    /// </summary>
+    /// <param name="id">Subscription identifier.</param>
+    private async Task DeleteSubscriptionAsync(Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            var subscription = await DbContext.Subscriptions.FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted).ConfigureAwait(false);
+            if (subscription == null)
+            {
+                _errorMessage = "Subscription was not found.";
+                return;
+            }
+
+            subscription.IsDeleted = true;
+            subscription.AutoRenew = false;
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+
+            await LoadSubscriptionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error deleting subscription {SubscriptionId} from admin page", id);
+            _errorMessage = "An error occurred while deleting the subscription.";
+        }
+    }
+
+    /// <summary>
+    /// Restores a soft-deleted subscription from the admin monitoring page.
+    /// </summary>
+    /// <param name="id">Subscription identifier.</param>
+    private async Task RestoreSubscriptionAsync(Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            var subscription = await DbContext.Subscriptions.FirstOrDefaultAsync(s => s.Id == id).ConfigureAwait(false);
+            if (subscription == null)
+            {
+                _errorMessage = "Subscription was not found.";
+                return;
+            }
+
+            subscription.IsDeleted = false;
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+
+            await LoadSubscriptionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error restoring subscription {SubscriptionId} from admin page", id);
+            _errorMessage = "An error occurred while restoring the subscription.";
+        }
+    }
+
+    /// <summary>
+    /// Reopens a non-active subscription from the admin monitoring page.
+    /// </summary>
+    /// <param name="id">Subscription identifier.</param>
+    private async Task ReopenSubscriptionAsync(Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            var subscription = await DbContext.Subscriptions
+                .Include(s => s.Price)
+                .FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted)
+                .ConfigureAwait(false);
+            if (subscription == null)
+            {
+                _errorMessage = "Subscription was not found.";
+                return;
+            }
+
+            subscription.Status = 1;
+            subscription.AutoRenew = true;
+            subscription.EndDate = CalculateRenewedEndDate(subscription.Price?.BillingPeriod, subscription.EndDate);
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+
+            await LoadSubscriptionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error reopening subscription {SubscriptionId} from admin page", id);
+            _errorMessage = "An error occurred while reopening the subscription.";
+        }
+    }
+
+    /// <summary>
+    /// Calculates the renewed end date for a reopened subscription.
+    /// </summary>
+    /// <param name="billingPeriod">Billing period.</param>
+    /// <param name="currentEndDate">Current subscription end date.</param>
+    /// <returns>Renewed end date.</returns>
+    private static DateTimeOffset CalculateRenewedEndDate(string? billingPeriod, DateTimeOffset? currentEndDate)
+    {
+        var baseDate = currentEndDate.HasValue && currentEndDate.Value > DateTimeOffset.UtcNow
+            ? currentEndDate.Value
+            : DateTimeOffset.UtcNow;
+
+        return billingPeriod?.ToLowerInvariant() switch
+        {
+            "week" => baseDate.AddDays(7),
+            "year" => baseDate.AddYears(1),
+            _ => baseDate.AddMonths(1)
+        };
+    }
+
+    private bool AllVisibleSelected => _model.Items.Count > 0 && _model.Items.All(item => _selectedSubscriptionIds.Contains(item.Id));
+
+    private void ToggleSelectAll(ChangeEventArgs args)
+    {
+        var isChecked = args?.Value is bool boolValue && boolValue;
+        if (!isChecked)
+        {
+            _selectedSubscriptionIds.Clear();
+            return;
+        }
+
+        foreach (var item in _model.Items)
+        {
+            _selectedSubscriptionIds.Add(item.Id);
+        }
+    }
+
+    private void ToggleSelection(Guid id, ChangeEventArgs args)
+    {
+        if (id == Guid.Empty)
+        {
+            return;
+        }
+
+        var isChecked = args?.Value is bool boolValue && boolValue;
+        if (isChecked)
+        {
+            _selectedSubscriptionIds.Add(id);
+            return;
+        }
+
+        _selectedSubscriptionIds.Remove(id);
+    }
+
+    private async Task BulkCancelAsync()
+    {
+        if (_selectedSubscriptionIds.Count == 0)
+        {
+            _errorMessage = "Select at least one subscription.";
+            return;
+        }
+
+        try
+        {
+            var subscriptions = await DbContext.Subscriptions
+                .Where(s => _selectedSubscriptionIds.Contains(s.Id) && !s.IsDeleted)
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            foreach (var subscription in subscriptions)
+            {
+                subscription.Status = 2;
+                subscription.AutoRenew = false;
+            }
+
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+            await LoadSubscriptionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error performing bulk cancel in admin subscriptions page");
+            _errorMessage = "An error occurred while bulk cancelling subscriptions.";
+        }
+    }
+
+    private async Task BulkDeleteAsync()
+    {
+        if (_selectedSubscriptionIds.Count == 0)
+        {
+            _errorMessage = "Select at least one subscription.";
+            return;
+        }
+
+        try
+        {
+            var subscriptions = await DbContext.Subscriptions
+                .Where(s => _selectedSubscriptionIds.Contains(s.Id) && !s.IsDeleted)
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            foreach (var subscription in subscriptions)
+            {
+                subscription.IsDeleted = true;
+                subscription.AutoRenew = false;
+            }
+
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+            await LoadSubscriptionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error performing bulk delete in admin subscriptions page");
+            _errorMessage = "An error occurred while bulk deleting subscriptions.";
+        }
+    }
+
+    private async Task BulkRestoreAsync()
+    {
+        if (_selectedSubscriptionIds.Count == 0)
+        {
+            _errorMessage = "Select at least one subscription.";
+            return;
+        }
+
+        try
+        {
+            var subscriptions = await DbContext.Subscriptions
+                .Where(s => _selectedSubscriptionIds.Contains(s.Id) && s.IsDeleted)
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            foreach (var subscription in subscriptions)
+            {
+                subscription.IsDeleted = false;
+            }
+
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+            await LoadSubscriptionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error performing bulk restore in admin subscriptions page");
+            _errorMessage = "An error occurred while bulk restoring subscriptions.";
+        }
+    }
+
+    private async Task BulkReopenAsync()
+    {
+        if (_selectedSubscriptionIds.Count == 0)
+        {
+            _errorMessage = "Select at least one subscription.";
+            return;
+        }
+
+        try
+        {
+            var subscriptions = await DbContext.Subscriptions
+                .Include(s => s.Price)
+                .Where(s => _selectedSubscriptionIds.Contains(s.Id) && !s.IsDeleted)
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            foreach (var subscription in subscriptions)
+            {
+                subscription.Status = 1;
+                subscription.AutoRenew = true;
+                subscription.EndDate = CalculateRenewedEndDate(subscription.Price?.BillingPeriod, subscription.EndDate);
+            }
+
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+            await LoadSubscriptionsAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error performing bulk reopen in admin subscriptions page");
+            _errorMessage = "An error occurred while bulk reopening subscriptions.";
+        }
+    }
 }

@@ -1,0 +1,120 @@
+@page "/error"
+@using Microsoft.AspNetCore.Components
+@inject Saas.Infra.MVC.Services.Errors.GlobalExceptionPageService GlobalExceptionPageService
+
+<PageTitle>Error - Saas.Infra</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="mb-3 text-danger">
+                            <i class="bi bi-exclamation-octagon" style="font-size: 4rem;"></i>
+                        </div>
+                        <h1 class="h2 mb-3">Global Exception Page</h1>
+                        <p class="lead text-muted mb-0">@DisplayMessage</p>
+                    </div>
+
+                    @if (_exceptionEntry != null)
+                    {
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="text-muted small">Error ID</div>
+                                    <div class="fw-semibold text-break">@_exceptionEntry.ErrorId</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="text-muted small">Status Code</div>
+                                    <div class="fw-semibold">@_exceptionEntry.StatusCode</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="text-muted small">Request Method</div>
+                                    <div class="fw-semibold">@_exceptionEntry.Method</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="text-muted small">Occurred At</div>
+                                    <div class="fw-semibold">@_exceptionEntry.CreatedTime.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Request Path</label>
+                            <div class="border rounded p-3 bg-light text-break">@_exceptionEntry.Path</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Exception Detail</label>
+                            <pre class="border rounded p-3 bg-dark text-light" style="white-space: pre-wrap; word-break: break-word; max-height: 500px; overflow: auto;">@_exceptionEntry.Detail</pre>
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(Message))
+                    {
+                        <div class="alert alert-warning" role="alert">@Message</div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning" role="alert">No exception detail is available for the requested error page.</div>
+                    }
+
+                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                        <a class="btn btn-primary" href="/dashboard">Back to Dashboard</a>
+                        <a class="btn btn-outline-secondary" href="/account/login">Back to Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// 错误标识查询参数。
+    /// Error identifier query parameter.
+    /// </summary>
+    [SupplyParameterFromQuery]
+    public string? ErrorId { get; set; }
+
+    /// <summary>
+    /// 状态码查询参数。
+    /// Status code query parameter.
+    /// </summary>
+    [SupplyParameterFromQuery]
+    public int? StatusCode { get; set; }
+
+    /// <summary>
+    /// 页面消息查询参数。
+    /// Page message query parameter.
+    /// </summary>
+    [SupplyParameterFromQuery]
+    public string? Message { get; set; }
+
+    private Saas.Infra.MVC.Services.Errors.GlobalExceptionEntry? _exceptionEntry;
+
+    /// <summary>
+    /// 根据错误标识加载异常详情。
+    /// Loads exception details by error identifier.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        _exceptionEntry = null;
+
+        if (!string.IsNullOrWhiteSpace(ErrorId))
+        {
+            _exceptionEntry = GlobalExceptionPageService.GetException(ErrorId);
+        }
+    }
+
+    private string DisplayMessage => _exceptionEntry?.Message
+        ?? (string.IsNullOrWhiteSpace(Message)
+            ? "An unexpected error occurred while processing your request."
+            : Message);
+}

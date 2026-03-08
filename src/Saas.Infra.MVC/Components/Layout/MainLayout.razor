@@ -19,7 +19,7 @@
 <header>
     <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/dashboard">
+            <a class="navbar-brand" href="@GetDashboardRoute()">
                 <i class="bi bi-box-seam"></i> Saas.Infra
             </a>
             <button class="navbar-toggler" type="button" @onclick="ToggleNavbar">
@@ -28,7 +28,7 @@
             <div class="navbar-collapse @(_navbarOpen ? "" : "collapse") d-sm-inline-flex justify-content-between">
                 <ul class="navbar-nav flex-grow-1">
                     <li class="nav-item">
-                        <a class="nav-link" href="/dashboard">
+                        <a class="nav-link" href="@GetDashboardRoute()">
                             <i class="bi bi-house"></i> Dashboard
                         </a>
                     </li>
@@ -51,8 +51,13 @@
                             </a>
                             <ul class="dropdown-menu @(_adminDropdownOpen ? "show" : "")">
                                 <li>
-                                    <a class="dropdown-item" href="/admin">
+                                    <a class="dropdown-item" href="@GetDashboardRoute()">
                                         <i class="bi bi-speedometer2"></i> Dashboard
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/admin/users">
+                                        <i class="bi bi-people"></i> Users
                                     </a>
                                 </li>
                                 <li>
@@ -128,5 +133,22 @@
         Serilog.Log.Information("[BLAZOR NAV] Logout clicked. Clearing token and navigating to /blazor/clear-auth.");
         TokenService.ClearToken();
         Nav.NavigateTo("/blazor/clear-auth", forceLoad: true);
+    }
+
+    /// <summary>Gets the dashboard route for the current role.</summary>
+    /// <returns>Dashboard route.</returns>
+    private string GetDashboardRoute()
+    {
+        if (TokenService.IsInRole("SUPER_ADMIN"))
+        {
+            return "/super-admin";
+        }
+
+        if (TokenService.IsInRole("ADMIN"))
+        {
+            return "/admin";
+        }
+
+        return "/dashboard";
     }
 }

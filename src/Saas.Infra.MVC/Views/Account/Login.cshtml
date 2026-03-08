@@ -220,71 +220,13 @@
     </div>
 
     <script>
+        // Form validation only - no AJAX interception
         document.addEventListener('DOMContentLoaded', function() {
             const loginForm = document.getElementById('loginForm');
-            
-            loginForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const formData = new FormData(loginForm);
-                const redirectUrl = new URLSearchParams(window.location.search).get('redirect_url');
-                
-                fetch(loginForm.action + (redirectUrl ? '?redirect_url=' + encodeURIComponent(redirectUrl) : ''), {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => {
-                            throw new Error(text);
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Store tokens in sessionStorage
-                        if (data.accessToken) {
-                            sessionStorage.setItem('accessToken', data.accessToken);
-                        }
-                        if (data.refreshToken) {
-                            sessionStorage.setItem('refreshToken', data.refreshToken);
-                        }
-                        if (data.expiresIn) {
-                            sessionStorage.setItem('expiresIn', data.expiresIn);
-                        }
 
-                        // If redirectUrl provided by server use it, otherwise go to dashboard
-                        if (data.redirectUrl) {
-                            // Append tokens to redirect URL as query parameters
-                            try {
-                                const separator = data.redirectUrl.indexOf('?') === -1 ? '?' : '&';
-                                const access = data.accessToken ? '&access_token=' + encodeURIComponent(data.accessToken) : '';
-                                const refresh = data.refreshToken ? '&refresh_token=' + encodeURIComponent(data.refreshToken) : '';
-                                const urlToGo = data.redirectUrl + separator + 'source=saas_infra' + access + refresh;
-                                window.location.href = urlToGo;
-                            } catch (e) {
-                                // Fallback: navigate without appending tokens
-                                window.location.href = data.redirectUrl;
-                            }
-                        } else {
-                            window.location.href = '/dashboard';
-                        }
-                    } else {
-                        // Show error message
-                        const alertDiv = document.createElement('div');
-                        alertDiv.className = 'alert alert-danger';
-                        alertDiv.textContent = data.message || 'Login failed. Please try again.';
-                        loginForm.parentNode.insertBefore(alertDiv, loginForm);
-                    }
-                })
-                .catch(error => {
-                    console.error('Login error:', error);
-                    const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-danger';
-                    alertDiv.textContent = 'An error occurred during login. Please try again.';
-                    loginForm.parentNode.insertBefore(alertDiv, loginForm);
-                });
+            loginForm.addEventListener('submit', function(e) {
+                // Let the form submit naturally to allow server-side validation errors to display
+                return true;
             });
         });
     </script>

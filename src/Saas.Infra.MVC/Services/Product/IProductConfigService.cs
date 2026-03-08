@@ -30,8 +30,8 @@ public interface IProductConfigService
 public class ProductInfo
 {
     /// <summary>
-    /// 产品标识（例如："cryptocycleai"）。
-    /// Product ID (e.g., "cryptocycleai").
+    /// 产品标识（Code字段，例如："CRYPTO_CYCLE_AI"）。
+    /// Product ID (Code field, e.g., "CRYPTO_CYCLE_AI").
     /// </summary>
     public string Id { get; set; } = string.Empty;
 
@@ -42,32 +42,14 @@ public class ProductInfo
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 产品URL（例如："/dashboard"）。
-    /// Product URL (e.g., "/dashboard").
-    /// </summary>
-    public string Url { get; set; } = string.Empty;
-
-    /// <summary>
     /// 产品描述（可选）。
     /// Optional product description.
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// 产品图标URL（可选，新架构中不持久化，可能由元数据提供）。
-    /// Optional product icon URL (not persisted in new schema; may be provided by metadata).
-    /// </summary>
-    public string? IconUrl { get; set; }
-
-    /// <summary>
-    /// 允许的支付网关数组（text[]）。
-    /// Allowed payment gateways (text[]).
-    /// </summary>
-    public string[]? AllowedPaymentGateways { get; set; }
-
-    /// <summary>
-    /// 原始JSON元数据。
-    /// Raw JSON metadata.
+    /// 原始JSON元数据（jsonb）。
+    /// Raw JSON metadata (jsonb).
     /// </summary>
     public string? Metadata { get; set; }
 }

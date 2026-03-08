@@ -1,66 +1,53 @@
 using System;
-using System.Text.Json;
 
 namespace Saas.Infra.Data
 {
     /// <summary>
+    /// 产品实体，存储在数据库中遵循产品定价架构。
     /// Product entity stored in database following product pricing schema.
     /// </summary>
     public class ProductEntity
     {
         /// <summary>
-        /// Primary key (UUID)
+        /// 主键（UUID）。
+        /// Primary key (UUID).
         /// </summary>
         public Guid Id { get; set; }
 
         /// <summary>
-        /// Business code (unique), used as public product identifier
+        /// 业务代码（唯一），用作公共产品标识符。
+        /// Business code (unique), used as public product identifier.
         /// </summary>
         public string Code { get; set; } = string.Empty;
 
         /// <summary>
-        /// Display name
+        /// 显示名称。
+        /// Display name.
         /// </summary>
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Description (text)
+        /// 产品描述（文本）。
+        /// Description (text).
         /// </summary>
         public string? Description { get; set; }
 
         /// <summary>
-        /// Allowed payment gateways (text[])
-        /// </summary>
-        public string[]? AllowedPaymentGateways { get; set; }
-
-        /// <summary>
-        /// Whether product is active
+        /// 产品是否激活。
+        /// Whether product is active.
         /// </summary>
         public bool IsActive { get; set; } = true;
 
         /// <summary>
-        /// JSON metadata (jsonb)
+        /// JSON元数据（jsonb，以字符串形式存储）。
+        /// JSON metadata (jsonb, stored as string).
         /// </summary>
-        public JsonDocument? Metadata { get; set; }
+        public string? Metadata { get; set; }
 
         /// <summary>
-        /// Created timestamp (with timezone)
+        /// 创建时间戳（带时区）。
+        /// Created timestamp (with timezone).
         /// </summary>
         public DateTimeOffset CreatedTime { get; set; }
-
-        /// <summary>
-        /// Updated timestamp (with timezone)
-        /// </summary>
-        public DateTimeOffset? UpdatedTime { get; set; }
-
-        /// <summary>
-        /// Audit: created by user id
-        /// </summary>
-        public Guid? CreatedBy { get; set; }
-
-        /// <summary>
-        /// Audit: updated by user id
-        /// </summary>
-        public Guid? UpdatedBy { get; set; }
     }
 }

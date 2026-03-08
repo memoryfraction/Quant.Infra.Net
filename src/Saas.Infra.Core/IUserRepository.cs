@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Saas.Infra.Core
@@ -37,5 +38,13 @@ namespace Saas.Infra.Core
         /// Adds a new user to the store and saves changes.
         /// </summary>
         Task AddAsync(User user);
+
+        /// <summary>
+        /// 根据用户ID异步获取角色代码列表。
+        /// Gets role codes by user ID asynchronously.
+        /// </summary>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <returns>角色代码列表。 / Role code list.</returns>
+        Task<IReadOnlyList<string>> GetRoleCodesByUserIdAsync(System.Guid userId);
     }
 }

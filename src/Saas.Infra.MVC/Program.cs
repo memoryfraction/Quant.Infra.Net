@@ -194,6 +194,19 @@ namespace Saas.Infra.MVC
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Redirect.IRedirectValidator, Saas.Infra.MVC.Services.Redirect.RedirectValidator>();
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Product.IProductConfigService, Saas.Infra.MVC.Services.Product.ProductConfigService>();
 
+                // ===================== 支付服务注册 =====================
+                // 注册支付网关（Stripe）
+                builder.Services.AddSingleton<Saas.Infra.MVC.Services.Payment.IPaymentGateway>(sp =>
+                {
+                    var config = sp.GetRequiredService<IConfiguration>();
+                    var secretKey = config["Stripe:SecretKey"] ?? throw new InvalidOperationException("Stripe:SecretKey not configured");
+                    var webhookSecret = config["Stripe:WebhookSecret"] ?? throw new InvalidOperationException("Stripe:WebhookSecret not configured");
+                    return new Saas.Infra.MVC.Services.Payment.StripePaymentGateway(secretKey, webhookSecret);
+                });
+
+                // 注册支付服务
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IPaymentService, Saas.Infra.MVC.Services.Payment.PaymentService>();
+
                 // ===================== 8. 构建应用并配置管道 =====================
                 var app = builder.Build();
 

@@ -1,0 +1,245 @@
+@model Saas.Infra.Data.ProductEntity
+
+@{
+    ViewData["Title"] = $"Edit {Model.Name} - Saas.Infra";
+    Layout = "_Layout";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- 返回按钮 -->
+            <div class="mb-4">
+                <a href="@Url.Action("Index", "ProductManagement")" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Products
+                </a>
+            </div>
+
+            <!-- 编辑表单 -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-pencil"></i> Edit Product
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form id="editProductForm">
+                        <input type="hidden" id="productId" value="@Model.Id">
+
+                        <div class="mb-3">
+                            <label class="form-label">Product Code</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   value="@Model.Code" 
+                                   disabled>
+                            <div class="form-text">Product code cannot be changed</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="name" 
+                                   name="name" 
+                                   value="@Model.Name"
+                                   required
+                                   maxlength="100">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="4"
+                                      maxlength="1000">@Model.Description</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="metadata" class="form-label">Metadata (JSON)</label>
+                            <textarea class="form-control font-monospace" 
+                                      id="metadata" 
+                                      name="metadata" 
+                                      rows="5">@Model.Metadata</textarea>
+                            <div id="metadataError" class="text-danger" style="display: none;"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="isActive" 
+                                       name="isActive"
+                                       @(Model.IsActive ? "checked" : "")>
+                                <label class="form-check-label" for="isActive">
+                                    Active (visible to users)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning" role="alert">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Warning:</strong> Deactivating a product will hide it from users, but existing subscriptions will remain active.
+                        </div>
+
+                        <div id="errorMessage" class="alert alert-danger" style="display: none;" role="alert"></div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="@Url.Action("Index", "ProductManagement")" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="bi bi-check-circle"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 产品信息卡片 -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-3 text-muted">Product Information</h6>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Product ID:</dt>
+                        <dd class="col-sm-9"><code>@Model.Id</code></dd>
+                        
+                        <dt class="col-sm-3">Created:</dt>
+                        <dd class="col-sm-9">@Model.CreatedTime.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                        
+                        <dt class="col-sm-3">Actions:</dt>
+                        <dd class="col-sm-9">
+                            <a href="@Url.Action("Prices", "ProductManagement", new { id = Model.Id })" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-tags"></i> Manage Prices
+                            </a>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('editProductForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const errorDiv = document.getElementById('errorMessage');
+            const metadataErrorDiv = document.getElementById('metadataError');
+            const productId = document.getElementById('productId').value;
+
+            // 隐藏错误消息
+            errorDiv.style.display = 'none';
+            metadataErrorDiv.style.display = 'none';
+
+            // 验证 JSON metadata
+            const metadataInput = document.getElementById('metadata').value.trim();
+            if (metadataInput) {
+                try {
+                    JSON.parse(metadataInput);
+                } catch (error) {
+                    metadataErrorDiv.textContent = 'Invalid JSON format';
+                    metadataErrorDiv.style.display = 'block';
+                    return;
+                }
+            }
+
+            // 禁用按钮
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+
+            try {
+                const token = getAccessToken();
+                if (!token) {
+                    window.location.href = '/account/login';
+                    return;
+                }
+
+                const formData = {
+                    name: document.getElementById('name').value.trim(),
+                    description: document.getElementById('description').value.trim() || null,
+                    isActive: document.getElementById('isActive').checked,
+                    metadata: metadataInput || null
+                };
+
+                const response = await fetch(`/api/products/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to update product');
+                }
+
+                alert('Product updated successfully!');
+                window.location.href = '/product-management';
+
+            } catch (error) {
+                console.error('Error updating product:', error);
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+                
+                // 重新启用按钮
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Save Changes';
+            }
+        });
+
+        function getAccessToken() {
+            return sessionStorage.getItem('AccessToken') || getCookie('AccessToken');
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // 实时验证 JSON
+        document.getElementById('metadata')?.addEventListener('blur', function() {
+            const metadataErrorDiv = document.getElementById('metadataError');
+            const value = this.value.trim();
+            
+            if (value) {
+                try {
+                    JSON.parse(value);
+                    metadataErrorDiv.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } catch (error) {
+                    metadataErrorDiv.textContent = 'Invalid JSON format';
+                    metadataErrorDiv.style.display = 'block';
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            } else {
+                metadataErrorDiv.style.display = 'none';
+                this.classList.remove('is-invalid', 'is-valid');
+            }
+        });
+    </script>
+}
+
+<style>
+    .card-header.bg-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+</style>

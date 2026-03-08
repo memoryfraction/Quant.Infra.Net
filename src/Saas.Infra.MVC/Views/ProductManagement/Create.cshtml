@@ -1,0 +1,239 @@
+@{
+    ViewData["Title"] = "Create Product - Saas.Infra";
+    Layout = "_Layout";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- 返回按钮 -->
+            <div class="mb-4">
+                <a href="@Url.Action("Index", "ProductManagement")" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Products
+                </a>
+            </div>
+
+            <!-- 创建表单 -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-plus-circle"></i> Create New Product
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form id="createProductForm">
+                        <div class="mb-3">
+                            <label for="code" class="form-label">Product Code <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="code" 
+                                   name="code" 
+                                   required
+                                   placeholder="e.g., CRYPTO_CYCLE_AI"
+                                   pattern="[A-Z0-9_]+"
+                                   title="Only uppercase letters, numbers and underscores">
+                            <div class="form-text">Unique identifier for the product (uppercase, numbers, underscores only)</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="name" 
+                                   name="name" 
+                                   required
+                                   placeholder="e.g., CryptoCycleAI"
+                                   maxlength="100">
+                            <div class="form-text">Display name for the product</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="4"
+                                      placeholder="Enter product description..."
+                                      maxlength="1000"></textarea>
+                            <div class="form-text">Brief description of the product (max 1000 characters)</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="metadata" class="form-label">Metadata (JSON)</label>
+                            <textarea class="form-control font-monospace" 
+                                      id="metadata" 
+                                      name="metadata" 
+                                      rows="5"
+                                      placeholder='{"features":["Feature 1","Feature 2"],"category":"AI Tools"}'></textarea>
+                            <div class="form-text">Optional JSON metadata for the product</div>
+                            <div id="metadataError" class="text-danger" style="display: none;"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="isActive" 
+                                       name="isActive"
+                                       checked>
+                                <label class="form-check-label" for="isActive">
+                                    Active (visible to users)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Note:</strong> After creating the product, you can add pricing plans from the product management page.
+                        </div>
+
+                        <div id="errorMessage" class="alert alert-danger" style="display: none;" role="alert"></div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="@Url.Action("Index", "ProductManagement")" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="bi bi-check-circle"></i> Create Product
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('createProductForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const errorDiv = document.getElementById('errorMessage');
+            const metadataErrorDiv = document.getElementById('metadataError');
+
+            // 隐藏错误消息
+            errorDiv.style.display = 'none';
+            metadataErrorDiv.style.display = 'none';
+
+            // 验证 JSON metadata
+            const metadataInput = document.getElementById('metadata').value.trim();
+            let metadata = null;
+
+            if (metadataInput) {
+                try {
+                    metadata = JSON.parse(metadataInput);
+                } catch (error) {
+                    metadataErrorDiv.textContent = 'Invalid JSON format';
+                    metadataErrorDiv.style.display = 'block';
+                    return;
+                }
+            }
+
+            // 禁用按钮
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
+
+            try {
+                const token = getAccessToken();
+                if (!token) {
+                    window.location.href = '/account/login';
+                    return;
+                }
+
+                const formData = {
+                    code: document.getElementById('code').value.trim().toUpperCase(),
+                    name: document.getElementById('name').value.trim(),
+                    description: document.getElementById('description').value.trim() || null,
+                    isActive: document.getElementById('isActive').checked,
+                    metadata: metadataInput || null
+                };
+
+                const response = await fetch('/api/products', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to create product');
+                }
+
+                const result = await response.json();
+                alert('Product created successfully!');
+                window.location.href = `/product-management/prices/${result.id}`;
+
+            } catch (error) {
+                console.error('Error creating product:', error);
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+                
+                // 重新启用按钮
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Create Product';
+            }
+        });
+
+        function getAccessToken() {
+            return sessionStorage.getItem('AccessToken') || getCookie('AccessToken');
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // 实时验证 JSON
+        document.getElementById('metadata')?.addEventListener('blur', function() {
+            const metadataErrorDiv = document.getElementById('metadataError');
+            const value = this.value.trim();
+            
+            if (value) {
+                try {
+                    JSON.parse(value);
+                    metadataErrorDiv.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } catch (error) {
+                    metadataErrorDiv.textContent = 'Invalid JSON format';
+                    metadataErrorDiv.style.display = 'block';
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            } else {
+                metadataErrorDiv.style.display = 'none';
+                this.classList.remove('is-invalid', 'is-valid');
+            }
+        });
+    </script>
+}
+
+<style>
+    .card-header.bg-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    .form-control.is-invalid {
+        border-color: #dc3545;
+    }
+
+    .form-control.is-valid {
+        border-color: #28a745;
+    }
+</style>

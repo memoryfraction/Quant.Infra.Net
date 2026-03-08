@@ -75,8 +75,11 @@ namespace Saas.Infra.SSO
 
             await _userRepository.AddAsync(newUser);
 
-            // 生成RSA签名的JWT令牌（TokenService已适配RSA）
-            var tokenResponse = _tokenService.GenerateToken(newUser.Username, clientId);
+            var roleCodes = await _userRepository.GetRoleCodesByUserIdAsync(newUser.Id);
+            var claims = BuildTokenClaims(newUser.Id, roleCodes);
+
+            // 生成RSA签名的JWT令牌（使用email作为稳定标识）
+            var tokenResponse = _tokenService.GenerateToken(newUser.Email, clientId, claims);
 
             // 保存刷新令牌（哈希存储，避免明文）
             var refreshHash = ComputeSha256(tokenResponse.RefreshToken);
@@ -131,9 +134,12 @@ namespace Saas.Infra.SSO
                 throw new InvalidOperationException("Incorrect password.");
             }
 
-            // 生成RSA签名的Token
-            var tokenResponse = _tokenService.GenerateToken(user.Username, clientId);
-            Log.Information("RSA-signed token generated for user: {Username} (Email: {Email})", user.Username, email);
+            var roleCodes = await _userRepository.GetRoleCodesByUserIdAsync(user.Id);
+            var claims = BuildTokenClaims(user.Id, roleCodes);
+
+            // 生成RSA签名的Token（使用email作为稳定标识）
+            var tokenResponse = _tokenService.GenerateToken(user.Email, clientId, claims);
+            Log.Information("RSA-signed token generated for email: {Email}", user.Email);
 
             return tokenResponse;
         }
@@ -168,8 +174,11 @@ namespace Saas.Infra.SSO
             await _refreshTokenRepository.RevokeAsync(hash);
             Log.Information("Old refresh token revoked for user: {Username} (UserId: {UserId})", user.Username, user.Id);
 
-            // 生成新的RSA签名令牌
-            var newTokenResponse = _tokenService.GenerateToken(user.Username, clientId);
+            var roleCodes = await _userRepository.GetRoleCodesByUserIdAsync(user.Id);
+            var claims = BuildTokenClaims(user.Id, roleCodes);
+
+            // 生成新的RSA签名令牌（使用email作为稳定标识）
+            var newTokenResponse = _tokenService.GenerateToken(user.Email, clientId, claims);
 
             // 保存新刷新令牌
             var newHash = ComputeSha256(newTokenResponse.RefreshToken);
@@ -236,6 +245,35 @@ namespace Saas.Infra.SSO
             var bytes = Encoding.UTF8.GetBytes(input);
             var hash = sha.ComputeHash(bytes);
             return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+        }
+
+        /// <summary>
+        /// 构建JWT附加声明（用户ID与角色）。
+        /// Builds additional JWT claims (user ID and roles).
+        /// </summary>
+        /// <param name="userId">用户ID。 / User ID.</param>
+        /// <param name="roleCodes">角色代码列表。 / Role code list.</param>
+        /// <returns>声明集合。 / Claim collection.</returns>
+        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        /// <exception cref="ArgumentNullException">当 roleCodes 为空时抛出。 / Thrown when roleCodes is null.</exception>
+        private static IEnumerable<Claim> BuildTokenClaims(Guid userId, IReadOnlyList<string> roleCodes)
+        {
+            if (userId == Guid.Empty)
+                throw new ArgumentException("userId must be a valid UUID", nameof(userId));
+            if (roleCodes == null)
+                throw new ArgumentNullException(nameof(roleCodes));
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+            };
+
+            foreach (var roleCode in roleCodes.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                claims.Add(new Claim(ClaimTypes.Role, roleCode));
+            }
+
+            return claims;
         }
 
         /// <summary>

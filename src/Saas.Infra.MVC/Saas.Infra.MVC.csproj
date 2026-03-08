@@ -10,9 +10,9 @@
 	<ItemGroup>
 		<!-- JWT 认证核心包 -->
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
-        <!-- Blazor Web App (removed) -->
+		<!-- Blazor Web App (removed) -->
 		<!-- EF Core 设计时工具 -->
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
@@ -25,6 +25,8 @@
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
 		<!-- RSA 加密相关 -->
 		<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.3" />
+		<!-- Stripe 支付网关 -->
+		<PackageReference Include="Stripe.net" Version="47.4.0" />
 	</ItemGroup>
 
 	<ItemGroup>

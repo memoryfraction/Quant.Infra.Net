@@ -1,0 +1,216 @@
+@{
+    ViewData["Title"] = "My Subscriptions - Saas.Infra";
+    Layout = "_Layout";
+}
+
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 mb-2">My Subscriptions</h1>
+            <p class="text-muted">Manage your active subscriptions</p>
+        </div>
+    </div>
+
+    <!-- 过滤器 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="filter" id="filter-all" checked>
+                <label class="btn btn-outline-primary" for="filter-all" onclick="loadSubscriptions(false)">
+                    All Subscriptions
+                </label>
+                
+                <input type="radio" class="btn-check" name="filter" id="filter-active">
+                <label class="btn btn-outline-primary" for="filter-active" onclick="loadSubscriptions(true)">
+                    Active Only
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载状态 -->
+    <div id="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3">Loading your subscriptions...</p>
+    </div>
+
+    <!-- 订阅列表 -->
+    <div id="subscriptions-container" style="display: none;">
+        <div class="row g-4" id="subscriptions-list"></div>
+    </div>
+
+    <!-- 空状态 -->
+    <div id="empty-state" style="display: none;">
+        <div class="alert alert-info text-center" role="alert">
+            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+            <h5>No subscriptions found</h5>
+            <p class="mb-3">You don't have any subscriptions yet.</p>
+            <a href="@Url.Action("Index", "Products")" class="btn btn-primary">
+                Browse Products
+            </a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function loadSubscriptions(activeOnly = false) {
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('subscriptions-container');
+            const emptyState = document.getElementById('empty-state');
+            const list = document.getElementById('subscriptions-list');
+
+            // 显示加载状态
+            loading.style.display = 'block';
+            container.style.display = 'none';
+            emptyState.style.display = 'none';
+
+            try {
+                const token = getAccessToken();
+                if (!token) {
+                    window.location.href = '/account/login';
+                    return;
+                }
+
+                const response = await fetch(`/api/subscriptions/my?activeOnly=${activeOnly}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load subscriptions');
+                }
+
+                const subscriptions = await response.json();
+
+                // 隐藏加载状态
+                loading.style.display = 'none';
+
+                if (subscriptions.length === 0) {
+                    emptyState.style.display = 'block';
+                } else {
+                    list.innerHTML = subscriptions.map(sub => createSubscriptionCard(sub)).join('');
+                    container.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading subscriptions:', error);
+                loading.style.display = 'none';
+                alert('Failed to load subscriptions. Please try again.');
+            }
+        }
+
+        function createSubscriptionCard(sub) {
+            const statusBadge = sub.status === 1 ? 
+                '<span class="badge bg-success">Active</span>' :
+                sub.status === 2 ? 
+                '<span class="badge bg-warning">Cancelled</span>' :
+                sub.status === 3 ?
+                '<span class="badge bg-secondary">Expired</span>' :
+                '<span class="badge bg-info">Pending</span>';
+
+            const remainingText = sub.remainingDays !== null && sub.status === 1 ? 
+                `<small class="text-muted"><i class="bi bi-clock"></i> ${sub.remainingDays} days remaining</small>` : '';
+
+            return `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title mb-0">${sub.productName || 'Product'}</h5>
+                                ${statusBadge}
+                            </div>
+                            
+                            <p class="text-muted mb-2">${sub.priceName || 'Plan'}</p>
+                            <p class="mb-1"><strong>${sub.formattedAmount}</strong></p>
+                            ${remainingText}
+                            
+                            <hr>
+                            
+                            <div class="d-grid gap-2">
+                                <a href="/subscriptions/${sub.id}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View Details
+                                </a>
+                                ${sub.status === 1 ? `
+                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelSubscription('${sub.id}')">
+                                        <i class="bi bi-x-circle"></i> Cancel
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="card-footer text-muted">
+                            <small>Started: ${new Date(sub.startDate).toLocaleDateString()}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function cancelSubscription(subscriptionId) {
+            if (!confirm('Are you sure you want to cancel this subscription?')) {
+                return;
+            }
+
+            try {
+                const token = getAccessToken();
+                const response = await fetch(`/api/subscriptions/${subscriptionId}/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to cancel subscription');
+                }
+
+                alert('Subscription cancelled successfully');
+                loadSubscriptions(false);
+            } catch (error) {
+                console.error('Error cancelling subscription:', error);
+                alert('Failed to cancel subscription. Please try again.');
+            }
+        }
+
+        function getAccessToken() {
+            return sessionStorage.getItem('AccessToken') || 
+                   getCookie('AccessToken');
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // 页面加载时获取订阅列表
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSubscriptions(false);
+        });
+    </script>
+}
+
+<style>
+    .btn-outline-primary {
+        border-color: #667eea;
+        color: #667eea;
+    }
+
+    .btn-outline-primary:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+    }
+
+    .card {
+        transition: transform 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+    }
+</style>

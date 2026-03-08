@@ -209,6 +209,7 @@ namespace Saas.Infra.MVC
                 // Register redirect validation and product configuration services
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Redirect.IRedirectValidator, Saas.Infra.MVC.Services.Redirect.RedirectValidator>();
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Product.IProductConfigService, Saas.Infra.MVC.Services.Product.ProductConfigService>();
+                builder.Services.AddSingleton<Saas.Infra.MVC.Services.Errors.GlobalExceptionPageService>();
 
                 // ===================== 支付服务注册 =====================
                 // 注册支付网关（Stripe）
@@ -235,7 +236,7 @@ namespace Saas.Infra.MVC
                 // 环境配置
                 if (!app.Environment.IsDevelopment())
                 {
-                    app.UseExceptionHandler("/Account/Login");
+                    app.UseExceptionHandler("/error");
                     app.UseHsts();
                 }
 
@@ -264,6 +265,37 @@ namespace Saas.Infra.MVC
                 // 认证&授权
                 app.UseAuthentication();
                 app.UseAuthorization();
+
+                app.UseStatusCodePages(async statusCodeContext =>
+                {
+                    var httpContext = statusCodeContext.HttpContext;
+                    if (httpContext.Request.Path.StartsWithSegments("/api")
+                        || httpContext.Request.Path.StartsWithSegments("/_blazor")
+                        || httpContext.Request.Path.StartsWithSegments("/_framework"))
+                    {
+                        return;
+                    }
+
+                    var statusCode = httpContext.Response.StatusCode;
+                    var acceptsHtml = httpContext.Request.Headers.Accept.Any(value => value.Contains("text/html", StringComparison.OrdinalIgnoreCase));
+                    if (!acceptsHtml)
+                    {
+                        return;
+                    }
+
+                    var redirectUrl = statusCode switch
+                    {
+                        StatusCodes.Status401Unauthorized => "/account/login?message=Authentication%20required.",
+                        StatusCodes.Status403Forbidden => "/access-denied?message=Bearer%20was%20forbidden.",
+                        StatusCodes.Status404NotFound => "/error?statusCode=404&message=The%20requested%20page%20was%20not%20found.",
+                        _ => null
+                    };
+
+                    if (!string.IsNullOrWhiteSpace(redirectUrl))
+                    {
+                        httpContext.Response.Redirect(redirectUrl);
+                    }
+                });
 
                 // Add antiforgery middleware
                 app.UseAntiforgery();

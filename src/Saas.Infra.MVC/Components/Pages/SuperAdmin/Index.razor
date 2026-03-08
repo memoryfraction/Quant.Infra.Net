@@ -1,18 +1,20 @@
-@page "/admin"
+@page "/super-admin"
 @layout MainLayout
-@attribute [Authorize(Roles = global::Saas.Infra.Core.RoleCodes.AdminOrSuperAdmin)]
-@using Microsoft.EntityFrameworkCore
-@using Serilog
+@attribute [Authorize(Roles = global::Saas.Infra.Core.RoleCodes.SuperAdminOnly)]
+@inject ApplicationDbContext DbContext
 
-<PageTitle>Admin Dashboard - Saas.Infra</PageTitle>
+@using Microsoft.EntityFrameworkCore
+@using Saas.Infra.MVC.Models
+
+<PageTitle>Super Admin Dashboard - Saas.Infra</PageTitle>
 
 @if (_isLoading)
 {
     <div class="container-fluid py-4">
-        <p>Loading admin dashboard...</p>
+        <p>Loading super admin dashboard...</p>
     </div>
 }
-else if (!string.IsNullOrEmpty(_errorMessage))
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
     <div class="container-fluid py-4">
         <div class="alert alert-danger" role="alert">@_errorMessage</div>
@@ -23,13 +25,24 @@ else
     <div class="container-fluid py-4">
         <div class="row mb-4">
             <div class="col-12">
-                <h1 class="display-6"><i class="bi bi-speedometer2"></i> Admin Dashboard</h1>
-                <p class="text-muted">Admin workspace for user, product, subscription, and payment operations.</p>
+                <h1 class="display-6"><i class="bi bi-shield-fill-check"></i> Super Admin Dashboard</h1>
+                <p class="text-muted">Highest privilege dashboard for users, products, subscriptions, and payments.</p>
             </div>
         </div>
 
         <div class="row g-3 mb-4">
-            <div class="col-md-4">
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted">Users</h6>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <h2 class="mb-0">@_userCount</h2>
+                            <span class="badge bg-primary">Admins: @_adminCount</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
                         <h6 class="text-muted">Products</h6>
@@ -40,24 +53,24 @@ else
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
                         <h6 class="text-muted">Subscriptions</h6>
                         <div class="d-flex justify-content-between align-items-end">
                             <h2 class="mb-0">@_model.TotalSubscriptions</h2>
-                            <span class="badge bg-primary">Active: @_model.ActiveSubscriptions</span>
+                            <span class="badge bg-info text-dark">Active: @_model.ActiveSubscriptions</span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
                         <h6 class="text-muted">Transactions</h6>
                         <div class="d-flex justify-content-between align-items-end">
                             <h2 class="mb-0">@_model.TotalTransactions</h2>
-                            <span class="badge bg-info text-dark">Success: @_model.SuccessfulTransactions</span>
+                            <span class="badge bg-warning text-dark">Success: @_model.SuccessfulTransactions</span>
                         </div>
                     </div>
                 </div>
@@ -69,7 +82,7 @@ else
                 <a href="/admin/users" class="card text-decoration-none shadow-sm h-100">
                     <div class="card-body">
                         <h5><i class="bi bi-people"></i> User Management</h5>
-                        <p class="text-muted mb-0">Manage ordinary user accounts and access status.</p>
+                        <p class="text-muted mb-0">Manage super admins, admins, and ordinary users.</p>
                     </div>
                 </a>
             </div>
@@ -77,15 +90,15 @@ else
                 <a href="/product-management" class="card text-decoration-none shadow-sm h-100">
                     <div class="card-body">
                         <h5><i class="bi bi-box-seam"></i> Product Management</h5>
-                        <p class="text-muted mb-0">Create and manage product definitions and pricing.</p>
+                        <p class="text-muted mb-0">Create and update product definitions and pricing.</p>
                     </div>
                 </a>
             </div>
             <div class="col-md-3">
                 <a href="/admin/subscriptions" class="card text-decoration-none shadow-sm h-100">
                     <div class="card-body">
-                        <h5><i class="bi bi-list-check"></i> Subscription Management</h5>
-                        <p class="text-muted mb-0">View all user subscriptions and status.</p>
+                        <h5><i class="bi bi-list-check"></i> Subscription Monitoring</h5>
+                        <p class="text-muted mb-0">Review every subscription across the platform.</p>
                     </div>
                 </a>
             </div>
@@ -93,7 +106,7 @@ else
                 <a href="/admin/transactions" class="card text-decoration-none shadow-sm h-100">
                     <div class="card-body">
                         <h5><i class="bi bi-cash-coin"></i> Transaction Monitoring</h5>
-                        <p class="text-muted mb-0">Filter and review payment transactions.</p>
+                        <p class="text-muted mb-0">Audit transaction status and payment health.</p>
                     </div>
                 </a>
             </div>
@@ -105,34 +118,38 @@ else
     private readonly AdminDashboardViewModel _model = new();
     private bool _isLoading = true;
     private string? _errorMessage;
+    private int _userCount;
+    private int _adminCount;
 
     /// <summary>
-    /// Loads admin dashboard statistics from the database.
+    /// 加载超级管理员仪表板统计数据。
+    /// Loads the super admin dashboard metrics.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _model.TotalProducts = await DbContext.Products.AsNoTracking().CountAsync().ConfigureAwait(false);
-            _model.ActiveProducts = await DbContext.Products.AsNoTracking().CountAsync(p => p.IsActive).ConfigureAwait(false);
-            _model.TotalSubscriptions = await DbContext.Subscriptions.AsNoTracking().CountAsync(s => !s.IsDeleted).ConfigureAwait(false);
-            _model.ActiveSubscriptions = await DbContext.Subscriptions.AsNoTracking().CountAsync(s => !s.IsDeleted && s.Status == 1).ConfigureAwait(false);
-            _model.TotalTransactions = await DbContext.Transactions.AsNoTracking().CountAsync().ConfigureAwait(false);
-            _model.SuccessfulTransactions = await DbContext.Transactions.AsNoTracking().CountAsync(t => t.Status == 1).ConfigureAwait(false);
+            _userCount = await DbContext.Users.AsNoTracking().CountAsync(user => !user.IsDeleted).ConfigureAwait(false);
+            _adminCount = await DbContext.UserRoles
+                .AsNoTracking()
+                .Join(DbContext.Roles.AsNoTracking(), userRole => userRole.RoleId, role => role.Id, (userRole, role) => new { userRole.UserId, role.Code })
+                .CountAsync(item => item.Code == "ADMIN" || item.Code == "SUPER_ADMIN")
+                .ConfigureAwait(false);
 
-            Log.Information("Admin dashboard (Blazor) loaded successfully");
+            _model.TotalProducts = await DbContext.Products.AsNoTracking().CountAsync().ConfigureAwait(false);
+            _model.ActiveProducts = await DbContext.Products.AsNoTracking().CountAsync(product => product.IsActive).ConfigureAwait(false);
+            _model.TotalSubscriptions = await DbContext.Subscriptions.AsNoTracking().CountAsync(subscription => !subscription.IsDeleted).ConfigureAwait(false);
+            _model.ActiveSubscriptions = await DbContext.Subscriptions.AsNoTracking().CountAsync(subscription => !subscription.IsDeleted && subscription.Status == 1).ConfigureAwait(false);
+            _model.TotalTransactions = await DbContext.Transactions.AsNoTracking().CountAsync().ConfigureAwait(false);
+            _model.SuccessfulTransactions = await DbContext.Transactions.AsNoTracking().CountAsync(transaction => transaction.Status == 1).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error loading admin dashboard in Blazor component");
-            _errorMessage = "Failed to load admin dashboard.";
+            _errorMessage = $"An error occurred while loading the super admin dashboard: {ex.Message}";
         }
         finally
         {
             _isLoading = false;
         }
     }
-
-    [Inject]
-    private ApplicationDbContext DbContext { get; set; } = default!;
 }

@@ -65,6 +65,24 @@ namespace Saas.Infra.MVC.Models
         public short? Status { get; set; }
 
         /// <summary>
+        /// 开始日期筛选。
+        /// From date filter.
+        /// </summary>
+        public DateTime? FromDate { get; set; }
+
+        /// <summary>
+        /// 结束日期筛选。
+        /// To date filter.
+        /// </summary>
+        public DateTime? ToDate { get; set; }
+
+        /// <summary>
+        /// 是否包含已删除订阅。
+        /// Whether to include deleted subscriptions.
+        /// </summary>
+        public bool IncludeDeleted { get; set; }
+
+        /// <summary>
         /// 订阅列表。
         /// Subscription items.
         /// </summary>
@@ -126,6 +144,18 @@ namespace Saas.Infra.MVC.Models
         public bool AutoRenew { get; set; }
 
         /// <summary>
+        /// 订阅结束时间。
+        /// Subscription end time.
+        /// </summary>
+        public DateTimeOffset? EndDate { get; set; }
+
+        /// <summary>
+        /// 是否已删除。
+        /// Whether the subscription is deleted.
+        /// </summary>
+        public bool IsDeleted { get; set; }
+
+        /// <summary>
         /// 订阅创建时间。
         /// Subscription created time.
         /// </summary>
@@ -149,6 +179,18 @@ namespace Saas.Infra.MVC.Models
         /// Status filter.
         /// </summary>
         public short? Status { get; set; }
+
+        /// <summary>
+        /// 开始日期筛选。
+        /// From date filter.
+        /// </summary>
+        public DateTime? FromDate { get; set; }
+
+        /// <summary>
+        /// 结束日期筛选。
+        /// To date filter.
+        /// </summary>
+        public DateTime? ToDate { get; set; }
 
         /// <summary>
         /// 交易列表。
@@ -210,6 +252,12 @@ namespace Saas.Infra.MVC.Models
         /// External transaction ID.
         /// </summary>
         public string? ExternalTransactionId { get; set; }
+
+        /// <summary>
+        /// 关联订阅ID。
+        /// Associated subscription ID.
+        /// </summary>
+        public Guid? SubscriptionId { get; set; }
 
         /// <summary>
         /// 创建时间。

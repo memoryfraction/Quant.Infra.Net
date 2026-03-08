@@ -21,9 +21,8 @@
 
 		if (isAuth)
 		{
-			// User is authenticated but still hit NotAuthorized; treat as forbidden
-			// and do not redirect back to login to avoid loops.
-			Serilog.Log.Information("[BLAZOR NAV] RedirectToLogin: user authenticated, skipping redirect.");
+			Serilog.Log.Information("[BLAZOR NAV] RedirectToLogin: user authenticated, redirecting to access denied page.");
+			Nav.NavigateTo("/access-denied?message=Bearer%20was%20forbidden.", forceLoad: false);
 			return;
 		}
 

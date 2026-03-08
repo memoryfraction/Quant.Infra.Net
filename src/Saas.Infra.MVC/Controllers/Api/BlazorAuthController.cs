@@ -1,7 +1,10 @@
 using System;
-using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Saas.Infra.Core;
 using Saas.Infra.MVC.Services.Blazor;
 
 namespace Saas.Infra.MVC.Controllers.Api
@@ -12,7 +15,7 @@ namespace Saas.Infra.MVC.Controllers.Api
     /// issues the HTTP-only authentication cookie, and redirects back to the Blazor route.
     /// </summary>
     [ApiController]
-    [Route("blazor")] 
+    [Route("blazor")]
     public sealed class BlazorAuthController : ControllerBase
     {
         private readonly BlazorAuthHandoffService _handoffService;
@@ -52,7 +55,6 @@ namespace Saas.Infra.MVC.Controllers.Api
                 return Redirect("/account/login");
             }
 
-            // Issue HttpOnly cookie so subsequent HTTP requests can access the token.
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
@@ -64,14 +66,49 @@ namespace Saas.Infra.MVC.Controllers.Api
             Response.Cookies.Append("AccessToken", token, cookieOptions);
             _logger.LogInformation("Blazor auth cookie established via handoff.");
 
-            // Normalise returnUrl to a safe application-relative path.
-            var target = string.IsNullOrWhiteSpace(returnUrl) ? "/dashboard" : returnUrl;
+            var target = string.IsNullOrWhiteSpace(returnUrl)
+                ? GetDefaultDashboardRoute(token)
+                : returnUrl;
             if (!target.StartsWith("/", StringComparison.Ordinal))
             {
                 target = "/" + target;
             }
 
             return Redirect(target);
+        }
+
+        private static string GetDefaultDashboardRoute(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return "/dashboard";
+            }
+
+            try
+            {
+                var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+                var roleCodes = jwt.Claims
+                    .Where(claim => string.Equals(claim.Type, "role", StringComparison.OrdinalIgnoreCase)
+                                    || string.Equals(claim.Type, System.Security.Claims.ClaimTypes.Role, StringComparison.OrdinalIgnoreCase))
+                    .Select(claim => claim.Value)
+                    .ToList();
+
+                if (roleCodes.Any(role => string.Equals(role, RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return "/super-admin";
+                }
+
+                if (roleCodes.Any(role => string.Equals(role, RoleCodes.Admin, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return "/admin";
+                }
+            }
+            catch
+            {
+                return "/dashboard";
+            }
+
+            return "/dashboard";
         }
     }
 }

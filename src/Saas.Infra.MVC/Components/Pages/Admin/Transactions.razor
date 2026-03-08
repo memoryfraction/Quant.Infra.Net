@@ -1,6 +1,6 @@
 @page "/admin/transactions"
 @layout MainLayout
-@attribute [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+@attribute [Authorize(Roles = global::Saas.Infra.Core.RoleCodes.AdminOrSuperAdmin)]
 @using Microsoft.EntityFrameworkCore
 @using Serilog
 
@@ -9,18 +9,26 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h3 mb-0"><i class="bi bi-cash-coin"></i> Transaction Monitoring</h1>
-        <a class="btn btn-outline-secondary" href="/admin">
-            <i class="bi bi-arrow-left"></i> Back to Admin
-        </a>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-success" href="@GetExportUrl(excel: true)">
+                <i class="bi bi-file-earmark-excel"></i> Export Excel
+            </a>
+            <a class="btn btn-outline-primary" href="@GetExportUrl(excel: false)">
+                <i class="bi bi-download"></i> Export CSV
+            </a>
+            <a class="btn btn-outline-secondary" href="/admin">
+                <i class="bi bi-arrow-left"></i> Back to Admin
+            </a>
+        </div>
     </div>
 
     <div class="card shadow-sm mb-3">
         <div class="card-body">
             <form class="row g-2" @onsubmit="OnFilterSubmitted">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <input type="text" class="form-control" placeholder="Gateway e.g. Stripe" @bind="_filterGateway" />
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <select class="form-select" @bind="_filterStatus">
                         <option value="">All Status</option>
                         <option value="0">Pending</option>
@@ -29,7 +37,13 @@
                         <option value="3">Refunded</option>
                     </select>
                 </div>
-                <div class="col-md-4 d-grid">
+                <div class="col-md-2">
+                    <InputDate class="form-control" @bind-Value="_filterFromDate" />
+                </div>
+                <div class="col-md-2">
+                    <InputDate class="form-control" @bind-Value="_filterToDate" />
+                </div>
+                <div class="col-md-2 d-grid">
                     <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Filter</button>
                 </div>
             </form>
@@ -58,6 +72,7 @@
                                 <th>Status</th>
                                 <th>External ID</th>
                                 <th>Created</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -73,6 +88,9 @@
                                 <td><span class="badge @GetStatusBadge(item.Status)">@GetStatusText(item.Status)</span></td>
                                 <td><small>@(item.ExternalTransactionId ?? "-")</small></td>
                                 <td>@item.CreatedTime.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/admin/transactions/{item.Id}")">Details</a>
+                                </td>
                             </tr>
                         }
                         </tbody>
@@ -93,6 +111,8 @@
     private string? _errorMessage;
     private string? _filterGateway;
     private string? _filterStatus;
+    private DateTime? _filterFromDate;
+    private DateTime? _filterToDate;
 
     [Inject]
     private ApplicationDbContext DbContext { get; set; } = default!;
@@ -116,6 +136,12 @@
             return;
         }
 
+        if (_filterFromDate.HasValue && _filterToDate.HasValue && _filterFromDate.Value.Date > _filterToDate.Value.Date)
+        {
+            _errorMessage = "From date cannot be later than to date.";
+            return;
+        }
+
         short? parsedStatus = null;
         if (!string.IsNullOrWhiteSpace(_filterStatus) && short.TryParse(_filterStatus, out var statusValue))
         {
@@ -124,6 +150,8 @@
 
         _model.Gateway = string.IsNullOrWhiteSpace(_filterGateway) ? null : _filterGateway.Trim();
         _model.Status = parsedStatus;
+        _model.FromDate = _filterFromDate?.Date;
+        _model.ToDate = _filterToDate?.Date;
 
         await LoadTransactionsAsync().ConfigureAwait(false);
     }
@@ -154,6 +182,18 @@
                 query = query.Where(t => t.Status == _model.Status.Value);
             }
 
+            if (_model.FromDate.HasValue)
+            {
+                var fromDate = new DateTimeOffset(_model.FromDate.Value.Date, TimeSpan.Zero);
+                query = query.Where(t => t.CreatedTime >= fromDate);
+            }
+
+            if (_model.ToDate.HasValue)
+            {
+                var toExclusiveDate = new DateTimeOffset(_model.ToDate.Value.Date.AddDays(1), TimeSpan.Zero);
+                query = query.Where(t => t.CreatedTime < toExclusiveDate);
+            }
+
             var items = await query
                 .OrderByDescending(t => t.CreatedTime)
                 .Take(300)
@@ -167,6 +207,7 @@
                     Gateway = t.Gateway,
                     Status = t.Status,
                     ExternalTransactionId = t.ExternalTransactionId,
+                    SubscriptionId = t.SubscriptionId,
                     CreatedTime = t.CreatedTime
                 })
                 .ToListAsync()
@@ -213,4 +254,38 @@
         3 => "bg-info text-dark",
         _ => "bg-light text-dark"
     };
+
+    /// <summary>
+    /// Gets the export URL according to the current filters.
+    /// </summary>
+    /// <param name="excel">Whether to export Excel format.</param>
+    /// <returns>Export URL.</returns>
+    private string GetExportUrl(bool excel)
+    {
+        var queryParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_filterGateway))
+        {
+            queryParts.Add($"gateway={Uri.EscapeDataString(_filterGateway.Trim())}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(_filterStatus))
+        {
+            queryParts.Add($"status={Uri.EscapeDataString(_filterStatus)}");
+        }
+
+        if (_filterFromDate.HasValue)
+        {
+            queryParts.Add($"fromDate={Uri.EscapeDataString(_filterFromDate.Value.ToString("yyyy-MM-dd"))}");
+        }
+
+        if (_filterToDate.HasValue)
+        {
+            queryParts.Add($"toDate={Uri.EscapeDataString(_filterToDate.Value.ToString("yyyy-MM-dd"))}");
+        }
+
+        var basePath = excel ? "/api/admin-transactions/export-excel" : "/api/admin-transactions/export";
+        return queryParts.Count == 0
+            ? basePath
+            : $"{basePath}?{string.Join("&", queryParts)}";
+    }
 }

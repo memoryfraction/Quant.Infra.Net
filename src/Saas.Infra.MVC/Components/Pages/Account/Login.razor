@@ -98,6 +98,18 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
+    [SupplyParameterFromQuery]
+    private string? Message { get; set; }
+
+    /// <summary>Initializes the login page state from query parameters.</summary>
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrWhiteSpace(Message))
+        {
+            _errorMessage = Message;
+        }
+    }
+
     /// <summary>Handles the login form submission by calling the SSO token endpoint.</summary>
     private async Task HandleLogin()
     {
@@ -157,7 +169,7 @@
 
             // Use the handoff service so the browser gets an HttpOnly cookie without JS
             var code = AuthHandoff.CreateHandoff(tokenData.AccessToken);
-            var returnUrl = string.IsNullOrWhiteSpace(ReturnUrl) ? "/dashboard" : ReturnUrl;
+            var returnUrl = string.IsNullOrWhiteSpace(ReturnUrl) ? GetDefaultDashboardRoute() : ReturnUrl;
             Serilog.Log.Information("[BLAZOR LOGIN] Handoff created. Code={Code}, RedirectingTo={ReturnUrl}", code, returnUrl);
             Nav.NavigateTo($"/blazor/establish-auth?code={Uri.EscapeDataString(code)}&return={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
         }
@@ -170,5 +182,22 @@
         {
             _isSubmitting = false;
         }
+    }
+
+    /// <summary>Gets the default dashboard route based on the current token roles.</summary>
+    /// <returns>Application-relative dashboard route.</returns>
+    private string GetDefaultDashboardRoute()
+    {
+        if (TokenService.IsInRole("SUPER_ADMIN"))
+        {
+            return "/super-admin";
+        }
+
+        if (TokenService.IsInRole("ADMIN"))
+        {
+            return "/admin";
+        }
+
+        return "/dashboard";
     }
 }

@@ -5,15 +5,26 @@ using Saas.Infra.MVC.Services.Errors;
 
 namespace Saas.Infra.MVC.Middleware
 {
-	// 全局异常处理中间件（单独抽离，复用性更高）
-	public class ExceptionHandlingMiddleware
+    /// <summary>
+    /// 全局异常处理中间件。
+    /// Global exception handling middleware.
+    /// </summary>
+    public class ExceptionHandlingMiddleware
 	{
 		private readonly RequestDelegate _next;
 		private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 		private readonly IWebHostEnvironment _env;
 		private readonly GlobalExceptionPageService _globalExceptionPageService;
 
-		// 构造函数注入IWebHostEnvironment
+        /// <summary>
+        /// 初始化 <see cref="ExceptionHandlingMiddleware"/> 的新实例。
+        /// Initializes a new instance of the <see cref="ExceptionHandlingMiddleware"/> class.
+        /// </summary>
+        /// <param name="next">下一个请求委托。 / The next request delegate.</param>
+        /// <param name="logger">日志记录器。 / Logger instance.</param>
+        /// <param name="env">宿主环境。 / Hosting environment.</param>
+        /// <param name="globalExceptionPageService">全局异常页面服务。 / Global exception page service.</param>
+        /// <exception cref="ArgumentNullException">当依赖为空时抛出。 / Thrown when dependencies are null.</exception>
 		public ExceptionHandlingMiddleware(
 			RequestDelegate next,
 			ILogger<ExceptionHandlingMiddleware> logger,
@@ -90,7 +101,10 @@ namespace Saas.Infra.MVC.Middleware
 		}
 	}
 
-	// 扩展方法：简化中间件注册
+    /// <summary>
+    /// 全局异常处理中间件扩展。
+    /// Global exception middleware extensions.
+    /// </summary>
 	public static class ExceptionHandlingMiddlewareExtensions
 	{
         /// <summary>

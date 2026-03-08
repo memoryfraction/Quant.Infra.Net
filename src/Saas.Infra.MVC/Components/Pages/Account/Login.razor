@@ -188,12 +188,12 @@
     /// <returns>Application-relative dashboard route.</returns>
     private string GetDefaultDashboardRoute()
     {
-        if (TokenService.IsInRole("SUPER_ADMIN"))
+        if (TokenService.IsInRole(global::Saas.Infra.Core.RoleCodes.SuperAdmin))
         {
             return "/super-admin";
         }
 
-        if (TokenService.IsInRole("ADMIN"))
+        if (TokenService.IsInRole(global::Saas.Infra.Core.RoleCodes.Admin))
         {
             return "/admin";
         }
@@ -201,3 +201,4 @@
         return "/dashboard";
     }
 }
+

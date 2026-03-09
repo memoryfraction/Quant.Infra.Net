@@ -57,9 +57,8 @@ public class LoginSuccessResponseTests
                 {
                     Id = "cryptocycleai",
                     Name = "CryptoCycleAI",
-                    Url = "/dashboard",
-                    IconUrl = "/images/icon.png",
-                    Description = "AI-powered analysis"
+                    Description = "AI-powered analysis",
+                    Metadata = "{\"icon\":\"/images/icon.png\"}"
                 }
             },
             WarningMessage = null
@@ -133,8 +132,8 @@ public class LoginSuccessResponseTests
     {
         var products = new List<ProductInfo>
         {
-            new ProductInfo { Id = "product1", Name = "Product 1", Url = "/product1" },
-            new ProductInfo { Id = "product2", Name = "Product 2", Url = "/product2" }
+            new ProductInfo { Id = "product1", Name = "Product 1", Description = "Product one" },
+            new ProductInfo { Id = "product2", Name = "Product 2", Description = "Product two" }
         };
 
         var response = new LoginSuccessResponse

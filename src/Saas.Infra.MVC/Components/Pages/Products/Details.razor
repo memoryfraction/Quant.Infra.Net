@@ -6,6 +6,7 @@
 @inject IConfiguration Configuration
 @inject Saas.Infra.MVC.Services.Blazor.BlazorTokenService TokenService
 
+@using Saas.Infra.MVC.Models.Requests
 @using Saas.Infra.MVC.Models.Responses
 
 <PageTitle>@(_product?.Name ?? "Product") - Saas.Infra</PageTitle>
@@ -119,8 +120,11 @@ else
                                 </ul>
 
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-primary btn-lg" @onclick="() => GoToCheckout(price.Id)">
-                                        Subscribe Now
+                                    <button type="button"
+                                            class="btn btn-primary btn-lg"
+                                            disabled="@_isCreatingOrder"
+                                            @onclick="() => GoToCheckoutAsync(price.Id)">
+                                        @(_isCreatingOrder ? "Creating order..." : "Subscribe Now")
                                     </button>
                                 </div>
                             </div>
@@ -180,6 +184,7 @@ else
     private ProductDto? _product;
     private readonly List<PriceDto> _prices = new();
     private bool _isLoading = true;
+    private bool _isCreatingOrder;
     private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
@@ -272,13 +277,80 @@ else
         Nav.NavigateTo("/products");
     }
 
-    private void GoToCheckout(Guid priceId)
+    private async Task GoToCheckoutAsync(Guid priceId)
     {
-        if (priceId == Guid.Empty)
+        if (priceId == Guid.Empty || _isCreatingOrder)
         {
             return;
         }
 
-        Nav.NavigateTo($"/checkout?priceId={priceId}", forceLoad: true);
+        _isCreatingOrder = true;
+        _errorMessage = null;
+
+        try
+        {
+            if (!TokenService.IsAuthenticated || string.IsNullOrWhiteSpace(TokenService.AccessToken))
+            {
+                Nav.NavigateTo($"/account/login?returnUrl=/products/{Id}", forceLoad: true);
+                return;
+            }
+
+            var apiBaseUrl = Configuration["ApiSettings:BaseUrl"] ?? Nav.BaseUri.TrimEnd('/');
+            var client = HttpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenService.AccessToken);
+
+            var request = new CreateOrderRequest
+            {
+                PriceId = priceId,
+                OrderType = "SUBSCRIPTION"
+            };
+
+            var response = await client.PostAsJsonAsync("/api/payment/create-order", request).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    TokenService.ClearToken();
+                    Nav.NavigateTo($"/account/login?returnUrl=/products/{Id}", forceLoad: true);
+                    return;
+                }
+
+                var serverError = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                _errorMessage = string.IsNullOrWhiteSpace(serverError)
+                    ? "Failed to create order, please try again."
+                    : serverError;
+                return;
+            }
+
+            var order = await response.Content.ReadFromJsonAsync<CreateOrderDto>(new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }).ConfigureAwait(false);
+
+            if (order is null || order.OrderId == Guid.Empty)
+            {
+                _errorMessage = "Order was not created correctly. Please try again.";
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(order.PaymentUrl))
+            {
+                Nav.NavigateTo(order.PaymentUrl, forceLoad: true);
+                return;
+            }
+
+            Nav.NavigateTo($"/checkout?orderId={order.OrderId}", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to start checkout: {ex.Message}";
+        }
+        finally
+        {
+            _isCreatingOrder = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 }

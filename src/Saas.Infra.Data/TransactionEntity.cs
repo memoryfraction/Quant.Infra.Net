@@ -21,6 +21,12 @@ namespace Saas.Infra.Data
         public Guid UserId { get; set; }
 
         /// <summary>
+        /// 关联的订单ID。
+        /// Associated order ID.
+        /// </summary>
+        public Guid? OrderId { get; set; }
+
+        /// <summary>
         /// 关联的订阅ID（可选）。
         /// Associated subscription ID (optional).
         /// </summary>
@@ -79,6 +85,12 @@ namespace Saas.Infra.Data
         /// Remarks.
         /// </summary>
         public string? Remarks { get; set; }
+
+        /// <summary>
+        /// 关联的订单实体（导航属性）。
+        /// Associated order entity (navigation property).
+        /// </summary>
+        public OrderEntity? Order { get; set; }
 
         /// <summary>
         /// 关联的用户实体（导航属性）。

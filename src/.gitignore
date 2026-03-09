@@ -1,0 +1,82 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options
+.vs/
+.vscode/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+*.sln.iml
+
+# ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Test Results
+TestResults/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment and configuration
+.env
+.env.local
+appsettings.local.json
+appsettings.*.json
+
+# Logs
+Logs/
+logs/
+*.log
+
+# Postman
+postman/
+Postman/
+*.postman_collection.json
+*.postman_environment.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (if applicable)
+node_modules/
+
+# Package manager lock files (optional, depending on project needs)
+package-lock.json
+yarn.lock
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~

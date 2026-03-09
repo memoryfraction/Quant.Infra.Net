@@ -33,6 +33,12 @@ namespace Saas.Infra.Data
         public Guid PriceId { get; set; }
 
         /// <summary>
+        /// 关联订单ID。
+        /// Related order ID.
+        /// </summary>
+        public Guid? OrderId { get; set; }
+
+        /// <summary>
         /// 订阅状态（0=Pending, 1=Active, 2=Expired）。
         /// Subscription status (0=Pending, 1=Active, 2=Expired).
         /// </summary>
@@ -85,6 +91,12 @@ namespace Saas.Infra.Data
         /// Whether deleted (soft delete flag).
         /// </summary>
         public bool IsDeleted { get; set; } = false;
+
+        /// <summary>
+        /// 关联的订单实体（导航属性）。
+        /// Associated order entity (navigation property).
+        /// </summary>
+        public OrderEntity? Order { get; set; }
 
         /// <summary>
         /// 关联的用户实体（导航属性）。

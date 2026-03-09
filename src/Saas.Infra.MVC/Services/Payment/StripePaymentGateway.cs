@@ -33,11 +33,9 @@ namespace Saas.Infra.MVC.Services.Payment
         {
             if (string.IsNullOrWhiteSpace(secretKey))
                 throw new ArgumentNullException(nameof(secretKey));
-            if (string.IsNullOrWhiteSpace(webhookSecret))
-                throw new ArgumentNullException(nameof(webhookSecret));
 
             _secretKey = secretKey;
-            _webhookSecret = webhookSecret;
+            _webhookSecret = webhookSecret ?? string.Empty;
             
             // 配置 Stripe API Key
             StripeConfiguration.ApiKey = _secretKey;
@@ -158,6 +156,8 @@ namespace Saas.Infra.MVC.Services.Payment
                 throw new ArgumentNullException(nameof(payload));
             if (string.IsNullOrWhiteSpace(signature))
                 throw new ArgumentNullException(nameof(signature));
+            if (string.IsNullOrWhiteSpace(_webhookSecret))
+                throw new InvalidOperationException("Stripe webhook secret is not configured.");
 
             try
             {

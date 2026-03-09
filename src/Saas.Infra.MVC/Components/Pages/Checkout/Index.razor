@@ -1,0 +1,147 @@
+@page "/checkout"
+@layout MainLayout
+@attribute [Authorize]
+@inject Saas.Infra.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Checkout - Saas.Infra</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="container py-5">
+        <p>Loading order...</p>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="container py-5">
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    </div>
+}
+else if (_order is null || _price is null || _product is null)
+{
+    <div class="container py-5">
+        <div class="alert alert-warning" role="alert">Order not found.</div>
+    </div>
+}
+else
+{
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h1 class="h3 mb-3">Order Confirmation</h1>
+                        <p class="text-muted mb-4">Review the order below and continue with payment.</p>
+
+                        <dl class="row mb-4">
+                            <dt class="col-sm-4">Order ID</dt>
+                            <dd class="col-sm-8">@_order.Id</dd>
+
+                            <dt class="col-sm-4">Product</dt>
+                            <dd class="col-sm-8">@_product.Name</dd>
+
+                            <dt class="col-sm-4">Plan</dt>
+                            <dd class="col-sm-8">@_price.Name (@_price.BillingPeriod)</dd>
+
+                            <dt class="col-sm-4">Amount</dt>
+                            <dd class="col-sm-8">@_price.Currency @((_order.ActualAmount / 100.0m).ToString("F2"))</dd>
+
+                            <dt class="col-sm-4">Status</dt>
+                            <dd class="col-sm-8">@GetStatusText(_order.Status)</dd>
+
+                            <dt class="col-sm-4">Expires</dt>
+                            <dd class="col-sm-8">@(_order.ExpiredTime?.ToString("u") ?? "N/A")</dd>
+                        </dl>
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-secondary" @onclick="BackToProducts">
+                                Back to Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery] public Guid? OrderId { get; set; }
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private Saas.Infra.Data.OrderEntity? _order;
+    private Saas.Infra.Data.PriceEntity? _price;
+    private Saas.Infra.Data.ProductEntity? _product;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            if (!OrderId.HasValue || OrderId.Value == Guid.Empty)
+            {
+                _errorMessage = "Order ID is required.";
+                return;
+            }
+
+            _order = await Db.Orders
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == OrderId.Value && !o.IsDeleted);
+
+            if (_order == null)
+            {
+                _errorMessage = "Order was not found.";
+                return;
+            }
+
+            _price = await Db.Prices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == _order.PriceId);
+
+            _product = await Db.Products
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == _order.ProductId);
+
+            if (_price == null || _product == null)
+            {
+                _errorMessage = "Order references invalid product or price data.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load order: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void BackToProducts()
+    {
+        if (_product == null)
+        {
+            Nav.NavigateTo("/products");
+            return;
+        }
+
+        Nav.NavigateTo($"/products/{_product.Id}");
+    }
+
+    private static string GetStatusText(short status)
+    {
+        return status switch
+        {
+            0 => "Pending",
+            1 => "Paid",
+            2 => "Cancelled",
+            3 => "Refunded",
+            _ => $"Unknown ({status})"
+        };
+    }
+}

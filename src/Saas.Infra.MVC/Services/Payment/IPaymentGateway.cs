@@ -94,6 +94,12 @@ namespace Saas.Infra.MVC.Services.Payment
     public class PaymentIntentResult
     {
         /// <summary>
+        /// 订单ID。
+        /// Order ID.
+        /// </summary>
+        public Guid OrderId { get; set; }
+
+        /// <summary>
         /// 客户端密钥（用于前端）。
         /// Client secret (for frontend).
         /// </summary>

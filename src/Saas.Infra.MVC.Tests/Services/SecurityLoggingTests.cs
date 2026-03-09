@@ -51,7 +51,7 @@ public class SecurityLoggingTests
             new { Url = "dashboard", Reason = "relative" }
         };
 
-        var testCase = testCases[Math.Abs(input.GetHashCode()) % testCases.Length];
+        var testCase = testCases[Math.Abs((input ?? string.Empty).GetHashCode()) % testCases.Length];
 
         // Reset mock to track calls
         _mockLogger.Reset();
@@ -79,7 +79,7 @@ public class SecurityLoggingTests
                 Times.Once);
         }
 
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>

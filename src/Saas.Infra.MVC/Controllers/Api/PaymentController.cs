@@ -4,6 +4,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Saas.Infra.Data;
 using Saas.Infra.MVC.Models.Requests;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.MVC.Services.Payment;
@@ -22,6 +24,7 @@ namespace Saas.Infra.MVC.Controllers.Api
         private readonly IPaymentService _paymentService;
         private readonly IConfiguration _configuration;
         private readonly IEnumerable<IPaymentGateway> _gateways;
+        private readonly ApplicationDbContext _db;
 
         /// <summary>
         /// 初始化<see cref="PaymentController"/>的新实例。
@@ -34,11 +37,13 @@ namespace Saas.Infra.MVC.Controllers.Api
         public PaymentController(
             IPaymentService paymentService,
             IConfiguration configuration,
-            IEnumerable<IPaymentGateway> gateways)
+            IEnumerable<IPaymentGateway> gateways,
+            ApplicationDbContext db)
         {
             _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
+            _db = db ?? throw new ArgumentNullException(nameof(db));
         }
 
         /// <summary>
@@ -60,20 +65,11 @@ namespace Saas.Infra.MVC.Controllers.Api
             try
             {
                 // 获取当前用户ID
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                var userId = await ResolveCurrentUserIdAsync();
+                if (userId == Guid.Empty)
                 {
-                    // 如果NameIdentifier不存在，尝试从Name获取
-                    var username = User.Identity?.Name;
-                    if (string.IsNullOrEmpty(username))
-                    {
-                        Log.Warning("User ID not found in claims for payment intent creation");
-                        return Unauthorized(new { message = "User not authenticated" });
-                    }
-                    
-                    // 临时方案：使用固定的测试用户ID（生产环境需要从数据库查询）
-                    // TODO: 从数据库根据username查询userId
-                    userId = Guid.Empty;
+                    Log.Warning("User ID not found in claims or database for payment intent creation");
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 var result = await _paymentService.CreatePaymentIntentAsync(
@@ -83,6 +79,7 @@ namespace Saas.Infra.MVC.Controllers.Api
 
                 var response = new PaymentIntentDto
                 {
+                    OrderId = result.OrderId,
                     ClientSecret = result.ClientSecret,
                     PaymentIntentId = result.PaymentIntentId,
                     Amount = result.Amount,
@@ -108,6 +105,92 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
+        /// 创建订单（产品端调用）。
+        /// Creates an order (called by product side).
+        /// </summary>
+        /// <param name="request">创建订单请求。 / Create order request.</param>
+        /// <returns>订单信息与支付页链接。 / Order info and payment page URL.</returns>
+        [HttpPost("create-order")]
+        [Authorize]
+        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
+        {
+            if (request == null)
+                return BadRequest(new { message = "Request cannot be null" });
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var userId = await ResolveCurrentUserIdAsync();
+                if (userId == Guid.Empty)
+                {
+                    Log.Warning("User ID not found in claims or database for order creation");
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var price = await _db.Prices
+                    .Include(p => p.Product)
+                    .FirstOrDefaultAsync(p => p.Id == request.PriceId);
+
+                if (price == null || !price.IsActive)
+                {
+                    return BadRequest(new { message = "Price is invalid or inactive" });
+                }
+
+                if (price.Product == null || !price.Product.IsActive)
+                {
+                    return BadRequest(new { message = "Product is invalid or inactive" });
+                }
+
+                var order = new OrderEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    OrderType = string.IsNullOrWhiteSpace(request.OrderType) ? "SUBSCRIPTION" : request.OrderType.Trim().ToUpperInvariant(),
+                    ProductId = price.ProductId,
+                    PriceId = price.Id,
+                    OriginalAmount = price.Amount,
+                    ActualAmount = price.Amount,
+                    DiscountAmount = 0,
+                    Status = 0,
+                    ExpiredTime = DateTimeOffset.UtcNow.AddHours(24),
+                    CreatedTime = DateTimeOffset.UtcNow,
+                    IsDeleted = false
+                };
+
+                _db.Orders.Add(order);
+                await _db.SaveChangesAsync();
+
+                var paymentUrl = $"{Request.Scheme}://{Request.Host}/checkout?orderId={order.Id}";
+                var response = new CreateOrderDto
+                {
+                    OrderId = order.Id,
+                    Status = order.Status,
+                    ProductId = order.ProductId,
+                    PriceId = order.PriceId,
+                    OrderType = order.OrderType,
+                    OriginalAmount = order.OriginalAmount,
+                    ActualAmount = order.ActualAmount,
+                    Currency = price.Currency,
+                    ProductName = price.Product.Name,
+                    PriceName = price.Name,
+                    BillingPeriod = price.BillingPeriod,
+                    PaymentUrl = paymentUrl,
+                    ExpiredTime = order.ExpiredTime
+                };
+
+                Log.Information("Order {OrderId} created for user {UserId}, price {PriceId}", order.Id, userId, price.Id);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Unexpected error creating order");
+                return StatusCode(500, new { message = "Failed to create order" });
+            }
+        }
+
+        /// <summary>
         /// 确认支付并创建订阅（用户）。
         /// Confirms payment and creates subscription (User).
         /// </summary>
@@ -126,28 +209,23 @@ namespace Saas.Infra.MVC.Controllers.Api
             try
             {
                 // 获取当前用户ID
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                var userId = await ResolveCurrentUserIdAsync();
+                if (userId == Guid.Empty)
                 {
-                    var username = User.Identity?.Name;
-                    if (string.IsNullOrEmpty(username))
-                    {
-                        Log.Warning("User ID not found in claims for payment confirmation");
-                        return Unauthorized(new { message = "User not authenticated" });
-                    }
-                    
-                    userId = Guid.Empty;
+                    Log.Warning("User ID not found in claims or database for payment confirmation");
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 var subscriptionId = await _paymentService.ConfirmPaymentAndCreateSubscriptionAsync(
                     request.PaymentIntentId,
                     userId,
-                    request.PriceId,
+                    request.OrderId,
                     request.Gateway);
 
                 var response = new PaymentConfirmationDto
                 {
                     Success = true,
+                    OrderId = request.OrderId,
                     SubscriptionId = subscriptionId,
                     Message = "Payment confirmed and subscription created successfully"
                 };
@@ -215,6 +293,27 @@ namespace Saas.Infra.MVC.Controllers.Api
                 Log.Error(ex, "Error processing Stripe webhook");
                 return StatusCode(500, new { message = "Webhook processing failed" });
             }
+        }
+
+        private async Task<Guid> ResolveCurrentUserIdAsync()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrWhiteSpace(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
+            {
+                return userId;
+            }
+
+            var email = User.FindFirstValue(ClaimTypes.Name) ?? User.FindFirstValue("sub") ?? User.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return Guid.Empty;
+            }
+
+            return await _db.Users
+                .AsNoTracking()
+                .Where(u => u.Email == email && !u.IsDeleted)
+                .Select(u => u.Id)
+                .FirstOrDefaultAsync();
         }
     }
 }

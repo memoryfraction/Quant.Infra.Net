@@ -47,7 +47,7 @@ public class LoginSuccessFlowTests
             .Setup(p => p.GetAvailableProductsAsync(It.IsAny<string>()))
             .ReturnsAsync(new List<ProductInfo>
             {
-                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Url = "/dashboard" }
+                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered analysis" }
             });
     }
 
@@ -61,7 +61,7 @@ public class LoginSuccessFlowTests
     public Property ValidRedirectExecution(string suffix)
     {
         var validPaths = new[] { "/dashboard", "/payment", "/profile", "/settings", "/api/products" };
-        var validPath = validPaths[Math.Abs(suffix.GetHashCode()) % validPaths.Length];
+        var validPath = validPaths[Math.Abs((suffix ?? string.Empty).GetHashCode()) % validPaths.Length];
 
         _mockRedirectValidator
             .Setup(v => v.ValidateAsync(validPath))
@@ -88,7 +88,7 @@ public class LoginSuccessFlowTests
         Assert.False(response.ShowProductSelection);
         Assert.Null(response.WarningMessage);
 
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -114,7 +114,7 @@ public class LoginSuccessFlowTests
             ShowProductSelection = true,
             AvailableProducts = new List<ProductInfo>
             {
-                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Url = "/dashboard" }
+                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered analysis" }
             },
             WarningMessage = "登录成功，但跳转地址无效"
         };
@@ -127,9 +127,9 @@ public class LoginSuccessFlowTests
         Assert.NotNull(response.WarningMessage);
         
         // Verify warning message doesn't expose invalid URL
-        Assert.DoesNotContain(invalidPath, response.WarningMessage);
+        Assert.Equal("登录成功，但跳转地址无效", response.WarningMessage);
         
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -143,8 +143,8 @@ public class LoginSuccessFlowTests
     {
         var products = new List<ProductInfo>
         {
-            new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Url = "/dashboard" },
-            new ProductInfo { Id = "analytics", Name = "Analytics", Url = "/analytics" }
+            new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered analysis" },
+            new ProductInfo { Id = "analytics", Name = "Analytics", Description = "Advanced analytics platform" }
         };
 
         _mockProductConfigService
@@ -170,7 +170,7 @@ public class LoginSuccessFlowTests
         Assert.Equal(2, response.AvailableProducts.Count);
         Assert.NotNull(response.WarningMessage);
 
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -203,7 +203,7 @@ public class LoginSuccessFlowTests
         Assert.True(response.ExpiresIn > 0);
         Assert.Equal(validExpiresIn, response.ExpiresIn);
 
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -234,7 +234,7 @@ public class LoginSuccessFlowTests
         Assert.DoesNotContain(accessToken, response.WarningMessage ?? "");
         Assert.DoesNotContain(refreshToken, response.WarningMessage ?? "");
 
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -276,7 +276,7 @@ public class LoginSuccessFlowTests
             ShowProductSelection = true,
             AvailableProducts = new List<ProductInfo>
             {
-                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Url = "/dashboard" }
+                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered analysis" }
             },
             WarningMessage = "登录成功，但跳转地址无效"
         };
@@ -303,7 +303,7 @@ public class LoginSuccessFlowTests
             ShowProductSelection = true,
             AvailableProducts = new List<ProductInfo>
             {
-                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Url = "/dashboard" }
+                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered analysis" }
             },
             WarningMessage = "登录成功，请选择要进入的产品"
         };

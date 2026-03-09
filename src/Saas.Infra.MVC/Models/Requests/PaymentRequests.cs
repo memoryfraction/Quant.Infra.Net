@@ -4,6 +4,28 @@ using System.ComponentModel.DataAnnotations;
 namespace Saas.Infra.MVC.Models.Requests
 {
     /// <summary>
+    /// 创建订单请求模型。
+    /// Create order request model.
+    /// </summary>
+    public class CreateOrderRequest
+    {
+        /// <summary>
+        /// 价格ID。
+        /// Price ID.
+        /// </summary>
+        [Required(ErrorMessage = "Price ID is required")]
+        public Guid PriceId { get; set; }
+
+        /// <summary>
+        /// 订单类型。
+        /// Order type.
+        /// </summary>
+        [Required(ErrorMessage = "Order type is required")]
+        [StringLength(20, ErrorMessage = "Order type cannot exceed 20 characters")]
+        public string OrderType { get; set; } = "SUBSCRIPTION";
+    }
+
+    /// <summary>
     /// 创建支付意图请求模型。
     /// Create payment intent request model.
     /// </summary>
@@ -39,13 +61,16 @@ namespace Saas.Infra.MVC.Models.Requests
         public string PaymentIntentId { get; set; } = string.Empty;
 
         /// <summary>
+        /// 订单ID。
+        /// Order ID.
+        /// </summary>
+        [Required(ErrorMessage = "Order ID is required")]
+        public Guid OrderId { get; set; }
+
+        /// <summary>
         /// 价格ID。
         /// Price ID.
         /// </summary>
-        [Required(ErrorMessage = "Price ID is required")]
-        public Guid PriceId { get; set; }
-
-        /// <summary>
         /// 支付网关。
         /// Payment gateway.
         /// </summary>

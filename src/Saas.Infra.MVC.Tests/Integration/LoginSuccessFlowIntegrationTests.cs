@@ -62,7 +62,7 @@ public class LoginSuccessFlowIntegrationTests
             .Setup(p => p.GetAvailableProductsAsync(It.IsAny<string>()))
             .ReturnsAsync(new List<ProductInfo>
             {
-                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Url = "/dashboard" }
+                new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered analysis" }
             });
 
         // Act
@@ -100,7 +100,7 @@ public class LoginSuccessFlowIntegrationTests
 
         var products = new List<ProductInfo>
         {
-            new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Url = "/dashboard" }
+            new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered analysis" }
         };
 
         _mockProductConfigService
@@ -141,7 +141,7 @@ public class LoginSuccessFlowIntegrationTests
 
         var products = new List<ProductInfo>
         {
-            new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Url = "/dashboard" }
+            new ProductInfo { Id = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered analysis" }
         };
 
         _mockProductConfigService
@@ -204,7 +204,7 @@ public class LoginSuccessFlowIntegrationTests
         Assert.NotNull(headers["Authorization"]);
         Assert.Contains("Bearer", headers["Authorization"]);
 
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -276,9 +276,9 @@ public class LoginSuccessFlowIntegrationTests
         // Arrange
         var products = new List<ProductInfo>
         {
-            new ProductInfo { Id = "product1", Name = "Product 1", Url = "/product1" },
-            new ProductInfo { Id = "product2", Name = "Product 2", Url = "/product2" },
-            new ProductInfo { Id = "product3", Name = "Product 3", Url = "/product3" }
+            new ProductInfo { Id = "product1", Name = "Product 1", Description = "Product one" },
+            new ProductInfo { Id = "product2", Name = "Product 2", Description = "Product two" },
+            new ProductInfo { Id = "product3", Name = "Product 3", Description = "Product three" }
         };
 
         // Act
@@ -300,7 +300,7 @@ public class LoginSuccessFlowIntegrationTests
         Assert.Equal(3, response.AvailableProducts.Count);
         Assert.All(response.AvailableProducts, p => Assert.NotNull(p.Id));
         Assert.All(response.AvailableProducts, p => Assert.NotNull(p.Name));
-        Assert.All(response.AvailableProducts, p => Assert.NotNull(p.Url));
+        Assert.All(response.AvailableProducts, p => Assert.NotNull(p.Description));
     }
 }
 

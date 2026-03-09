@@ -166,7 +166,9 @@ namespace Saas.Infra.MVC
                     options.IdleTimeout = TimeSpan.FromMinutes(30);
                     options.Cookie.HttpOnly = true;
                     options.Cookie.IsEssential = true;
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+                        ? CookieSecurePolicy.SameAsRequest
+                        : CookieSecurePolicy.Always;
                     options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
                 });
 
@@ -176,7 +178,9 @@ namespace Saas.Infra.MVC
                     options.HeaderName = "X-CSRF-TOKEN";
                     options.FormFieldName = "__RequestVerificationToken";
                     options.Cookie.HttpOnly = true;
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+                        ? CookieSecurePolicy.SameAsRequest
+                        : CookieSecurePolicy.Always;
                     options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
                 });
 
@@ -240,7 +244,10 @@ namespace Saas.Infra.MVC
                     app.UseHsts();
                 }
 
-                app.UseHttpsRedirection();
+                if (!app.Environment.IsDevelopment())
+                {
+                    app.UseHttpsRedirection();
+                }
                 app.UseStaticFiles();
                 app.UseRouting();
 

@@ -42,7 +42,7 @@
                             <i class="bi bi-list-check"></i> My Subscriptions
                         </a>
                     </li>
-                    @if (TokenService.IsInRole("ADMIN") || TokenService.IsInRole("SUPER_ADMIN"))
+                    @if (TokenService.IsInRole(global::Saas.Infra.Core.RoleCodes.Admin) || TokenService.IsInRole(global::Saas.Infra.Core.RoleCodes.SuperAdmin))
                     {
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button"
@@ -139,12 +139,12 @@
     /// <returns>Dashboard route.</returns>
     private string GetDashboardRoute()
     {
-        if (TokenService.IsInRole("SUPER_ADMIN"))
+        if (TokenService.IsInRole(global::Saas.Infra.Core.RoleCodes.SuperAdmin))
         {
             return "/super-admin";
         }
 
-        if (TokenService.IsInRole("ADMIN"))
+        if (TokenService.IsInRole(global::Saas.Infra.Core.RoleCodes.Admin))
         {
             return "/admin";
         }
@@ -152,3 +152,4 @@
         return "/dashboard";
     }
 }
+

@@ -90,12 +90,12 @@
                                                 }
                                             }
 
-                                            @if (IsSuperAdmin && user.CanManage && !user.IsDeleted && user.RoleCode == "USER")
+                                            @if (IsSuperAdmin && user.CanManage && !user.IsDeleted && string.Equals(user.RoleCode, global::Saas.Infra.Core.RoleCodes.User, StringComparison.OrdinalIgnoreCase))
                                             {
                                                 <button type="button" class="btn btn-outline-success" @onclick="() => ChangeAdminRoleAsync(user, true)">Grant Admin</button>
                                             }
 
-                                            @if (IsSuperAdmin && user.CanManage && !user.IsDeleted && user.RoleCode == "ADMIN")
+                                            @if (IsSuperAdmin && user.CanManage && !user.IsDeleted && string.Equals(user.RoleCode, global::Saas.Infra.Core.RoleCodes.Admin, StringComparison.OrdinalIgnoreCase))
                                             {
                                                 <button type="button" class="btn btn-outline-warning" @onclick="() => ChangeAdminRoleAsync(user, false)">Revoke Admin</button>
                                             }
@@ -165,7 +165,7 @@
     private string? _errorMessage;
     private EditUserModel? _editModel;
 
-    private bool IsSuperAdmin => TokenService.IsInRole("SUPER_ADMIN");
+    private bool IsSuperAdmin => TokenService.IsInRole(global::Saas.Infra.Core.RoleCodes.SuperAdmin);
 
     /// <summary>
     /// 加载用户管理列表。
@@ -415,12 +415,12 @@
 
     private static string GetRoleBadgeCss(string roleCode)
     {
-        if (string.Equals(roleCode, "SUPER_ADMIN", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(roleCode, global::Saas.Infra.Core.RoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase))
         {
             return "bg-danger";
         }
 
-        if (string.Equals(roleCode, "ADMIN", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(roleCode, global::Saas.Infra.Core.RoleCodes.Admin, StringComparison.OrdinalIgnoreCase))
         {
             return "bg-primary";
         }
@@ -439,3 +439,4 @@
         public short Status { get; set; }
     }
 }
+

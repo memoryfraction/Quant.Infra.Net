@@ -8,6 +8,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Views\**" />
+	  <Content Remove="Views\**" />
+	  <EmbeddedResource Remove="Views\**" />
+	  <None Remove="Views\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<!-- JWT 认证核心包 -->
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
 		<!-- Blazor Web App (removed) -->
@@ -44,14 +51,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Views\Account\" />
-	  <Folder Include="Views\Admin\" />
-	  <Folder Include="Views\Checkout\" />
-	  <Folder Include="Views\Dashboard\" />
-	  <Folder Include="Views\ProductManagement\" />
-	  <Folder Include="Views\Products\" />
-	  <Folder Include="Views\Shared\" />
-	  <Folder Include="Views\Subscriptions\" />
 	  <Folder Include="wwwroot\js\" />
 	</ItemGroup>
 

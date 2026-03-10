@@ -212,7 +212,7 @@ namespace Saas.Infra.Data
                 entity.HasOne(e => e.Order)
                     .WithMany()
                     .HasForeignKey(e => e.OrderId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // RoleEntity mapping
@@ -299,16 +299,9 @@ namespace Saas.Infra.Data
                 entity.Property(e => e.Gateway).HasColumnName("Gateway").HasMaxLength(50).IsRequired();
                 entity.Property(e => e.ExternalTransactionId).HasColumnName("ExternalTransactionId").HasMaxLength(255);
                 entity.Property(e => e.Status).HasColumnName("Status").IsRequired();
-                entity.Property(e => e.Metadata).HasColumnName("Metadata").HasColumnType("jsonb");
                 entity.Property(e => e.CreatedTime).HasColumnName("CreatedTime");
-                entity.Property(e => e.UpdatedTime).HasColumnName("UpdatedTime");
                 entity.Property(e => e.Remarks).HasColumnName("Remarks").HasColumnType("text");
-                entity.HasIndex(e => e.UserId).HasDatabaseName("IX_Transactions_UserId");
                 entity.HasIndex(e => new { e.OrderId, e.Status }).HasDatabaseName("IX_Transactions_OrderId_Status");
-                entity.HasIndex(e => e.SubscriptionId).HasDatabaseName("IX_Transactions_SubscriptionId");
-                entity.HasIndex(e => e.Status).HasDatabaseName("IX_Transactions_Status");
-                entity.HasIndex(e => e.ExternalTransactionId).HasDatabaseName("IX_Transactions_ExternalTransactionId");
-                entity.HasIndex(e => e.CreatedTime).HasDatabaseName("IX_Transactions_CreatedTime");
                 entity.HasOne(e => e.User)
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
@@ -320,7 +313,7 @@ namespace Saas.Infra.Data
                 entity.HasOne(e => e.Subscription)
                     .WithMany()
                     .HasForeignKey(e => e.SubscriptionId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

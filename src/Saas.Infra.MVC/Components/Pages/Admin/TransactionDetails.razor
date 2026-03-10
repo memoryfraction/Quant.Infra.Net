@@ -62,8 +62,6 @@ else
                             <dt class="col-sm-4">Created</dt>
                             <dd class="col-sm-8">@_transaction.CreatedTime.ToString("yyyy-MM-dd HH:mm:ss")</dd>
 
-                            <dt class="col-sm-4">Updated</dt>
-                            <dd class="col-sm-8">@(_transaction.UpdatedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</dd>
                         </dl>
                     </div>
                 </div>
@@ -90,11 +88,6 @@ else
                             <dt class="col-sm-4">Remarks</dt>
                             <dd class="col-sm-8">@(_transaction.Remarks ?? "-")</dd>
                         </dl>
-
-                        <div class="mt-4">
-                            <label class="form-label fw-semibold">Metadata</label>
-                            <pre class="border rounded p-3 bg-light" style="white-space: pre-wrap; word-break: break-word; max-height: 280px; overflow: auto;">@(_transaction.Metadata ?? "-")</pre>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -154,10 +147,8 @@ else
                     Gateway = t.Gateway,
                     ExternalTransactionId = t.ExternalTransactionId,
                     Status = t.Status,
-                    Metadata = t.Metadata,
                     Remarks = t.Remarks,
-                    CreatedTime = t.CreatedTime,
-                    UpdatedTime = t.UpdatedTime
+                    CreatedTime = t.CreatedTime
                 })
                 .FirstOrDefaultAsync()
                 .ConfigureAwait(false);
@@ -210,12 +201,8 @@ else
 
         public short Status { get; set; }
 
-        public string? Metadata { get; set; }
-
         public string? Remarks { get; set; }
 
         public DateTimeOffset CreatedTime { get; set; }
-
-        public DateTimeOffset? UpdatedTime { get; set; }
     }
 }

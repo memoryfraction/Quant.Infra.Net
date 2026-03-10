@@ -51,7 +51,7 @@ BEGIN
     ) THEN
         ALTER TABLE public."Subscriptions"
             ADD CONSTRAINT "FK_Subscriptions_Orders_OrderId"
-            FOREIGN KEY ("OrderId") REFERENCES public."Orders"("Id") ON DELETE SET NULL;
+            FOREIGN KEY ("OrderId") REFERENCES public."Orders"("Id") ON DELETE RESTRICT;
     END IF;
 END $$;
 

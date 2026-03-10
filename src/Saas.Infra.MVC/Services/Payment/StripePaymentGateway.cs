@@ -185,19 +185,26 @@ namespace Saas.Infra.MVC.Services.Payment
         /// <param name="amount">金额（以分为单位）。 / Amount in cents.</param>
         /// <param name="currency">货币代码。 / Currency code.</param>
         /// <param name="productName">产品名称。 / Product display name.</param>
+        /// <param name="billingPeriod">计费周期（week/month/year）。 / Billing period (week/month/year).</param>
+        /// <param name="metadata">Session元数据。 / Session metadata.</param>
         /// <param name="successUrl">支付成功回调URL，可包含{CHECKOUT_SESSION_ID}占位符。 / Success redirect URL, may contain {CHECKOUT_SESSION_ID} placeholder.</param>
         /// <param name="cancelUrl">取消支付回调URL。 / Cancel redirect URL.</param>
         /// <returns>包含Session ID与托管支付URL的结果。 / Result containing Session ID and hosted payment URL.</returns>
         /// <exception cref="ArgumentException">当参数无效时抛出。 / Thrown when parameters are invalid.</exception>
         public async Task<CheckoutSessionResult> CreateCheckoutSessionAsync(
             Guid priceId, long amount, string currency, string productName,
+            string billingPeriod, Dictionary<string, string> metadata,
             string successUrl, string cancelUrl)
         {
             if (priceId == Guid.Empty) throw new ArgumentException("priceId must not be empty", nameof(priceId));
             if (amount <= 0) throw new ArgumentException("Amount must be positive", nameof(amount));
             if (string.IsNullOrWhiteSpace(currency)) throw new ArgumentNullException(nameof(currency));
+            if (string.IsNullOrWhiteSpace(billingPeriod)) throw new ArgumentNullException(nameof(billingPeriod));
+            if (metadata == null) throw new ArgumentNullException(nameof(metadata));
             if (string.IsNullOrWhiteSpace(successUrl)) throw new ArgumentNullException(nameof(successUrl));
             if (string.IsNullOrWhiteSpace(cancelUrl)) throw new ArgumentNullException(nameof(cancelUrl));
+
+            var interval = NormalizeBillingInterval(billingPeriod);
 
             try
             {
@@ -212,6 +219,10 @@ namespace Saas.Infra.MVC.Services.Payment
                             {
                                 Currency = currency.ToLower(),
                                 UnitAmount = amount,
+                                Recurring = new SessionLineItemPriceDataRecurringOptions
+                                {
+                                    Interval = interval
+                                },
                                 ProductData = new SessionLineItemPriceDataProductDataOptions
                                 {
                                     Name = string.IsNullOrWhiteSpace(productName) ? "Subscription" : productName
@@ -220,10 +231,10 @@ namespace Saas.Infra.MVC.Services.Payment
                             Quantity = 1
                         }
                     },
-                    Mode = "payment",
+                    Mode = "subscription",
                     SuccessUrl = successUrl,
                     CancelUrl = cancelUrl,
-                    Metadata = new Dictionary<string, string> { { "priceId", priceId.ToString() } }
+                    Metadata = metadata
                 };
 
                 var service = new SessionService();
@@ -237,6 +248,17 @@ namespace Saas.Infra.MVC.Services.Payment
                 Log.Error(ex, "Stripe error creating Checkout Session: {ErrorMessage}", ex.Message);
                 throw new InvalidOperationException($"Stripe error: {ex.Message}", ex);
             }
+        }
+
+        private static string NormalizeBillingInterval(string billingPeriod)
+        {
+            return billingPeriod.Trim().ToLowerInvariant() switch
+            {
+                "week" => "week",
+                "month" => "month",
+                "year" => "year",
+                _ => throw new ArgumentException($"Unsupported billing period: {billingPeriod}", nameof(billingPeriod))
+            };
         }
 
         /// <summary>

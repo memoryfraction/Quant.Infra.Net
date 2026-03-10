@@ -1,15 +1,19 @@
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.Data;
 using Saas.Infra.MVC.Models.Requests;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.MVC.Services.Payment;
 using Serilog;
+using Stripe;
+using Stripe.Checkout;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
@@ -25,6 +29,7 @@ namespace Saas.Infra.MVC.Controllers.Api
         private readonly IConfiguration _configuration;
         private readonly IEnumerable<IPaymentGateway> _gateways;
         private readonly ApplicationDbContext _db;
+        private readonly RsaSecurityKey _jwtSigningKey;
 
         /// <summary>
         /// 初始化<see cref="PaymentController"/>的新实例。
@@ -38,12 +43,14 @@ namespace Saas.Infra.MVC.Controllers.Api
             IPaymentService paymentService,
             IConfiguration configuration,
             IEnumerable<IPaymentGateway> gateways,
-            ApplicationDbContext db)
+            ApplicationDbContext db,
+            RsaSecurityKey jwtSigningKey)
         {
             _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
             _db = db ?? throw new ArgumentNullException(nameof(db));
+            _jwtSigningKey = jwtSigningKey ?? throw new ArgumentNullException(nameof(jwtSigningKey));
         }
 
         /// <summary>
@@ -162,7 +169,9 @@ namespace Saas.Infra.MVC.Controllers.Api
                 _db.Orders.Add(order);
                 await _db.SaveChangesAsync();
 
-                var paymentUrl = $"{Request.Scheme}://{Request.Host}/checkout?orderId={order.Id}";
+                var checkoutSession = await CreateStripeCheckoutForOrderAsync(order, userId);
+
+                var paymentUrl = checkoutSession.Url;
                 var response = new CreateOrderDto
                 {
                     OrderId = order.Id,
@@ -180,13 +189,63 @@ namespace Saas.Infra.MVC.Controllers.Api
                     ExpiredTime = order.ExpiredTime
                 };
 
-                Log.Information("Order {OrderId} created for user {UserId}, price {PriceId}", order.Id, userId, price.Id);
+                Log.Information(
+                    "Order {OrderId} created and Stripe checkout session {SessionId} prepared for user {UserId}, price {PriceId}",
+                    order.Id, checkoutSession.SessionId, userId, price.Id);
                 return Ok(response);
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Unexpected error creating order");
                 return StatusCode(500, new { message = "Failed to create order" });
+            }
+        }
+
+        /// <summary>
+        /// 基于已有订单创建Stripe Checkout Session。
+        /// Creates a Stripe Checkout Session based on an existing order.
+        /// </summary>
+        /// <param name="orderId">订单ID。 / Order ID.</param>
+        /// <returns>包含Stripe托管支付页链接。 / Hosted Stripe checkout URL.</returns>
+        [HttpPost("{orderId:guid}/checkout-session")]
+        [Authorize]
+        public async Task<IActionResult> CreateCheckoutSession(Guid orderId)
+        {
+            if (orderId == Guid.Empty)
+                return BadRequest(new { message = "Order ID is required" });
+
+            try
+            {
+                var userId = await ResolveCurrentUserIdAsync();
+                if (userId == Guid.Empty)
+                {
+                    Log.Warning("User ID not found in claims or database for checkout session creation");
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var order = await ResolveOrderForCheckoutAsync(orderId, userId);
+                if (order == null)
+                {
+                    return BadRequest(new { message = "Order is invalid for payment" });
+                }
+
+                var checkoutSession = await CreateStripeCheckoutForOrderAsync(order, userId);
+                return Ok(new
+                {
+                    orderId = order.Id,
+                    paymentUrl = checkoutSession.Url,
+                    sessionId = checkoutSession.SessionId
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                Log.Warning(ex, "Error creating checkout session for order {OrderId}", orderId);
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Unexpected error creating checkout session for order {OrderId}", orderId);
+                return StatusCode(500, new { message = "Failed to create checkout session" });
             }
         }
 
@@ -248,6 +307,93 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
+        /// 查询订单支付状态（用户）。
+        /// Gets payment status by order ID (User).
+        /// </summary>
+        /// <param name="orderId">订单ID。 / Order ID.</param>
+        /// <returns>支付状态。 / Payment status.</returns>
+        [HttpGet("status/{orderId:guid}")]
+        [Authorize]
+        public async Task<IActionResult> GetPaymentStatus(Guid orderId)
+        {
+            if (orderId == Guid.Empty)
+                return BadRequest(new { message = "Order ID is required" });
+
+            try
+            {
+                var userId = await ResolveCurrentUserIdAsync();
+                if (userId == Guid.Empty)
+                {
+                    Log.Warning("User ID not found in claims or database for payment status query");
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var order = await _db.Orders
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId && !o.IsDeleted);
+
+                if (order == null)
+                    return NotFound(new { message = "Order not found" });
+
+                var latestTransaction = await _db.Transactions
+                    .AsNoTracking()
+                    .Where(t => t.OrderId == order.Id)
+                    .OrderByDescending(t => t.CreatedTime)
+                    .FirstOrDefaultAsync();
+
+                var subscription = order.SubscriptionId.HasValue
+                    ? await _db.Subscriptions
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(s => s.Id == order.SubscriptionId.Value && !s.IsDeleted)
+                    : null;
+
+                var user = await _db.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == order.UserId && !u.IsDeleted);
+
+                string? subscriptionAccessToken = null;
+                int? tokenExpiresIn = null;
+                if (order.Status == 1 && subscription != null && user != null)
+                {
+                    var tokenResult = GenerateSubscriptionToken(
+                        user.Id,
+                        user.Email,
+                        order.ProductId,
+                        await ResolveProductNameAsync(order.ProductId),
+                        subscription.StartDate,
+                        subscription.EndDate,
+                        order.Id);
+
+                    subscriptionAccessToken = tokenResult.AccessToken;
+                    tokenExpiresIn = tokenResult.ExpiresIn;
+                }
+
+                var response = new PaymentStatusDto
+                {
+                    OrderId = order.Id,
+                    OrderStatus = order.Status,
+                    OrderStatusText = GetOrderStatusText(order.Status),
+                    Paid = order.Status == 1,
+                    SubscriptionId = order.SubscriptionId,
+                    TransactionId = latestTransaction?.Id,
+                    TransactionStatus = latestTransaction?.Status,
+                    ExternalTransactionId = latestTransaction?.ExternalTransactionId,
+                    PaidTime = order.PaidTime,
+                    ExpiredTime = order.ExpiredTime,
+                    SubscriptionAccessToken = subscriptionAccessToken,
+                    SubscriptionTokenExpiresIn = tokenExpiresIn
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Unexpected error querying payment status for order {OrderId}", orderId);
+                return StatusCode(500, new { message = "Failed to query payment status" });
+            }
+        }
+
+        /// <summary>
         /// 处理Stripe Webhook事件。
         /// Handles Stripe webhook events.
         /// </summary>
@@ -283,8 +429,10 @@ namespace Saas.Infra.MVC.Controllers.Api
                     return Unauthorized(new { message = "Invalid signature" });
                 }
 
-                // TODO: 根据事件类型处理（payment_intent.succeeded等）
-                Log.Information("Stripe webhook processed successfully");
+                var stripeEvent = EventUtility.ParseEvent(json);
+                await ProcessStripeEventAsync(stripeEvent);
+
+                Log.Information("Stripe webhook processed successfully, event {EventType}", stripeEvent.Type);
 
                 return Ok();
             }
@@ -314,6 +462,393 @@ namespace Saas.Infra.MVC.Controllers.Api
                 .Where(u => u.Email == email && !u.IsDeleted)
                 .Select(u => u.Id)
                 .FirstOrDefaultAsync();
+        }
+
+        private async Task<OrderEntity?> ResolveOrderForCheckoutAsync(Guid orderId, Guid userId)
+        {
+            var order = await _db.Orders
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId && !o.IsDeleted);
+
+            if (order == null)
+            {
+                Log.Warning("Order {OrderId} not found for user {UserId}", orderId, userId);
+                return null;
+            }
+
+            if (order.Status != 0)
+            {
+                Log.Warning("Order {OrderId} is not pending, status {Status}", orderId, order.Status);
+                throw new InvalidOperationException("Order is not pending");
+            }
+
+            if (order.ExpiredTime.HasValue && order.ExpiredTime.Value <= DateTimeOffset.UtcNow)
+            {
+                Log.Warning("Order {OrderId} has expired at {ExpiredTime}", orderId, order.ExpiredTime);
+                throw new InvalidOperationException("Order has expired");
+            }
+
+            return order;
+        }
+
+        private async Task<CheckoutSessionResult> CreateStripeCheckoutForOrderAsync(OrderEntity order, Guid userId)
+        {
+            var price = await _db.Prices
+                .AsNoTracking()
+                .Include(p => p.Product)
+                .FirstOrDefaultAsync(p => p.Id == order.PriceId);
+
+            if (price == null || !price.IsActive)
+                throw new InvalidOperationException("Price is invalid or inactive");
+
+            if (price.Product == null || !price.Product.IsActive)
+                throw new InvalidOperationException("Product is invalid or inactive");
+
+            var stripeGateway = _gateways.FirstOrDefault(g => g.GatewayName == "Stripe");
+            if (stripeGateway == null)
+                throw new InvalidOperationException("Stripe gateway is not configured");
+
+            var successUrl = $"{Request.Scheme}://{Request.Host}/checkout?payment=success&orderId={order.Id}&session_id={{CHECKOUT_SESSION_ID}}";
+            var cancelUrl = $"{Request.Scheme}://{Request.Host}/checkout?payment=cancel&orderId={order.Id}";
+            var metadata = new Dictionary<string, string>
+            {
+                ["orderId"] = order.Id.ToString(),
+                ["userId"] = userId.ToString(),
+                ["priceId"] = price.Id.ToString(),
+                ["productId"] = price.ProductId.ToString()
+            };
+
+            var checkoutSession = await stripeGateway.CreateCheckoutSessionAsync(
+                price.Id,
+                order.ActualAmount,
+                price.Currency,
+                price.Product.Name,
+                price.BillingPeriod,
+                metadata,
+                successUrl,
+                cancelUrl);
+
+            if (string.IsNullOrWhiteSpace(checkoutSession.Url))
+                throw new InvalidOperationException("Failed to create Stripe checkout session");
+
+            return checkoutSession;
+        }
+
+        private static string GetOrderStatusText(short status)
+        {
+            return status switch
+            {
+                0 => "Pending",
+                1 => "Paid",
+                2 => "Cancelled",
+                3 => "Refunded",
+                _ => $"Unknown({status})"
+            };
+        }
+
+        private async Task ProcessStripeEventAsync(Event stripeEvent)
+        {
+            if (stripeEvent == null)
+                throw new ArgumentNullException(nameof(stripeEvent));
+
+            switch (stripeEvent.Type)
+            {
+                case "checkout.session.completed":
+                    if (stripeEvent.Data.Object is Session completedSession)
+                    {
+                        await HandleCheckoutCompletedAsync(completedSession);
+                    }
+                    break;
+
+                case "checkout.session.expired":
+                    if (stripeEvent.Data.Object is Session expiredSession)
+                    {
+                        await HandleCheckoutExpiredAsync(expiredSession);
+                    }
+                    break;
+
+                case "payment_intent.payment_failed":
+                    if (stripeEvent.Data.Object is PaymentIntent failedIntent)
+                    {
+                        await HandlePaymentFailedAsync(failedIntent);
+                    }
+                    break;
+
+                default:
+                    Log.Information("Stripe event {EventType} is ignored in current handler", stripeEvent.Type);
+                    break;
+            }
+        }
+
+        private async Task HandleCheckoutCompletedAsync(Session session)
+        {
+            var orderId = TryParseMetadataGuid(session.Metadata, "orderId");
+            if (orderId == Guid.Empty)
+            {
+                Log.Warning("checkout.session.completed missing orderId metadata, session {SessionId}", session.Id);
+                return;
+            }
+
+            var order = await _db.Orders
+                .FirstOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
+            if (order == null)
+            {
+                Log.Warning("Order {OrderId} not found for checkout.session.completed", orderId);
+                return;
+            }
+
+            if (order.Status == 1)
+            {
+                Log.Information("Order {OrderId} already paid, skip duplicate completion event", order.Id);
+                return;
+            }
+
+            await using var tx = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                order.Status = 1;
+                order.PaidTime = DateTimeOffset.UtcNow;
+
+                var price = await _db.Prices
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == order.PriceId);
+                if (price == null)
+                {
+                    throw new InvalidOperationException($"Price {order.PriceId} not found for order {order.Id}");
+                }
+
+                var subscription = await _db.Subscriptions
+                    .FirstOrDefaultAsync(s => s.OrderId == order.Id && !s.IsDeleted);
+                if (subscription == null)
+                {
+                    subscription = new SubscriptionEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = order.UserId,
+                        ProductId = order.ProductId,
+                        PriceId = order.PriceId,
+                        OrderId = order.Id,
+                        Status = 1,
+                        StartDate = DateTimeOffset.UtcNow,
+                        EndDate = CalculateEndDate(price.BillingPeriod),
+                        AutoRenew = true,
+                        OriginalAmount = order.OriginalAmount,
+                        ActualAmount = session.AmountTotal ?? order.ActualAmount,
+                        CreatedTime = DateTimeOffset.UtcNow,
+                        IsDeleted = false
+                    };
+
+                    _db.Subscriptions.Add(subscription);
+                }
+
+                if (!order.SubscriptionId.HasValue || order.SubscriptionId.Value != subscription.Id)
+                {
+                    order.SubscriptionId = subscription.Id;
+                }
+
+                var externalTransactionId = !string.IsNullOrWhiteSpace(session.PaymentIntentId)
+                    ? session.PaymentIntentId
+                    : session.Id;
+
+                var existingTransaction = await _db.Transactions
+                    .FirstOrDefaultAsync(t => t.OrderId == order.Id && t.Status == 1);
+                if (existingTransaction == null)
+                {
+                    _db.Transactions.Add(new TransactionEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = order.UserId,
+                        OrderId = order.Id,
+                        SubscriptionId = subscription.Id,
+                        Amount = session.AmountTotal ?? order.ActualAmount,
+                        Currency = string.IsNullOrWhiteSpace(session.Currency) ? "usd" : session.Currency,
+                        Gateway = "Stripe",
+                        ExternalTransactionId = externalTransactionId,
+                        Status = 1,
+                        CreatedTime = DateTimeOffset.UtcNow,
+                        Remarks = "Stripe checkout.session.completed"
+                    });
+                }
+
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                Log.Information("Order {OrderId} marked paid by checkout.session.completed", order.Id);
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+        }
+
+        private async Task HandleCheckoutExpiredAsync(Session session)
+        {
+            var orderId = TryParseMetadataGuid(session.Metadata, "orderId");
+            if (orderId == Guid.Empty)
+            {
+                Log.Warning("checkout.session.expired missing orderId metadata, session {SessionId}", session.Id);
+                return;
+            }
+
+            var order = await _db.Orders
+                .FirstOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
+            if (order == null)
+            {
+                Log.Warning("Order {OrderId} not found for checkout.session.expired", orderId);
+                return;
+            }
+
+            if (order.Status == 1)
+            {
+                Log.Information("Order {OrderId} already paid, ignore checkout.session.expired", order.Id);
+                return;
+            }
+
+            if (order.Status != 2)
+            {
+                order.Status = 2;
+                await _db.SaveChangesAsync();
+            }
+
+            Log.Information("Order {OrderId} marked cancelled by checkout.session.expired", order.Id);
+        }
+
+        private async Task HandlePaymentFailedAsync(PaymentIntent intent)
+        {
+            var orderId = TryParseMetadataGuid(intent.Metadata, "orderId");
+            if (orderId == Guid.Empty)
+            {
+                Log.Warning("payment_intent.payment_failed missing orderId metadata, paymentIntent {PaymentIntentId}", intent.Id);
+                return;
+            }
+
+            var order = await _db.Orders
+                .FirstOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
+            if (order == null)
+            {
+                Log.Warning("Order {OrderId} not found for payment_intent.payment_failed", orderId);
+                return;
+            }
+
+            if (order.Status == 1)
+            {
+                Log.Information("Order {OrderId} already paid, ignore payment_intent.payment_failed", order.Id);
+                return;
+            }
+
+            await using var tx = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                order.Status = 2;
+
+                _db.Transactions.Add(new TransactionEntity
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = order.UserId,
+                    OrderId = order.Id,
+                    SubscriptionId = order.SubscriptionId,
+                    Amount = intent.Amount,
+                    Currency = string.IsNullOrWhiteSpace(intent.Currency) ? "usd" : intent.Currency,
+                    Gateway = "Stripe",
+                    ExternalTransactionId = intent.Id,
+                    Status = 2,
+                    CreatedTime = DateTimeOffset.UtcNow,
+                    Remarks = $"Stripe payment failed: {intent.LastPaymentError?.Message ?? "unknown reason"}"
+                });
+
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                Log.Information("Order {OrderId} marked cancelled by payment_intent.payment_failed", order.Id);
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+        }
+
+        private static Guid TryParseMetadataGuid(IDictionary<string, string>? metadata, string key)
+        {
+            if (metadata == null || !metadata.TryGetValue(key, out var raw))
+            {
+                return Guid.Empty;
+            }
+
+            return Guid.TryParse(raw, out var value)
+                ? value
+                : Guid.Empty;
+        }
+
+        private static DateTimeOffset CalculateEndDate(string billingPeriod)
+        {
+            return billingPeriod.Trim().ToLowerInvariant() switch
+            {
+                "week" => DateTimeOffset.UtcNow.AddDays(7),
+                "month" => DateTimeOffset.UtcNow.AddMonths(1),
+                "year" => DateTimeOffset.UtcNow.AddYears(1),
+                _ => DateTimeOffset.UtcNow.AddMonths(1)
+            };
+        }
+
+        private async Task<string> ResolveProductNameAsync(Guid productId)
+        {
+            var productName = await _db.Products
+                .AsNoTracking()
+                .Where(p => p.Id == productId)
+                .Select(p => p.Name)
+                .FirstOrDefaultAsync();
+
+            return string.IsNullOrWhiteSpace(productName)
+                ? "UnknownProduct"
+                : productName;
+        }
+
+        private (string AccessToken, int ExpiresIn) GenerateSubscriptionToken(
+            Guid userId,
+            string userEmail,
+            Guid productId,
+            string productName,
+            DateTimeOffset subscriptionStartUtc,
+            DateTimeOffset? subscriptionEndUtc,
+            Guid orderId)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var expires = now.AddHours(24);
+
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                new Claim("productId", productId.ToString()),
+                new Claim("productName", productName),
+                new Claim("subscriptionStartUtc", subscriptionStartUtc.UtcDateTime.ToString("O")),
+                new Claim("subscriptionEndUtc", (subscriptionEndUtc ?? now).UtcDateTime.ToString("O")),
+                new Claim("orderId", orderId.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(ClaimTypes.Name, userEmail),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var signingCredentials = new SigningCredentials(_jwtSigningKey, SecurityAlgorithms.RsaSha256);
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"] ?? JwtConstants.Issuer,
+                audience: _configuration["Jwt:Audience"] ?? "Saas.Infra.Clients",
+                claims: claims,
+                notBefore: now.UtcDateTime,
+                expires: expires.UtcDateTime,
+                signingCredentials: signingCredentials);
+
+            if (!token.Header.ContainsKey("kid") && !string.IsNullOrWhiteSpace(_jwtSigningKey.KeyId))
+            {
+                token.Header["kid"] = _jwtSigningKey.KeyId;
+            }
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var accessToken = tokenHandler.WriteToken(token);
+            var expiresIn = (int)(expires - now).TotalSeconds;
+
+            return (accessToken, expiresIn);
         }
     }
 }

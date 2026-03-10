@@ -160,4 +160,83 @@ namespace Saas.Infra.MVC.Models.Responses
         /// </summary>
         public string Message { get; set; } = string.Empty;
     }
+
+    /// <summary>
+    /// 支付状态响应DTO。
+    /// Payment status response DTO.
+    /// </summary>
+    public class PaymentStatusDto
+    {
+        /// <summary>
+        /// 订单ID。
+        /// Order ID.
+        /// </summary>
+        public Guid OrderId { get; set; }
+
+        /// <summary>
+        /// 订单状态值。
+        /// Order status value.
+        /// </summary>
+        public short OrderStatus { get; set; }
+
+        /// <summary>
+        /// 订单状态文本。
+        /// Order status text.
+        /// </summary>
+        public string OrderStatusText { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 是否支付成功。
+        /// Whether payment succeeded.
+        /// </summary>
+        public bool Paid { get; set; }
+
+        /// <summary>
+        /// 订阅ID（如已创建）。
+        /// Subscription ID if created.
+        /// </summary>
+        public Guid? SubscriptionId { get; set; }
+
+        /// <summary>
+        /// 最新交易ID（如存在）。
+        /// Latest transaction ID if present.
+        /// </summary>
+        public Guid? TransactionId { get; set; }
+
+        /// <summary>
+        /// 最新交易状态（如存在）。
+        /// Latest transaction status if present.
+        /// </summary>
+        public short? TransactionStatus { get; set; }
+
+        /// <summary>
+        /// 最新外部交易ID（如Stripe Charge ID）。
+        /// Latest external transaction ID (for example Stripe Charge ID).
+        /// </summary>
+        public string? ExternalTransactionId { get; set; }
+
+        /// <summary>
+        /// 支付时间。
+        /// Paid time.
+        /// </summary>
+        public DateTimeOffset? PaidTime { get; set; }
+
+        /// <summary>
+        /// 订单过期时间。
+        /// Order expiration time.
+        /// </summary>
+        public DateTimeOffset? ExpiredTime { get; set; }
+
+        /// <summary>
+        /// 支付成功后颁发的订阅访问令牌。
+        /// Subscription access token issued after successful payment.
+        /// </summary>
+        public string? SubscriptionAccessToken { get; set; }
+
+        /// <summary>
+        /// 订阅令牌过期秒数。
+        /// Subscription token expiry in seconds.
+        /// </summary>
+        public int? SubscriptionTokenExpiresIn { get; set; }
+    }
 }

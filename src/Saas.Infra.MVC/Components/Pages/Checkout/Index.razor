@@ -3,14 +3,16 @@
 @attribute [Authorize]
 @inject Saas.Infra.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 
-<PageTitle>Checkout - Saas.Infra</PageTitle>
+<PageTitle>Payment Result - Saas.Infra</PageTitle>
 
 @if (_isLoading)
 {
     <div class="container py-5">
-        <p>Loading order...</p>
+        <p>Loading payment result...</p>
     </div>
 }
 else if (!string.IsNullOrWhiteSpace(_errorMessage))
@@ -22,7 +24,7 @@ else if (!string.IsNullOrWhiteSpace(_errorMessage))
 else if (_order is null || _price is null || _product is null)
 {
     <div class="container py-5">
-        <div class="alert alert-warning" role="alert">Order not found.</div>
+        <div class="alert alert-warning" role="alert">Order not found or no longer available.</div>
     </div>
 }
 else
@@ -32,12 +34,46 @@ else
             <div class="col-lg-8">
                 <div class="card shadow-sm">
                     <div class="card-body p-4">
-                        <h1 class="h3 mb-3">Order Confirmation</h1>
-                        <p class="text-muted mb-4">Review the order below and continue with payment.</p>
+                        <h1 class="h3 mb-3">Payment Result</h1>
+                        <p class="text-muted mb-4">@GetSummaryText()</p>
+
+                        @if (IsSuccess())
+                        {
+                            <div class="alert alert-success" role="alert">
+                                Payment succeeded. Your subscription should be available shortly.
+                            </div>
+                        }
+                        else if (IsCancelled())
+                        {
+                            <div class="alert alert-warning" role="alert">
+                                Payment was canceled. You can retry payment at any time before expiration.
+                            </div>
+                        }
+                        else if (IsFailed())
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                Payment failed. Please try again with another payment method or card.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info" role="alert">
+                                Payment is still being processed. Please refresh this page in a few moments.
+                            </div>
+                        }
 
                         <dl class="row mb-4">
                             <dt class="col-sm-4">Order ID</dt>
                             <dd class="col-sm-8">@_order.Id</dd>
+
+                            <dt class="col-sm-4">Payment Action</dt>
+                            <dd class="col-sm-8">@(_paymentAction ?? "unknown")</dd>
+
+                            @if (!string.IsNullOrWhiteSpace(SessionId))
+                            {
+                                <dt class="col-sm-4">Stripe Session</dt>
+                                <dd class="col-sm-8"><code>@SessionId</code></dd>
+                            }
 
                             <dt class="col-sm-4">Product</dt>
                             <dd class="col-sm-8">@_product.Name</dd>
@@ -56,9 +92,18 @@ else
                         </dl>
 
                         <div class="d-flex gap-2">
-                            <button class="btn btn-outline-secondary" @onclick="BackToProducts">
-                                Back to Product
-                            </button>
+                            @if (IsSuccess())
+                            {
+                                <button class="btn btn-primary" @onclick="GoToSubscriptions">Go to My Subscriptions</button>
+                            }
+                            else if (IsCancelled())
+                            {
+                                <button class="btn btn-primary" @onclick="BackToProducts">Back to Product</button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-outline-secondary" @onclick="RefreshPage">Refresh</button>
+                            }
                         </div>
                     </div>
                 </div>
@@ -69,9 +114,12 @@ else
 
 @code {
     [SupplyParameterFromQuery] public Guid? OrderId { get; set; }
+    [SupplyParameterFromQuery(Name = "payment")] public string? Payment { get; set; }
+    [SupplyParameterFromQuery(Name = "session_id")] public string? SessionId { get; set; }
 
     private bool _isLoading = true;
     private string? _errorMessage;
+    private string? _paymentAction;
     private Saas.Infra.Data.OrderEntity? _order;
     private Saas.Infra.Data.PriceEntity? _price;
     private Saas.Infra.Data.ProductEntity? _product;
@@ -89,13 +137,30 @@ else
                 return;
             }
 
+            _paymentAction = NormalizePaymentAction(Payment);
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var currentUser = authState.User;
+            if (currentUser?.Identity?.IsAuthenticated != true)
+            {
+                _errorMessage = "You need to sign in to view payment results.";
+                return;
+            }
+
+            var currentUserId = await ResolveCurrentUserIdAsync(currentUser);
+            if (currentUserId == Guid.Empty)
+            {
+                _errorMessage = "Unable to resolve the current user.";
+                return;
+            }
+
             _order = await Db.Orders
                 .AsNoTracking()
-                .FirstOrDefaultAsync(o => o.Id == OrderId.Value && !o.IsDeleted);
+                .FirstOrDefaultAsync(o => o.Id == OrderId.Value && o.UserId == currentUserId && !o.IsDeleted);
 
             if (_order == null)
             {
-                _errorMessage = "Order was not found.";
+                _errorMessage = "Order was not found or does not belong to you.";
                 return;
             }
 
@@ -131,6 +196,73 @@ else
         }
 
         Nav.NavigateTo($"/products/{_product.Id}");
+    }
+
+    private void GoToSubscriptions()
+    {
+        Nav.NavigateTo("/subscriptions");
+    }
+
+    private void RefreshPage()
+    {
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+    }
+
+    private bool IsSuccess()
+    {
+        return _paymentAction == "success" || (_order?.Status == 1);
+    }
+
+    private bool IsCancelled()
+    {
+        return _paymentAction == "cancel" || (_order?.Status == 2);
+    }
+
+    private bool IsFailed()
+    {
+        return _paymentAction == "failed";
+    }
+
+    private string GetSummaryText()
+    {
+        if (IsSuccess())
+            return "Your payment was successful.";
+
+        if (IsCancelled())
+            return "Your payment was canceled.";
+
+        if (IsFailed())
+            return "Your payment failed.";
+
+        return "We are checking your latest payment status.";
+    }
+
+    private static string NormalizePaymentAction(string? payment)
+    {
+        return string.IsNullOrWhiteSpace(payment)
+            ? "unknown"
+            : payment.Trim().ToLowerInvariant();
+    }
+
+    private async Task<Guid> ResolveCurrentUserIdAsync(ClaimsPrincipal user)
+    {
+        var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrWhiteSpace(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
+        {
+            return userId;
+        }
+
+        var email = user.FindFirstValue(ClaimTypes.Name) ?? user.FindFirstValue("sub") ?? user.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Guid.Empty;
+        }
+
+        return await Db.Users
+            .AsNoTracking()
+            .Where(u => u.Email == email && !u.IsDeleted)
+            .Select(u => u.Id)
+            .FirstOrDefaultAsync();
     }
 
     private static string GetStatusText(short status)

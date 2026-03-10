@@ -335,13 +335,13 @@ else
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(order.PaymentUrl))
+            if (string.IsNullOrWhiteSpace(order.PaymentUrl))
             {
-                Nav.NavigateTo(order.PaymentUrl, forceLoad: true);
+                _errorMessage = "Payment session was not created. Please try again.";
                 return;
             }
 
-            Nav.NavigateTo($"/checkout?orderId={order.OrderId}", forceLoad: true);
+            Nav.NavigateTo(order.PaymentUrl, forceLoad: true);
         }
         catch (Exception ex)
         {

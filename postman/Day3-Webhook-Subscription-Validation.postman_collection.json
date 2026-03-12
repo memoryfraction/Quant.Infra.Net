@@ -1,0 +1,474 @@
+{
+  "info": {
+    "_postman_id": "f35f0ed1-4f7f-4c61-b6e8-08d74f2c6b10",
+    "name": "Day3 Webhook + Subscription Validation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1) Login - Generate Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\",\"clientId\":\"{{clientId}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/sso/generate-token",
+          "host": ["{{baseUrl}}"],
+          "path": ["sso", "generate-token"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.environment.set('token', json.accessToken);",
+              "pm.test('Has token', function () { pm.expect(json.accessToken).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2) Get Product + Active Price",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/products?activeOnly=true",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "products"],
+          "query": [
+            { "key": "activeOnly", "value": "true" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const products = pm.response.json();",
+              "pm.test('Has products', function () { pm.expect(products.length).to.be.greaterThan(0); });",
+              "pm.environment.set('productId', products[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3) Get Prices By Product",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/prices/product/{{productId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "prices", "product", "{{productId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const prices = pm.response.json();",
+              "pm.test('Has prices', function () { pm.expect(prices.length).to.be.greaterThan(0); });",
+              "const active = prices.find(p => p.isActive === true) || prices[0];",
+              "pm.environment.set('priceId', active.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4) Create Order - Success Scenario",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/create-order",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "create-order"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const obj = pm.response.json();",
+              "pm.environment.set('orderIdSuccess', obj.orderId);",
+              "pm.test('Pending order', function () { pm.expect(obj.status).to.eql(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5) Webhook - checkout.session.completed",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const orderId = pm.environment.get('orderIdSuccess');",
+              "const priceId = pm.environment.get('priceId');",
+              "const productId = pm.environment.get('productId');",
+              "const secret = pm.environment.get('webhookSecret');",
+              "const evt = {",
+              "  id: 'evt_test_' + Date.now(),",
+              "  object: 'event',",
+              "  api_version: '2025-12-15.clover',",
+              "  created: Math.floor(Date.now() / 1000),",
+              "  livemode: false,",
+              "  pending_webhooks: 1,",
+              "  request: { id: null, idempotency_key: null },",
+              "  type: 'checkout.session.completed',",
+              "  data: { object: {",
+              "    id: 'cs_test_completed',",
+              "    object: 'checkout.session',",
+              "    payment_intent: 'pi_test_completed',",
+              "    amount_total: 8900,",
+              "    currency: 'usd',",
+              "    metadata: { orderId, userId: '', priceId, productId }",
+              "  } }",
+              "};",
+              "const payload = JSON.stringify(evt);",
+              "const timestamp = Math.floor(Date.now() / 1000);",
+              "const signedPayload = timestamp + '.' + payload;",
+              "const signature = CryptoJS.HmacSHA256(signedPayload, secret).toString(CryptoJS.enc.Hex);",
+              "pm.environment.set('webhookPayload', payload);",
+              "pm.request.headers.upsert({ key: 'Stripe-Signature', value: `t=${timestamp},v1=${signature}` });"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Webhook accepted', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{webhookPayload}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/webhook",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "webhook"]
+        }
+      }
+    },
+    {
+      "name": "6) Status - Success Should Be Paid",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/status/{{orderIdSuccess}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "status", "{{orderIdSuccess}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const obj = pm.response.json();",
+              "pm.test('Order paid', function () { pm.expect(obj.orderStatus).to.eql(1); pm.expect(obj.paid).to.eql(true); });",
+              "pm.test('Has subscription token', function () { pm.expect(obj.subscriptionAccessToken).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7) Create Order - Expired Scenario",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/create-order",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "create-order"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('orderIdExpired', pm.response.json().orderId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8) Webhook - checkout.session.expired",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const orderId = pm.environment.get('orderIdExpired');",
+              "const priceId = pm.environment.get('priceId');",
+              "const productId = pm.environment.get('productId');",
+              "const secret = pm.environment.get('webhookSecret');",
+              "const evt = {",
+              "  id: 'evt_test_' + Date.now(),",
+              "  object: 'event',",
+              "  api_version: '2025-12-15.clover',",
+              "  created: Math.floor(Date.now() / 1000),",
+              "  livemode: false,",
+              "  pending_webhooks: 1,",
+              "  request: { id: null, idempotency_key: null },",
+              "  type: 'checkout.session.expired',",
+              "  data: { object: {",
+              "    id: 'cs_test_expired',",
+              "    object: 'checkout.session',",
+              "    metadata: { orderId, userId: '', priceId, productId }",
+              "  } }",
+              "};",
+              "const payload = JSON.stringify(evt);",
+              "const timestamp = Math.floor(Date.now() / 1000);",
+              "const signedPayload = timestamp + '.' + payload;",
+              "const signature = CryptoJS.HmacSHA256(signedPayload, secret).toString(CryptoJS.enc.Hex);",
+              "pm.environment.set('webhookPayload', payload);",
+              "pm.request.headers.upsert({ key: 'Stripe-Signature', value: `t=${timestamp},v1=${signature}` });"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Webhook accepted', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{webhookPayload}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/webhook",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "webhook"]
+        }
+      }
+    },
+    {
+      "name": "9) Status - Expired Should Be Cancelled",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/status/{{orderIdExpired}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "status", "{{orderIdExpired}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const obj = pm.response.json();",
+              "pm.test('Order cancelled', function () { pm.expect(obj.orderStatus).to.eql(2); pm.expect(obj.paid).to.eql(false); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10) Create Order - Failed Scenario",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/create-order",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "create-order"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('orderIdFailed', pm.response.json().orderId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11) Webhook - payment_intent.payment_failed",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const orderId = pm.environment.get('orderIdFailed');",
+              "const priceId = pm.environment.get('priceId');",
+              "const productId = pm.environment.get('productId');",
+              "const secret = pm.environment.get('webhookSecret');",
+              "const evt = {",
+              "  id: 'evt_test_' + Date.now(),",
+              "  object: 'event',",
+              "  api_version: '2025-12-15.clover',",
+              "  created: Math.floor(Date.now() / 1000),",
+              "  livemode: false,",
+              "  pending_webhooks: 1,",
+              "  request: { id: null, idempotency_key: null },",
+              "  type: 'payment_intent.payment_failed',",
+              "  data: { object: {",
+              "    id: 'pi_test_failed',",
+              "    object: 'payment_intent',",
+              "    amount: 8900,",
+              "    currency: 'usd',",
+              "    metadata: { orderId, userId: '', priceId, productId },",
+              "    last_payment_error: { message: 'card_declined (test)' }",
+              "  } }",
+              "};",
+              "const payload = JSON.stringify(evt);",
+              "const timestamp = Math.floor(Date.now() / 1000);",
+              "const signedPayload = timestamp + '.' + payload;",
+              "const signature = CryptoJS.HmacSHA256(signedPayload, secret).toString(CryptoJS.enc.Hex);",
+              "pm.environment.set('webhookPayload', payload);",
+              "pm.request.headers.upsert({ key: 'Stripe-Signature', value: `t=${timestamp},v1=${signature}` });"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Webhook accepted', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{webhookPayload}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/webhook",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "webhook"]
+        }
+      }
+    },
+    {
+      "name": "12) Status - Failed Should Be Cancelled + Failed Tx",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/status/{{orderIdFailed}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "status", "{{orderIdFailed}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const obj = pm.response.json();",
+              "pm.test('Order cancelled + failed transaction', function () {",
+              "  pm.expect(obj.orderStatus).to.eql(2);",
+              "  pm.expect(obj.paid).to.eql(false);",
+              "  pm.expect(obj.transactionStatus).to.eql(2);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

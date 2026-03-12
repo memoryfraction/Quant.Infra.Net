@@ -1,0 +1,454 @@
+{
+    "info":  {
+                 "_postman_id":  "a9d9e20a-4df6-46b3-abf2-1f7d92e9d5a2",
+                 "name":  "Detailed Payment+Subscription Validation",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "item":  [
+                 {
+                     "name":  "1) Login",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\"email\":\"{{email}}\",\"password\":\"{{password}}\",\"clientId\":\"{{clientId}}\"}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/sso/generate-token",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "sso",
+                                                              "generate-token"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027,()=\u003epm.response.to.have.status(200));",
+                                                                   "const j=pm.response.json(); pm.expect(j.accessToken).to.be.a(\u0027string\u0027).and.not.empty; pm.environment.set(\u0027token\u0027,j.accessToken);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "2) Products",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/products?activeOnly=true",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "products"
+                                                          ],
+                                                 "query":  [
+                                                               {
+                                                                   "key":  "activeOnly",
+                                                                   "value":  "true"
+                                                               }
+                                                           ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027,()=\u003epm.response.to.have.status(200));",
+                                                                   "const a=pm.response.json(); pm.expect(a.length).to.be.greaterThan(0); pm.environment.set(\u0027productId\u0027,a[0].id);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "3) Prices",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/prices/product/{{productId}}",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "prices",
+                                                              "product",
+                                                              "{{productId}}"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027,()=\u003epm.response.to.have.status(200));",
+                                                                   "const a=pm.response.json(); pm.expect(a.length).to.be.greaterThan(0); const p=a.find(x=\u003ex.isActive===true)||a[0]; pm.environment.set(\u0027priceId\u0027,p.id);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "4) Create Order (API only)",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    },
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/payment/create-order",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "payment",
+                                                              "create-order"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027,()=\u003epm.response.to.have.status(200));",
+                                                                   "const j=pm.response.json(); pm.expect(j.orderId).to.be.a(\u0027string\u0027).and.not.empty; pm.expect(j.paymentUrl).to.include(\u0027checkout.stripe.com\u0027); pm.environment.set(\u0027orderId\u0027,j.orderId);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "5) Webhook completed (signed)",
+                     "event":  [
+                                   {
+                                       "listen":  "prerequest",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "const secret=pm.environment.get(\u0027webhookSecret\u0027);",
+                                                                   "const orderId=pm.environment.get(\u0027orderId\u0027);",
+                                                                   "const priceId=pm.environment.get(\u0027priceId\u0027);",
+                                                                   "const productId=pm.environment.get(\u0027productId\u0027);",
+                                                                   "const evt={id:\u0027evt_test_\u0027+Date.now(),object:\u0027event\u0027,api_version:\u00272025-12-15.clover\u0027,created:Math.floor(Date.now()/1000),livemode:false,pending_webhooks:1,request:{id:null,idempotency_key:null},type:\u0027checkout.session.completed\u0027,data:{object:{id:\u0027cs_test_completed\u0027,object:\u0027checkout.session\u0027,payment_intent:\u0027pi_test_completed\u0027,amount_total:8900,currency:\u0027usd\u0027,metadata:{orderId,userId:\u0027\u0027,priceId,productId}}}};",
+                                                                   "const payload=JSON.stringify(evt);",
+                                                                   "const t=Math.floor(Date.now()/1000);",
+                                                                   "const sig=CryptoJS.HmacSHA256(t + \u0027.\u0027 + payload, secret).toString(CryptoJS.enc.Hex);",
+                                                                   "pm.environment.set(\u0027payload\u0027,payload);",
+                                                                   "pm.request.headers.upsert({key:\u0027Stripe-Signature\u0027,value:`t=${t},v1=${sig}`});"
+                                                               ]
+                                                  }
+                                   },
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027,()=\u003epm.response.to.have.status(200));"
+                                                               ]
+                                                  }
+                                   }
+                               ],
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{{payload}}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/payment/webhook",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "payment",
+                                                              "webhook"
+                                                          ]
+                                             }
+                                 }
+                 },
+                 {
+                     "name":  "6) Payment status",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/payment/status/{{orderId}}",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "payment",
+                                                              "status",
+                                                              "{{orderId}}"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027,()=\u003epm.response.to.have.status(200));",
+                                                                   "const j=pm.response.json(); pm.expect(j.paid).to.eql(true); pm.expect(j.subscriptionId).to.be.a(\u0027string\u0027).and.not.empty; pm.environment.set(\u0027subscriptionId\u0027,j.subscriptionId);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "7) My subscriptions (activeOnly)",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/subscriptions/my?activeOnly=true",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "subscriptions",
+                                                              "my"
+                                                          ],
+                                                 "query":  [
+                                                               {
+                                                                   "key":  "activeOnly",
+                                                                   "value":  "true"
+                                                               }
+                                                           ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027,()=\u003epm.response.to.have.status(200));",
+                                                                   "const list=pm.response.json(); const sid=pm.environment.get(\u0027subscriptionId\u0027); const row=list.find(x=\u003ex.id===sid); pm.expect(row,\u0027subscription exists\u0027).to.exist;",
+                                                                   "pm.expect(row.amount).to.be.a(\u0027number\u0027);",
+                                                                   "pm.expect(row.originalAmount).to.eql(undefined);",
+                                                                   "pm.expect(row.actualAmount).to.eql(undefined);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "8) Subscription detail",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/subscriptions/{{subscriptionId}}",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "subscriptions",
+                                                              "{{subscriptionId}}"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027,()=\u003epm.response.to.have.status(200));",
+                                                                   "const j=pm.response.json(); pm.expect(j.id).to.eql(pm.environment.get(\u0027subscriptionId\u0027)); pm.expect(j.amount).to.be.a(\u0027number\u0027);",
+                                                                   "pm.expect(j.originalAmount).to.eql(undefined); pm.expect(j.actualAmount).to.eql(undefined);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "9) Subscription transactions",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/subscriptions/{{subscriptionId}}/transactions",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "subscriptions",
+                                                              "{{subscriptionId}}",
+                                                              "transactions"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027200\u0027,()=\u003epm.response.to.have.status(200));",
+                                                                   "const a=pm.response.json(); pm.expect(a.length).to.be.greaterThan(0);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "10) Negative create-order no token",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/payment/create-order",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "payment",
+                                                              "create-order"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027401\u0027,()=\u003epm.response.to.have.status(401));"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "11) Negative create-order invalid price",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    },
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\"priceId\":\"00000000-0000-0000-0000-000000000000\",\"orderType\":\"SUBSCRIPTION\"}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/payment/create-order",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "payment",
+                                                              "create-order"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027400\u0027,()=\u003epm.response.to.have.status(400));"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 }
+             ]
+}

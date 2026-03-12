@@ -240,8 +240,6 @@ namespace Saas.Infra.MVC.Services.Payment
                     StartDate = DateTimeOffset.UtcNow,
                     EndDate = CalculateEndDate(price.BillingPeriod),
                     AutoRenew = true,
-                    OriginalAmount = order.OriginalAmount,
-                    ActualAmount = paymentResult.Amount,
                     CreatedTime = DateTimeOffset.UtcNow,
                     IsDeleted = false
                 };

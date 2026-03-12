@@ -192,8 +192,6 @@ namespace Saas.Infra.Data
                 entity.Property(e => e.StartDate).HasColumnName("StartDate");
                 entity.Property(e => e.EndDate).HasColumnName("EndDate");
                 entity.Property(e => e.AutoRenew).HasColumnName("AutoRenew");
-                entity.Property(e => e.OriginalAmount).HasColumnName("OriginalAmount").IsRequired();
-                entity.Property(e => e.ActualAmount).HasColumnName("ActualAmount").IsRequired();
                 entity.Property(e => e.Metadata).HasColumnName("Metadata").HasColumnType("jsonb");
                 entity.Property(e => e.CreatedTime).HasColumnName("CreatedTime");
                 entity.Property(e => e.IsDeleted).HasColumnName("IsDeleted");

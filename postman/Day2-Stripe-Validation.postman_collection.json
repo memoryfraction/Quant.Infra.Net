@@ -1,0 +1,249 @@
+{
+  "info": {
+    "_postman_id": "9f0b2d2d-0a63-4f6e-b8b5-1356cf2b8f01",
+    "name": "Day2 Stripe Validation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1) Login - Generate Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\",\"clientId\":\"{{clientId}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/sso/generate-token",
+          "host": ["{{baseUrl}}"],
+          "path": ["sso", "generate-token"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('Has accessToken', function () { pm.expect(json.accessToken).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('token', json.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2) Get Products",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/products?activeOnly=true",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "products"],
+          "query": [{ "key": "activeOnly", "value": "true" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const arr = pm.response.json();",
+              "pm.test('Products not empty', function () { pm.expect(arr.length).to.be.greaterThan(0); });",
+              "pm.environment.set('productId', arr[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3) Get Prices By Product",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/prices/product/{{productId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "prices", "product", "{{productId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const arr = pm.response.json();",
+              "pm.test('Prices not empty', function () { pm.expect(arr.length).to.be.greaterThan(0); });",
+              "const active = arr.find(x => x.isActive === true) || arr[0];",
+              "pm.environment.set('priceId', active.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4) Create Order (Direct Stripe URL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/create-order",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "create-order"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const obj = pm.response.json();",
+              "pm.test('Has orderId', function () { pm.expect(obj.orderId).to.be.a('string').and.not.empty; });",
+              "pm.test('Order status is pending', function () { pm.expect(obj.status).to.eql(0); });",
+              "pm.test('PaymentUrl is Stripe hosted page', function () {",
+              "  pm.expect(obj.paymentUrl).to.be.a('string').and.not.empty;",
+              "  pm.expect(obj.paymentUrl).to.include(pm.environment.get('expectedStripeHost'));",
+              "});",
+              "pm.environment.set('orderId', obj.orderId);",
+              "pm.environment.set('paymentUrl', obj.paymentUrl);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5) Get Payment Status By OrderId",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/status/{{orderId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "status", "{{orderId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const obj = pm.response.json();",
+              "pm.test('OrderId matches', function () { pm.expect(obj.orderId).to.eql(pm.environment.get('orderId')); });",
+              "pm.test('Has order status text', function () { pm.expect(obj.orderStatusText).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6) Create Checkout Session By OrderId",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/{{orderId}}/checkout-session",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "{{orderId}}", "checkout-session"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const obj = pm.response.json();",
+              "pm.test('Session URL is Stripe hosted page', function () {",
+              "  pm.expect(obj.paymentUrl).to.be.a('string').and.not.empty;",
+              "  pm.expect(obj.paymentUrl).to.include(pm.environment.get('expectedStripeHost'));",
+              "});",
+              "pm.test('Has sessionId', function () { pm.expect(obj.sessionId).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('stripeSessionId', obj.sessionId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7) Negative - Status Without Token (401)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/status/{{orderId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "status", "{{orderId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 401', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8) Webhook Endpoint Requires Signature (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payment/webhook",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payment", "webhook"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 400 without Stripe signature', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

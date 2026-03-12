@@ -632,8 +632,6 @@ namespace Saas.Infra.MVC.Controllers.Api
                         StartDate = DateTimeOffset.UtcNow,
                         EndDate = CalculateEndDate(price.BillingPeriod),
                         AutoRenew = true,
-                        OriginalAmount = order.OriginalAmount,
-                        ActualAmount = session.AmountTotal ?? order.ActualAmount,
                         CreatedTime = DateTimeOffset.UtcNow,
                         IsDeleted = false
                     };

@@ -146,7 +146,6 @@ namespace Saas.Infra.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("Id");
                 entity.Property(e => e.UserId).HasColumnName("UserId").IsRequired();
-                entity.Property(e => e.OrderType).HasColumnName("OrderType").HasMaxLength(20).IsRequired();
                 entity.Property(e => e.ProductId).HasColumnName("ProductId").IsRequired();
                 entity.Property(e => e.PriceId).HasColumnName("PriceId").IsRequired();
                 entity.Property(e => e.SubscriptionId).HasColumnName("SubscriptionId");

@@ -33,12 +33,6 @@ namespace Saas.Infra.MVC.Models.Responses
         public Guid PriceId { get; set; }
 
         /// <summary>
-        /// 订单类型。
-        /// Order type.
-        /// </summary>
-        public string OrderType { get; set; } = string.Empty;
-
-        /// <summary>
         /// 原始金额。
         /// Original amount.
         /// </summary>

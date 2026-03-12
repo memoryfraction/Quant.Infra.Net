@@ -121,7 +121,6 @@ namespace Saas.Infra.MVC.Services.Payment
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                OrderType = "SUBSCRIPTION",
                 ProductId = price.ProductId,
                 PriceId = priceId,
                 OriginalAmount = price.Amount,

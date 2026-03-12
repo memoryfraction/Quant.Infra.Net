@@ -21,12 +21,6 @@ namespace Saas.Infra.Data
         public Guid UserId { get; set; }
 
         /// <summary>
-        /// 订单类型（如 SUBSCRIPTION）。
-        /// Order type (for example SUBSCRIPTION).
-        /// </summary>
-        public string OrderType { get; set; } = "SUBSCRIPTION";
-
-        /// <summary>
         /// 产品ID。
         /// Product ID.
         /// </summary>

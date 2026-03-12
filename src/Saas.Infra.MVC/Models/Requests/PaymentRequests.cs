@@ -16,13 +16,6 @@ namespace Saas.Infra.MVC.Models.Requests
         [Required(ErrorMessage = "Price ID is required")]
         public Guid PriceId { get; set; }
 
-        /// <summary>
-        /// 订单类型。
-        /// Order type.
-        /// </summary>
-        [Required(ErrorMessage = "Order type is required")]
-        [StringLength(20, ErrorMessage = "Order type cannot exceed 20 characters")]
-        public string OrderType { get; set; } = "SUBSCRIPTION";
     }
 
     /// <summary>

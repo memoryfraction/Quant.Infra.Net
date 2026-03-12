@@ -224,6 +224,12 @@ namespace Saas.Infra.MVC
                 // 注册支付服务
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IPaymentService, Saas.Infra.MVC.Services.Payment.PaymentService>();
 
+                // 注册Stripe Webhook处理服务
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IStripeWebhookService, Saas.Infra.MVC.Services.Payment.StripeWebhookService>();
+
+                // 注册订阅令牌服务
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.ISubscriptionTokenService, Saas.Infra.MVC.Services.Payment.SubscriptionTokenService>();
+
                 // ===================== 8. 构建应用并配置管道 =====================
                 var app = builder.Build();
 

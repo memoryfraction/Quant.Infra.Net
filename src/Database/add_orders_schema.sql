@@ -8,7 +8,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public."Orders" (
     "Id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     "UserId" UUID NOT NULL REFERENCES public."Users"("Id") ON DELETE RESTRICT,
-    "OrderType" VARCHAR(20) NOT NULL,
     "ProductId" UUID NOT NULL REFERENCES public."Products"("Id") ON DELETE RESTRICT,
     "PriceId" UUID NOT NULL REFERENCES public."Prices"("Id") ON DELETE RESTRICT,
     "SubscriptionId" UUID NULL,

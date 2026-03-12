@@ -194,7 +194,7 @@
                                                 ],
                                      "body":  {
                                                   "mode":  "raw",
-                                                  "raw":  "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+                                                  "raw":  "{\"priceId\":\"{{priceId}}\"}"
                                               },
                                      "url":  {
                                                  "raw":  "{{baseUrl}}/api/payment/create-order",
@@ -246,7 +246,7 @@
                                                 ],
                                      "body":  {
                                                   "mode":  "raw",
-                                                  "raw":  "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+                                                  "raw":  "{\"priceId\":\"{{priceId}}\"}"
                                               },
                                      "url":  {
                                                  "raw":  "{{baseUrl}}/api/payment/create-order",
@@ -290,7 +290,7 @@
                                                 ],
                                      "body":  {
                                                   "mode":  "raw",
-                                                  "raw":  "{\"priceId\":\"00000000-0000-0000-0000-000000000000\",\"orderType\":\"SUBSCRIPTION\"}"
+                                                  "raw":  "{\"priceId\":\"00000000-0000-0000-0000-000000000000\"}"
                                               },
                                      "url":  {
                                                  "raw":  "{{baseUrl}}/api/payment/create-order",
@@ -371,3 +371,5 @@
                  }
              ]
 }
+
+

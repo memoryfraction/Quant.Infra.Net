@@ -107,7 +107,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+          "raw": "{\"priceId\":\"{{priceId}}\"}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/payment/create-order",
@@ -233,7 +233,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+          "raw": "{\"priceId\":\"{{priceId}}\"}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/payment/create-order",
@@ -255,7 +255,7 @@
       ]
     },
     {
-      "name": "8) Webhook - checkout.session.expired",
+      "name": "8) Webhook - checkout.session.expired (Order -> Cancelled)",
       "event": [
         {
           "listen": "prerequest",
@@ -317,7 +317,7 @@
       }
     },
     {
-      "name": "9) Status - Expired Should Be Cancelled",
+      "name": "9) Status - Cancelled Should Be Returned",
       "request": {
         "method": "GET",
         "header": [
@@ -344,7 +344,7 @@
       ]
     },
     {
-      "name": "10) Create Order - Failed Scenario",
+      "name": "10) Create Order - Failed Flow Setup (New Order)",
       "request": {
         "method": "POST",
         "header": [
@@ -353,7 +353,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"priceId\":\"{{priceId}}\",\"orderType\":\"SUBSCRIPTION\"}"
+          "raw": "{\"priceId\":\"{{priceId}}\"}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/payment/create-order",
@@ -472,3 +472,5 @@
     }
   ]
 }
+
+

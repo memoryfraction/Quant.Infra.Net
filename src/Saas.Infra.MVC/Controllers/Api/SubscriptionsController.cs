@@ -81,8 +81,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                         StartDate = s.StartDate,
                         EndDate = s.EndDate,
                         AutoRenew = s.AutoRenew,
-                        OriginalAmount = s.OriginalAmount,
-                        ActualAmount = s.ActualAmount,
+                        Amount = s.Price != null ? s.Price.Amount : 0,
                         Currency = s.Price != null ? s.Price.Currency : "USD",
                         CreatedTime = s.CreatedTime,
                         IsDeleted = s.IsDeleted
@@ -151,8 +150,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                     StartDate = subscription.StartDate,
                     EndDate = subscription.EndDate,
                     AutoRenew = subscription.AutoRenew,
-                    OriginalAmount = subscription.OriginalAmount,
-                    ActualAmount = subscription.ActualAmount,
+                    Amount = subscription.Price?.Amount ?? 0,
                     Currency = subscription.Price?.Currency ?? "USD",
                     CreatedTime = subscription.CreatedTime,
                     IsDeleted = subscription.IsDeleted

@@ -119,8 +119,10 @@ else
                                 </ul>
 
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-primary btn-lg" @onclick="() => GoToCheckout(price.Id)">
-                                        Subscribe Now
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-lg"
+                                            @onclick="() => ShowApiOrderGuide(price.Id)">
+                                        Use Postman To Create Order
                                     </button>
                                 </div>
                             </div>
@@ -139,6 +141,19 @@ else
                 </div>
             }
         </div>
+
+        @if (!string.IsNullOrWhiteSpace(_apiOrderHint))
+        {
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <div class="fw-semibold mb-2">Order creation is API-only now.</div>
+                        <div class="mb-2">@_apiOrderHint</div>
+                        <div>Endpoint: <code>POST /api/payment/create-order</code></div>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 }
 
@@ -180,6 +195,7 @@ else
     private ProductDto? _product;
     private readonly List<PriceDto> _prices = new();
     private bool _isLoading = true;
+    private string? _apiOrderHint;
     private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
@@ -272,13 +288,14 @@ else
         Nav.NavigateTo("/products");
     }
 
-    private void GoToCheckout(Guid priceId)
+    private void ShowApiOrderGuide(Guid priceId)
     {
         if (priceId == Guid.Empty)
         {
             return;
         }
 
-        Nav.NavigateTo($"/checkout?priceId={priceId}", forceLoad: true);
+        _errorMessage = null;
+        _apiOrderHint = $"Use Postman body: {{ \"priceId\": \"{priceId}\" }} and include Bearer JWT.";
     }
 }

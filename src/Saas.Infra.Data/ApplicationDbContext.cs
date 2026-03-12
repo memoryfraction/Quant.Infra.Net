@@ -42,6 +42,12 @@ namespace Saas.Infra.Data
         public DbSet<PriceEntity> Prices { get; set; } = null!;
 
         /// <summary>
+        /// 订单实体集合。
+        /// Orders entity set.
+        /// </summary>
+        public DbSet<OrderEntity> Orders { get; set; } = null!;
+
+        /// <summary>
         /// 订阅实体集合。
         /// Subscriptions entity set.
         /// </summary>
@@ -133,6 +139,44 @@ namespace Saas.Infra.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // OrderEntity mapping
+            modelBuilder.Entity<OrderEntity>(entity =>
+            {
+                entity.ToTable("Orders");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id");
+                entity.Property(e => e.UserId).HasColumnName("UserId").IsRequired();
+                entity.Property(e => e.ProductId).HasColumnName("ProductId").IsRequired();
+                entity.Property(e => e.PriceId).HasColumnName("PriceId").IsRequired();
+                entity.Property(e => e.SubscriptionId).HasColumnName("SubscriptionId");
+                entity.Property(e => e.OriginalAmount).HasColumnName("OriginalAmount").IsRequired();
+                entity.Property(e => e.ActualAmount).HasColumnName("ActualAmount").IsRequired();
+                entity.Property(e => e.DiscountAmount).HasColumnName("DiscountAmount").IsRequired();
+                entity.Property(e => e.Status).HasColumnName("Status").IsRequired();
+                entity.Property(e => e.ExpiredTime).HasColumnName("ExpiredTime");
+                entity.Property(e => e.PaidTime).HasColumnName("PaidTime");
+                entity.Property(e => e.Metadata).HasColumnName("Metadata").HasColumnType("jsonb");
+                entity.Property(e => e.CreatedTime).HasColumnName("CreatedTime").IsRequired();
+                entity.Property(e => e.IsDeleted).HasColumnName("IsDeleted").IsRequired();
+                entity.HasIndex(e => new { e.UserId, e.Status }).HasDatabaseName("IX_Orders_UserId_Status");
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Product)
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Price)
+                    .WithMany()
+                    .HasForeignKey(e => e.PriceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Subscription)
+                    .WithMany()
+                    .HasForeignKey(e => e.SubscriptionId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
             // SubscriptionEntity mapping
             modelBuilder.Entity<SubscriptionEntity>(entity =>
             {
@@ -142,12 +186,11 @@ namespace Saas.Infra.Data
                 entity.Property(e => e.UserId).HasColumnName("UserId").IsRequired();
                 entity.Property(e => e.ProductId).HasColumnName("ProductId").IsRequired();
                 entity.Property(e => e.PriceId).HasColumnName("PriceId").IsRequired();
+                entity.Property(e => e.OrderId).HasColumnName("OrderId");
                 entity.Property(e => e.Status).HasColumnName("Status").IsRequired();
                 entity.Property(e => e.StartDate).HasColumnName("StartDate");
                 entity.Property(e => e.EndDate).HasColumnName("EndDate");
                 entity.Property(e => e.AutoRenew).HasColumnName("AutoRenew");
-                entity.Property(e => e.OriginalAmount).HasColumnName("OriginalAmount").IsRequired();
-                entity.Property(e => e.ActualAmount).HasColumnName("ActualAmount").IsRequired();
                 entity.Property(e => e.Metadata).HasColumnName("Metadata").HasColumnType("jsonb");
                 entity.Property(e => e.CreatedTime).HasColumnName("CreatedTime");
                 entity.Property(e => e.IsDeleted).HasColumnName("IsDeleted");
@@ -162,6 +205,10 @@ namespace Saas.Infra.Data
                 entity.HasOne(e => e.Price)
                     .WithMany()
                     .HasForeignKey(e => e.PriceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Order)
+                    .WithMany()
+                    .HasForeignKey(e => e.OrderId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -242,29 +289,28 @@ namespace Saas.Infra.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("Id");
                 entity.Property(e => e.UserId).HasColumnName("UserId").IsRequired();
+                entity.Property(e => e.OrderId).HasColumnName("OrderId");
                 entity.Property(e => e.SubscriptionId).HasColumnName("SubscriptionId");
                 entity.Property(e => e.Amount).HasColumnName("Amount").IsRequired();
                 entity.Property(e => e.Currency).HasColumnName("Currency").HasMaxLength(10).IsRequired();
                 entity.Property(e => e.Gateway).HasColumnName("Gateway").HasMaxLength(50).IsRequired();
                 entity.Property(e => e.ExternalTransactionId).HasColumnName("ExternalTransactionId").HasMaxLength(255);
                 entity.Property(e => e.Status).HasColumnName("Status").IsRequired();
-                entity.Property(e => e.Metadata).HasColumnName("Metadata").HasColumnType("jsonb");
                 entity.Property(e => e.CreatedTime).HasColumnName("CreatedTime");
-                entity.Property(e => e.UpdatedTime).HasColumnName("UpdatedTime");
                 entity.Property(e => e.Remarks).HasColumnName("Remarks").HasColumnType("text");
-                entity.HasIndex(e => e.UserId).HasDatabaseName("IX_Transactions_UserId");
-                entity.HasIndex(e => e.SubscriptionId).HasDatabaseName("IX_Transactions_SubscriptionId");
-                entity.HasIndex(e => e.Status).HasDatabaseName("IX_Transactions_Status");
-                entity.HasIndex(e => e.ExternalTransactionId).HasDatabaseName("IX_Transactions_ExternalTransactionId");
-                entity.HasIndex(e => e.CreatedTime).HasDatabaseName("IX_Transactions_CreatedTime");
+                entity.HasIndex(e => new { e.OrderId, e.Status }).HasDatabaseName("IX_Transactions_OrderId_Status");
                 entity.HasOne(e => e.User)
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Order)
+                    .WithMany()
+                    .HasForeignKey(e => e.OrderId)
+                    .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(e => e.Subscription)
                     .WithMany()
                     .HasForeignKey(e => e.SubscriptionId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

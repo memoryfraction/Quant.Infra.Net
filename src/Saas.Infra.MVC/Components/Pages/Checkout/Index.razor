@@ -1,0 +1,279 @@
+@page "/checkout"
+@layout MainLayout
+@attribute [Authorize]
+@inject Saas.Infra.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+
+<PageTitle>Payment Result - Saas.Infra</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="container py-5">
+        <p>Loading payment result...</p>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="container py-5">
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    </div>
+}
+else if (_order is null || _price is null || _product is null)
+{
+    <div class="container py-5">
+        <div class="alert alert-warning" role="alert">Order not found or no longer available.</div>
+    </div>
+}
+else
+{
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h1 class="h3 mb-3">Payment Result</h1>
+                        <p class="text-muted mb-4">@GetSummaryText()</p>
+
+                        @if (IsSuccess())
+                        {
+                            <div class="alert alert-success" role="alert">
+                                Payment succeeded. Your subscription should be available shortly.
+                            </div>
+                        }
+                        else if (IsCancelled())
+                        {
+                            <div class="alert alert-warning" role="alert">
+                                Payment was canceled. You can retry payment at any time before expiration.
+                            </div>
+                        }
+                        else if (IsFailed())
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                Payment failed. Please try again with another payment method or card.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info" role="alert">
+                                Payment is still being processed. Please refresh this page in a few moments.
+                            </div>
+                        }
+
+                        <dl class="row mb-4">
+                            <dt class="col-sm-4">Order ID</dt>
+                            <dd class="col-sm-8">@_order.Id</dd>
+
+                            <dt class="col-sm-4">Payment Action</dt>
+                            <dd class="col-sm-8">@(_paymentAction ?? "unknown")</dd>
+
+                            @if (!string.IsNullOrWhiteSpace(SessionId))
+                            {
+                                <dt class="col-sm-4">Stripe Session</dt>
+                                <dd class="col-sm-8"><code>@SessionId</code></dd>
+                            }
+
+                            <dt class="col-sm-4">Product</dt>
+                            <dd class="col-sm-8">@_product.Name</dd>
+
+                            <dt class="col-sm-4">Plan</dt>
+                            <dd class="col-sm-8">@_price.Name (@_price.BillingPeriod)</dd>
+
+                            <dt class="col-sm-4">Amount</dt>
+                            <dd class="col-sm-8">@_price.Currency @((_order.ActualAmount / 100.0m).ToString("F2"))</dd>
+
+                            <dt class="col-sm-4">Status</dt>
+                            <dd class="col-sm-8">@GetStatusText(_order.Status)</dd>
+
+                            <dt class="col-sm-4">Expires</dt>
+                            <dd class="col-sm-8">@(_order.ExpiredTime?.ToString("u") ?? "N/A")</dd>
+                        </dl>
+
+                        <div class="d-flex gap-2">
+                            @if (IsSuccess())
+                            {
+                                <button class="btn btn-primary" @onclick="GoToSubscriptions">Go to My Subscriptions</button>
+                            }
+                            else if (IsCancelled())
+                            {
+                                <button class="btn btn-primary" @onclick="BackToProducts">Back to Product</button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-outline-secondary" @onclick="RefreshPage">Refresh</button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery] public Guid? OrderId { get; set; }
+    [SupplyParameterFromQuery(Name = "payment")] public string? Payment { get; set; }
+    [SupplyParameterFromQuery(Name = "session_id")] public string? SessionId { get; set; }
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _paymentAction;
+    private Saas.Infra.Data.OrderEntity? _order;
+    private Saas.Infra.Data.PriceEntity? _price;
+    private Saas.Infra.Data.ProductEntity? _product;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            if (!OrderId.HasValue || OrderId.Value == Guid.Empty)
+            {
+                _errorMessage = "Order ID is required.";
+                return;
+            }
+
+            _paymentAction = NormalizePaymentAction(Payment);
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var currentUser = authState.User;
+            if (currentUser?.Identity?.IsAuthenticated != true)
+            {
+                _errorMessage = "You need to sign in to view payment results.";
+                return;
+            }
+
+            var currentUserId = await ResolveCurrentUserIdAsync(currentUser);
+            if (currentUserId == Guid.Empty)
+            {
+                _errorMessage = "Unable to resolve the current user.";
+                return;
+            }
+
+            _order = await Db.Orders
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == OrderId.Value && o.UserId == currentUserId && !o.IsDeleted);
+
+            if (_order == null)
+            {
+                _errorMessage = "Order was not found or does not belong to you.";
+                return;
+            }
+
+            _price = await Db.Prices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == _order.PriceId);
+
+            _product = await Db.Products
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == _order.ProductId);
+
+            if (_price == null || _product == null)
+            {
+                _errorMessage = "Order references invalid product or price data.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load order: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void BackToProducts()
+    {
+        if (_product == null)
+        {
+            Nav.NavigateTo("/products");
+            return;
+        }
+
+        Nav.NavigateTo($"/products/{_product.Id}");
+    }
+
+    private void GoToSubscriptions()
+    {
+        Nav.NavigateTo("/subscriptions");
+    }
+
+    private void RefreshPage()
+    {
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+    }
+
+    private bool IsSuccess()
+    {
+        return _paymentAction == "success" || (_order?.Status == 1);
+    }
+
+    private bool IsCancelled()
+    {
+        return _paymentAction == "cancel" || (_order?.Status == 2);
+    }
+
+    private bool IsFailed()
+    {
+        return _paymentAction == "failed";
+    }
+
+    private string GetSummaryText()
+    {
+        if (IsSuccess())
+            return "Your payment was successful.";
+
+        if (IsCancelled())
+            return "Your payment was canceled.";
+
+        if (IsFailed())
+            return "Your payment failed.";
+
+        return "We are checking your latest payment status.";
+    }
+
+    private static string NormalizePaymentAction(string? payment)
+    {
+        return string.IsNullOrWhiteSpace(payment)
+            ? "unknown"
+            : payment.Trim().ToLowerInvariant();
+    }
+
+    private async Task<Guid> ResolveCurrentUserIdAsync(ClaimsPrincipal user)
+    {
+        var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrWhiteSpace(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
+        {
+            return userId;
+        }
+
+        var email = user.FindFirstValue(ClaimTypes.Name) ?? user.FindFirstValue("sub") ?? user.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Guid.Empty;
+        }
+
+        return await Db.Users
+            .AsNoTracking()
+            .Where(u => u.Email == email && !u.IsDeleted)
+            .Select(u => u.Id)
+            .FirstOrDefaultAsync();
+    }
+
+    private static string GetStatusText(short status)
+    {
+        return status switch
+        {
+            0 => "Pending",
+            1 => "Paid",
+            2 => "Cancelled",
+            3 => "Refunded",
+            _ => $"Unknown ({status})"
+        };
+    }
+}

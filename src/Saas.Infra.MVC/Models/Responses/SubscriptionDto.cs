@@ -94,16 +94,10 @@ namespace Saas.Infra.MVC.Models.Responses
         public bool AutoRenew { get; set; }
 
         /// <summary>
-        /// 原价（以分为单位）。
-        /// Original amount (in cents).
+        /// 金额（以分为单位，来自关联Price）。
+        /// Amount (in cents, from related Price).
         /// </summary>
-        public long OriginalAmount { get; set; }
-
-        /// <summary>
-        /// 实付金额（以分为单位）。
-        /// Actual amount (in cents).
-        /// </summary>
-        public long ActualAmount { get; set; }
+        public long Amount { get; set; }
 
         /// <summary>
         /// 货币代码。
@@ -112,10 +106,10 @@ namespace Saas.Infra.MVC.Models.Responses
         public string? Currency { get; set; }
 
         /// <summary>
-        /// 格式化后的实付金额。
-        /// Formatted actual amount.
+        /// 格式化后的金额。
+        /// Formatted amount.
         /// </summary>
-        public string FormattedAmount => $"{Currency ?? "USD"} {ActualAmount / 100.0:F2}";
+        public string FormattedAmount => $"{Currency ?? "USD"} {Amount / 100.0:F2}";
 
         /// <summary>
         /// 创建时间。

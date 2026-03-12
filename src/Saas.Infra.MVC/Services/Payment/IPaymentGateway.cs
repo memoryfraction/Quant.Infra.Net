@@ -53,11 +53,14 @@ namespace Saas.Infra.MVC.Services.Payment
         /// <param name="amount">金额（以分为单位）。 / Amount in cents.</param>
         /// <param name="currency">货币代码。 / Currency code.</param>
         /// <param name="productName">产品名称。 / Product display name.</param>
+        /// <param name="billingPeriod">计费周期（week/month/year）。 / Billing period (week/month/year).</param>
+        /// <param name="metadata">Stripe Session元数据。 / Stripe Session metadata.</param>
         /// <param name="successUrl">支付成功回调URL。 / Success redirect URL.</param>
         /// <param name="cancelUrl">取消支付回调URL。 / Cancel redirect URL.</param>
         /// <returns>Checkout Session结果。 / Checkout Session result.</returns>
         Task<CheckoutSessionResult> CreateCheckoutSessionAsync(
             Guid priceId, long amount, string currency, string productName,
+            string billingPeriod, Dictionary<string, string> metadata,
             string successUrl, string cancelUrl);
 
         /// <summary>
@@ -93,6 +96,12 @@ namespace Saas.Infra.MVC.Services.Payment
     /// </summary>
     public class PaymentIntentResult
     {
+        /// <summary>
+        /// 订单ID。
+        /// Order ID.
+        /// </summary>
+        public Guid OrderId { get; set; }
+
         /// <summary>
         /// 客户端密钥（用于前端）。
         /// Client secret (for frontend).

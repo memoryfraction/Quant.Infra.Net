@@ -44,7 +44,7 @@ public class RedirectValidatorTests
     {
         // Generate valid encoded paths
         var validPaths = new[] { "/dashboard", "/payment", "/profile", "/settings", "/api/products" };
-        var path = validPaths[Math.Abs(encodedPath.GetHashCode()) % validPaths.Length];
+        var path = validPaths[Math.Abs((encodedPath ?? string.Empty).GetHashCode()) % validPaths.Length];
         var encoded = Uri.EscapeDataString(path);
 
         return Prop.ForAll(Arb.Default.String(), (extra) =>
@@ -80,7 +80,7 @@ public class RedirectValidatorTests
         Assert.True(result.IsValid);
         Assert.Null(result.ValidatedPath);
         
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public class RedirectValidatorTests
             "..%5c"
         };
         
-        var pattern = traversalPatterns[Math.Abs(prefix.GetHashCode()) % traversalPatterns.Length];
+        var pattern = traversalPatterns[Math.Abs((prefix ?? string.Empty).GetHashCode()) % traversalPatterns.Length];
         var maliciousUrl = $"/dashboard{pattern}etc/passwd";
 
         var result = _validator.ValidateAsync(maliciousUrl).Result;
@@ -111,7 +111,7 @@ public class RedirectValidatorTests
         Assert.False(result.IsValid);
         Assert.NotNull(result.ErrorMessage);
         
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -136,7 +136,7 @@ public class RedirectValidatorTests
             "blob:"
         };
         
-        var scheme = schemes[Math.Abs(suffix.GetHashCode()) % schemes.Length];
+        var scheme = schemes[Math.Abs((suffix ?? string.Empty).GetHashCode()) % schemes.Length];
         var maliciousUrl = $"{scheme}evil.com/dashboard";
 
         var result = _validator.ValidateAsync(maliciousUrl).Result;
@@ -145,7 +145,7 @@ public class RedirectValidatorTests
         Assert.False(result.IsValid);
         Assert.NotNull(result.ErrorMessage);
         
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -159,14 +159,14 @@ public class RedirectValidatorTests
     {
         // Generate paths without leading slash
         var invalidPaths = new[] { "dashboard", "payment", "profile", "settings", "api/products" };
-        var invalidPath = invalidPaths[Math.Abs(path.GetHashCode()) % invalidPaths.Length];
+        var invalidPath = invalidPaths[Math.Abs((path ?? string.Empty).GetHashCode()) % invalidPaths.Length];
 
         var result = _validator.ValidateAsync(invalidPath).Result;
         
         // Paths without leading slash should be rejected
         Assert.False(result.IsValid);
         
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -188,14 +188,14 @@ public class RedirectValidatorTests
             "/unauthorized" 
         };
         
-        var invalidPath = invalidPaths[Math.Abs(path.GetHashCode()) % invalidPaths.Length];
+        var invalidPath = invalidPaths[Math.Abs((path ?? string.Empty).GetHashCode()) % invalidPaths.Length];
 
         var result = _validator.ValidateAsync(invalidPath).Result;
         
         // Paths not in whitelist should be rejected
         Assert.False(result.IsValid);
         
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -218,7 +218,7 @@ public class RedirectValidatorTests
         Assert.Equal(validPath, result.ValidatedPath);
         Assert.Null(result.ErrorMessage);
         
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>
@@ -243,7 +243,7 @@ public class RedirectValidatorTests
             new { Encoded = "%2f%64%61%73%68%62%6f%61%72%64", Expected = true, Description = "Encoded /dashboard (all chars)" }
         };
 
-        var testCase = testCases[Math.Abs(input.GetHashCode()) % testCases.Length];
+        var testCase = testCases[Math.Abs((input ?? string.Empty).GetHashCode()) % testCases.Length];
         var result = _validator.ValidateAsync(testCase.Encoded).Result;
 
         if (testCase.Expected)
@@ -255,7 +255,7 @@ public class RedirectValidatorTests
             Assert.False(result.IsValid, $"Failed: {testCase.Description}");
         }
 
-        return Prop.True;
+        return true.ToProperty();
     }
 
     /// <summary>

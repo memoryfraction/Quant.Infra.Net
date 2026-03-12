@@ -33,6 +33,12 @@ namespace Saas.Infra.Data
         public Guid PriceId { get; set; }
 
         /// <summary>
+        /// 关联订单ID。
+        /// Related order ID.
+        /// </summary>
+        public Guid? OrderId { get; set; }
+
+        /// <summary>
         /// 订阅状态（0=Pending, 1=Active, 2=Expired）。
         /// Subscription status (0=Pending, 1=Active, 2=Expired).
         /// </summary>
@@ -57,18 +63,6 @@ namespace Saas.Infra.Data
         public bool AutoRenew { get; set; } = true;
 
         /// <summary>
-        /// 原始金额（冗余快照，订阅时的原始标价，以分为单位）。
-        /// Original amount (redundant snapshot, original price at subscription time, in cents).
-        /// </summary>
-        public long OriginalAmount { get; set; }
-
-        /// <summary>
-        /// 实际支付金额（冗余快照，实际支付金额，以分为单位）。
-        /// Actual amount (redundant snapshot, actual payment amount, in cents).
-        /// </summary>
-        public long ActualAmount { get; set; }
-
-        /// <summary>
         /// JSON元数据（预留，未来存储关联的优惠券ID或折扣说明）。
         /// JSON metadata (reserved for future coupon ID or discount description).
         /// </summary>
@@ -85,6 +79,12 @@ namespace Saas.Infra.Data
         /// Whether deleted (soft delete flag).
         /// </summary>
         public bool IsDeleted { get; set; } = false;
+
+        /// <summary>
+        /// 关联的订单实体（导航属性）。
+        /// Associated order entity (navigation property).
+        /// </summary>
+        public OrderEntity? Order { get; set; }
 
         /// <summary>
         /// 关联的用户实体（导航属性）。

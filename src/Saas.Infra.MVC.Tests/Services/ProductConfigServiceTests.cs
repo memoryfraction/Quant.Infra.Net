@@ -1,4 +1,5 @@
-using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
+using Saas.Infra.Data;
 using Saas.Infra.MVC.Services.Product;
 
 namespace Saas.Infra.MVC.Tests.Services;
@@ -8,27 +9,20 @@ namespace Saas.Infra.MVC.Tests.Services;
 /// </summary>
 public class ProductConfigServiceTests
 {
-    private readonly IProductConfigService _service;
-
-    public ProductConfigServiceTests()
+    private static ProductConfigService CreateServiceWithProducts(IEnumerable<ProductEntity>? products = null)
     {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                { "Products:Available:0:Id", "cryptocycleai" },
-                { "Products:Available:0:Name", "CryptoCycleAI" },
-                { "Products:Available:0:Url", "/dashboard" },
-                { "Products:Available:0:IconUrl", "/images/cryptocycleai-icon.png" },
-                { "Products:Available:0:Description", "AI-powered cryptocurrency analysis" },
-                { "Products:Available:1:Id", "analytics" },
-                { "Products:Available:1:Name", "Analytics" },
-                { "Products:Available:1:Url", "/analytics" },
-                { "Products:Available:1:IconUrl", "/images/analytics-icon.png" },
-                { "Products:Available:1:Description", "Advanced analytics platform" }
-            })
-            .Build();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
 
-        _service = new ProductConfigService(config);
+        var context = new ApplicationDbContext(options);
+        if (products is not null)
+        {
+            context.Products.AddRange(products);
+            context.SaveChanges();
+        }
+
+        return new ProductConfigService(context);
     }
 
     /// <summary>
@@ -37,7 +31,14 @@ public class ProductConfigServiceTests
     [Fact]
     public async Task GetAvailableProductsAsync_ReturnsAllProducts()
     {
-        var products = await _service.GetAvailableProductsAsync("user123");
+        var service = CreateServiceWithProducts(new[]
+        {
+            new ProductEntity { Id = Guid.NewGuid(), Code = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered cryptocurrency analysis", IsActive = true, CreatedTime = DateTimeOffset.UtcNow },
+            new ProductEntity { Id = Guid.NewGuid(), Code = "analytics", Name = "Analytics", Description = "Advanced analytics platform", IsActive = true, CreatedTime = DateTimeOffset.UtcNow },
+            new ProductEntity { Id = Guid.NewGuid(), Code = "inactive", Name = "Inactive", Description = "Inactive product", IsActive = false, CreatedTime = DateTimeOffset.UtcNow }
+        });
+
+        var products = await service.GetAvailableProductsAsync("user123");
         
         Assert.NotNull(products);
         Assert.Equal(2, products.Count);
@@ -51,12 +52,17 @@ public class ProductConfigServiceTests
     [Fact]
     public async Task GetProductAsync_WithValidId_ReturnsProduct()
     {
-        var product = await _service.GetProductAsync("cryptocycleai");
+        var service = CreateServiceWithProducts(new[]
+        {
+            new ProductEntity { Id = Guid.NewGuid(), Code = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered cryptocurrency analysis", IsActive = true, CreatedTime = DateTimeOffset.UtcNow }
+        });
+
+        var product = await service.GetProductAsync("cryptocycleai");
         
         Assert.NotNull(product);
         Assert.Equal("cryptocycleai", product.Id);
         Assert.Equal("CryptoCycleAI", product.Name);
-        Assert.Equal("/dashboard", product.Url);
+        Assert.Equal("AI-powered cryptocurrency analysis", product.Description);
     }
 
     /// <summary>
@@ -65,7 +71,12 @@ public class ProductConfigServiceTests
     [Fact]
     public async Task GetProductAsync_IsCaseInsensitive()
     {
-        var product = await _service.GetProductAsync("CRYPTOCYCLEAI");
+        var service = CreateServiceWithProducts(new[]
+        {
+            new ProductEntity { Id = Guid.NewGuid(), Code = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered cryptocurrency analysis", IsActive = true, CreatedTime = DateTimeOffset.UtcNow }
+        });
+
+        var product = await service.GetProductAsync("CRYPTOCYCLEAI");
         
         Assert.NotNull(product);
         Assert.Equal("cryptocycleai", product.Id);
@@ -77,7 +88,12 @@ public class ProductConfigServiceTests
     [Fact]
     public async Task GetProductAsync_WithInvalidId_ReturnsNull()
     {
-        var product = await _service.GetProductAsync("nonexistent");
+        var service = CreateServiceWithProducts(new[]
+        {
+            new ProductEntity { Id = Guid.NewGuid(), Code = "cryptocycleai", Name = "CryptoCycleAI", Description = "AI-powered cryptocurrency analysis", IsActive = true, CreatedTime = DateTimeOffset.UtcNow }
+        });
+
+        var product = await service.GetProductAsync("nonexistent");
         
         Assert.Null(product);
     }
@@ -88,11 +104,7 @@ public class ProductConfigServiceTests
     [Fact]
     public async Task GetAvailableProductsAsync_WithNoProducts_ReturnsEmptyList()
     {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>())
-            .Build();
-
-        var service = new ProductConfigService(config);
+        var service = CreateServiceWithProducts();
         var products = await service.GetAvailableProductsAsync("user123");
         
         Assert.NotNull(products);
@@ -105,13 +117,26 @@ public class ProductConfigServiceTests
     [Fact]
     public async Task GetProductAsync_LoadsAllProperties()
     {
-        var product = await _service.GetProductAsync("cryptocycleai");
+        var service = CreateServiceWithProducts(new[]
+        {
+            new ProductEntity
+            {
+                Id = Guid.NewGuid(),
+                Code = "cryptocycleai",
+                Name = "CryptoCycleAI",
+                Description = "AI-powered cryptocurrency analysis",
+                Metadata = "{\"icon\":\"/images/cryptocycleai-icon.png\"}",
+                IsActive = true,
+                CreatedTime = DateTimeOffset.UtcNow
+            }
+        });
+
+        var product = await service.GetProductAsync("cryptocycleai");
         
         Assert.NotNull(product);
         Assert.Equal("cryptocycleai", product.Id);
         Assert.Equal("CryptoCycleAI", product.Name);
-        Assert.Equal("/dashboard", product.Url);
-        Assert.Equal("/images/cryptocycleai-icon.png", product.IconUrl);
         Assert.Equal("AI-powered cryptocurrency analysis", product.Description);
+        Assert.Equal("{\"icon\":\"/images/cryptocycleai-icon.png\"}", product.Metadata);
     }
 }

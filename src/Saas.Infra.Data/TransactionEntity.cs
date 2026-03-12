@@ -21,6 +21,12 @@ namespace Saas.Infra.Data
         public Guid UserId { get; set; }
 
         /// <summary>
+        /// 关联的订单ID。
+        /// Associated order ID.
+        /// </summary>
+        public Guid OrderId { get; set; }
+
+        /// <summary>
         /// 关联的订阅ID（可选）。
         /// Associated subscription ID (optional).
         /// </summary>
@@ -57,28 +63,22 @@ namespace Saas.Infra.Data
         public short Status { get; set; }
 
         /// <summary>
-        /// JSON元数据（存储支付相关的额外信息）。
-        /// JSON metadata (storing additional payment-related information).
-        /// </summary>
-        public string? Metadata { get; set; }
-
-        /// <summary>
         /// 创建时间戳（带时区）。
         /// Created timestamp (with timezone).
         /// </summary>
         public DateTimeOffset CreatedTime { get; set; }
 
         /// <summary>
-        /// 更新时间戳（带时区）。
-        /// Updated timestamp (with timezone).
-        /// </summary>
-        public DateTimeOffset? UpdatedTime { get; set; }
-
-        /// <summary>
         /// 备注信息。
         /// Remarks.
         /// </summary>
         public string? Remarks { get; set; }
+
+        /// <summary>
+        /// 关联的订单实体（导航属性）。
+        /// Associated order entity (navigation property).
+        /// </summary>
+        public OrderEntity? Order { get; set; }
 
         /// <summary>
         /// 关联的用户实体（导航属性）。

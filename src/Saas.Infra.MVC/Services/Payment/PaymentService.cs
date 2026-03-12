@@ -30,13 +30,13 @@ namespace Saas.Infra.MVC.Services.Payment
         /// </summary>
         /// <param name="paymentIntentId">支付意图ID。 / Payment intent ID.</param>
         /// <param name="userId">用户ID。 / User ID.</param>
-        /// <param name="priceId">价格ID。 / Price ID.</param>
+        /// <param name="orderId">订单ID。 / Order ID.</param>
         /// <param name="gateway">支付网关名称。 / Payment gateway name.</param>
         /// <returns>订阅ID。 / Subscription ID.</returns>
         Task<Guid> ConfirmPaymentAndCreateSubscriptionAsync(
             string paymentIntentId,
             Guid userId,
-            Guid priceId,
+            Guid orderId,
             string gateway);
     }
 
@@ -101,6 +101,12 @@ namespace Saas.Infra.MVC.Services.Payment
                 throw new InvalidOperationException("Price is not active");
             }
 
+            if (price.Product == null || !price.Product.IsActive)
+            {
+                Log.Warning("Product for price {PriceId} is not active", priceId);
+                throw new InvalidOperationException("Product is not active");
+            }
+
             // 获取支付网关
             var paymentGateway = _gateways.FirstOrDefault(g =>
                 g.GatewayName.Equals(gateway, StringComparison.OrdinalIgnoreCase));
@@ -111,9 +117,28 @@ namespace Saas.Infra.MVC.Services.Payment
                 throw new InvalidOperationException($"Payment gateway '{gateway}' not supported");
             }
 
+            var order = new OrderEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                ProductId = price.ProductId,
+                PriceId = priceId,
+                OriginalAmount = price.Amount,
+                ActualAmount = price.Amount,
+                DiscountAmount = 0,
+                Status = 0,
+                ExpiredTime = DateTimeOffset.UtcNow.AddHours(24),
+                CreatedTime = DateTimeOffset.UtcNow,
+                IsDeleted = false
+            };
+
+            _db.Orders.Add(order);
+            await _db.SaveChangesAsync();
+
             // 创建元数据
             var metadata = new Dictionary<string, string>
             {
+                { "orderId", order.Id.ToString() },
                 { "userId", userId.ToString() },
                 { "priceId", priceId.ToString() },
                 { "productId", price.ProductId.ToString() },
@@ -126,8 +151,10 @@ namespace Saas.Infra.MVC.Services.Payment
                 price.Currency,
                 metadata);
 
-            Log.Information("Payment intent created for user {UserId}, price {PriceId}, gateway {Gateway}",
-                userId, priceId, gateway);
+            result.OrderId = order.Id;
+
+            Log.Information("Payment intent created for order {OrderId}, user {UserId}, price {PriceId}, gateway {Gateway}",
+                order.Id, userId, priceId, gateway);
 
             return result;
         }
@@ -138,7 +165,7 @@ namespace Saas.Infra.MVC.Services.Payment
         /// </summary>
         /// <param name="paymentIntentId">支付意图ID。 / Payment intent ID.</param>
         /// <param name="userId">用户ID。 / User ID.</param>
-        /// <param name="priceId">价格ID。 / Price ID.</param>
+        /// <param name="orderId">订单ID。 / Order ID.</param>
         /// <param name="gateway">支付网关名称。 / Payment gateway name.</param>
         /// <returns>订阅ID。 / Subscription ID.</returns>
         /// <exception cref="ArgumentException">当参数无效时抛出。 / Thrown when parameters are invalid.</exception>
@@ -146,22 +173,37 @@ namespace Saas.Infra.MVC.Services.Payment
         public async Task<Guid> ConfirmPaymentAndCreateSubscriptionAsync(
             string paymentIntentId,
             Guid userId,
-            Guid priceId,
+            Guid orderId,
             string gateway)
         {
             if (string.IsNullOrWhiteSpace(paymentIntentId))
                 throw new ArgumentNullException(nameof(paymentIntentId));
             if (userId == Guid.Empty)
                 throw new ArgumentException("Invalid user ID", nameof(userId));
-            if (priceId == Guid.Empty)
-                throw new ArgumentException("Invalid price ID", nameof(priceId));
+            if (orderId == Guid.Empty)
+                throw new ArgumentException("Invalid order ID", nameof(orderId));
             if (string.IsNullOrWhiteSpace(gateway))
                 throw new ArgumentNullException(nameof(gateway));
+
+            var order = await _db.Orders
+                .FirstOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
+
+            if (order == null)
+                throw new InvalidOperationException("Order not found");
+
+            if (order.UserId != userId)
+                throw new InvalidOperationException("Order does not belong to the current user");
+
+            if (order.Status != 0)
+                throw new InvalidOperationException("Order is not pending");
+
+            if (order.ExpiredTime.HasValue && order.ExpiredTime.Value <= DateTimeOffset.UtcNow)
+                throw new InvalidOperationException("Order has expired");
 
             // 获取价格信息
             var price = await _db.Prices
                 .Include(p => p.Product)
-                .FirstOrDefaultAsync(p => p.Id == priceId);
+                .FirstOrDefaultAsync(p => p.Id == order.PriceId);
 
             if (price == null)
                 throw new InvalidOperationException("Price not found");
@@ -191,13 +233,12 @@ namespace Saas.Infra.MVC.Services.Payment
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     ProductId = price.ProductId,
-                    PriceId = priceId,
+                    PriceId = order.PriceId,
+                    OrderId = order.Id,
                     Status = 1, // Active
                     StartDate = DateTimeOffset.UtcNow,
                     EndDate = CalculateEndDate(price.BillingPeriod),
                     AutoRenew = true,
-                    OriginalAmount = price.Amount,
-                    ActualAmount = price.Amount,
                     CreatedTime = DateTimeOffset.UtcNow,
                     IsDeleted = false
                 };
@@ -209,6 +250,7 @@ namespace Saas.Infra.MVC.Services.Payment
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
+                    OrderId = order.Id,
                     SubscriptionId = subscription.Id,
                     Amount = paymentResult.Amount,
                     Currency = paymentResult.Currency,
@@ -221,11 +263,16 @@ namespace Saas.Infra.MVC.Services.Payment
 
                 _db.Transactions.Add(transactionEntity);
 
+                order.SubscriptionId = subscription.Id;
+                order.ActualAmount = paymentResult.Amount;
+                order.Status = 1;
+                order.PaidTime = DateTimeOffset.UtcNow;
+
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                Log.Information("Subscription {SubscriptionId} created for user {UserId}, payment {PaymentIntentId}",
-                    subscription.Id, userId, paymentIntentId);
+                Log.Information("Subscription {SubscriptionId} created for order {OrderId}, user {UserId}, payment {PaymentIntentId}",
+                    subscription.Id, order.Id, userId, paymentIntentId);
 
                 return subscription.Id;
             }

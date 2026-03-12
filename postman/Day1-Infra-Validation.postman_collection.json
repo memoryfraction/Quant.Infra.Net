@@ -1,0 +1,375 @@
+{
+    "info":  {
+                 "_postman_id":  "c7fe9b45-9be3-4ef0-8eb4-9af6f6d5e2a1",
+                 "name":  "Day1 Infra Validation",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "item":  [
+                 {
+                     "name":  "1) Login - Generate Token",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\"email\":\"{{email}}\",\"password\":\"{{password}}\",\"clientId\":\"{{clientId}}\"}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/sso/generate-token",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "sso",
+                                                              "generate-token"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\"Status is 200\", function () {",
+                                                                   "  pm.response.to.have.status(200);",
+                                                                   "});",
+                                                                   "const json = pm.response.json();",
+                                                                   "pm.test(\"Has accessToken\", function () {",
+                                                                   "  pm.expect(json.accessToken).to.be.a(\"string\").and.not.empty;",
+                                                                   "});",
+                                                                   "pm.environment.set(\"token\", json.accessToken);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "2) Get Products (activeOnly=true)",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/products?activeOnly=true",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "products"
+                                                          ],
+                                                 "query":  [
+                                                               {
+                                                                   "key":  "activeOnly",
+                                                                   "value":  "true"
+                                                               }
+                                                           ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\"Status is 200\", function () {",
+                                                                   "  pm.response.to.have.status(200);",
+                                                                   "});",
+                                                                   "const arr = pm.response.json();",
+                                                                   "pm.test(\"Products array not empty\", function () {",
+                                                                   "  pm.expect(arr.length).to.be.greaterThan(0);",
+                                                                   "});",
+                                                                   "pm.environment.set(\"productId\", arr[0].id);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "3) Get Prices By Product",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/prices/product/{{productId}}",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "prices",
+                                                              "product",
+                                                              "{{productId}}"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\"Status is 200\", function () {",
+                                                                   "  pm.response.to.have.status(200);",
+                                                                   "});",
+                                                                   "const arr = pm.response.json();",
+                                                                   "pm.test(\"Prices array not empty\", function () {",
+                                                                   "  pm.expect(arr.length).to.be.greaterThan(0);",
+                                                                   "});",
+                                                                   "const active = arr.find(x =\u003e x.isActive === true) || arr[0];",
+                                                                   "pm.environment.set(\"priceId\", active.id);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "4) Get Price Detail",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/prices/{{priceId}}",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "prices",
+                                                              "{{priceId}}"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\"Status is 200\", function () {",
+                                                                   "  pm.response.to.have.status(200);",
+                                                                   "});",
+                                                                   "const obj = pm.response.json();",
+                                                                   "pm.test(\"Price id matches\", function () {",
+                                                                   "  pm.expect(obj.id).to.eql(pm.environment.get(\"priceId\"));",
+                                                                   "});"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "5) Create Order",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    },
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\"priceId\":\"{{priceId}}\"}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/payment/create-order",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "payment",
+                                                              "create-order"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\"Status is 200\", function () {",
+                                                                   "  pm.response.to.have.status(200);",
+                                                                   "});",
+                                                                   "const obj = pm.response.json();",
+                                                                   "pm.test(\"Has orderId\", function () {",
+                                                                   "  pm.expect(obj.orderId).to.be.a(\"string\").and.not.empty;",
+                                                                   "});",
+                                                                   "pm.test(\"Status is pending(0)\", function () {",
+                                                                   "  pm.expect(obj.status).to.eql(0);",
+                                                                   "});",
+                                                                   "pm.test(\"PaymentUrl is Stripe hosted page\", function () {",
+                                                                   "  pm.expect(obj.paymentUrl).to.be.a(\"string\").and.not.empty;",
+                                                                   "  pm.expect(obj.paymentUrl).to.include(pm.environment.get(\"expectedStripeHost\"));",
+                                                                   "});",
+                                                                   "pm.environment.set(\"orderId\", obj.orderId);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "6) Negative - Create Order Without Token (401)",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\"priceId\":\"{{priceId}}\"}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/payment/create-order",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "payment",
+                                                              "create-order"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\"Status is 401\", function () {",
+                                                                   "  pm.response.to.have.status(401);",
+                                                                   "});"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "7) Negative - Invalid PriceId (400)",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    },
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\"priceId\":\"00000000-0000-0000-0000-000000000000\"}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/payment/create-order",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "payment",
+                                                              "create-order"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\"Status is 400\", function () {",
+                                                                   "  pm.response.to.have.status(400);",
+                                                                   "});"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "8) Create Payment Intent (Optional)",
+                     "request":  {
+                                     "method":  "POST",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{token}}"
+                                                    },
+                                                    {
+                                                        "key":  "Content-Type",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "body":  {
+                                                  "mode":  "raw",
+                                                  "raw":  "{\"priceId\":\"{{priceId}}\",\"gateway\":\"Stripe\"}"
+                                              },
+                                     "url":  {
+                                                 "raw":  "{{baseUrl}}/api/payment/create-intent",
+                                                 "host":  [
+                                                              "{{baseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "api",
+                                                              "payment",
+                                                              "create-intent"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\"Status is 200\", function () {",
+                                                                   "  pm.response.to.have.status(200);",
+                                                                   "});",
+                                                                   "const obj = pm.response.json();",
+                                                                   "pm.test(\"Has paymentIntentId\", function () {",
+                                                                   "  pm.expect(obj.paymentIntentId).to.be.a(\"string\").and.not.empty;",
+                                                                   "});",
+                                                                   "pm.test(\"Has clientSecret\", function () {",
+                                                                   "  pm.expect(obj.clientSecret).to.be.a(\"string\").and.not.empty;",
+                                                                   "});"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 }
+             ]
+}
+
+

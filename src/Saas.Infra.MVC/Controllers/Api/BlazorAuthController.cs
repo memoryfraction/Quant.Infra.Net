@@ -59,7 +59,9 @@ namespace Saas.Infra.MVC.Controllers.Api
             {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.Strict,
+                // Stripe redirects back from a third-party domain. Lax allows the auth cookie
+                // on top-level cross-site navigations while still protecting subresource CSRF.
+                SameSite = SameSiteMode.Lax,
                 Expires = DateTimeOffset.UtcNow.AddHours(1)
             };
 

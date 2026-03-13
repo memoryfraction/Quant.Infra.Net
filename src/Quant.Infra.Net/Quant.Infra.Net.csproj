@@ -42,7 +42,17 @@
     <PackageReference Include="Stats.NET" Version="1.0.0" />
     <PackageReference Include="System.Linq" Version="4.3.0" />
     <PackageReference Include="YahooFinanceApi" Version="2.3.3" />
+    <!-- Code analyzers to help enforce documentation and argument validation -->
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.12">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
+  <PropertyGroup>
+    <!-- Run analyzers during build to surface issues early -->
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\InterReact\InterReact\InterReact.csproj" />
   </ItemGroup>

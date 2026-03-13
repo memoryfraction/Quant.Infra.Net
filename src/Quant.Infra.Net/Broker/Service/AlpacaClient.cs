@@ -46,6 +46,10 @@ namespace Quant.Infra.Net.Broker.Service
 
         public AlpacaClient(BrokerCredentials creds, ExchangeEnvironment mode)
         {
+            if (creds == null) throw new ArgumentNullException(nameof(creds));
+            if (string.IsNullOrWhiteSpace(creds.ApiKey) || string.IsNullOrWhiteSpace(creds.Secret))
+                throw new ArgumentException("Broker credentials ApiKey and Secret must not be null or empty.", nameof(creds));
+
             var env = mode == ExchangeEnvironment.Paper ? Environments.Paper : Environments.Live;
             _tradeClient = env.GetAlpacaTradingClient(new SecretKey(creds.ApiKey, creds.Secret));
             _dataClient = env.GetAlpacaDataClient(new SecretKey(creds.ApiKey, creds.Secret));
@@ -64,6 +68,8 @@ namespace Quant.Infra.Net.Broker.Service
         /// </summary>
         public async Task<IPosition> GetPositionAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentNullException(nameof(symbol));
+
             try
             {
                 return await _tradeClient.GetPositionAsync(symbol);
@@ -105,6 +111,8 @@ namespace Quant.Infra.Net.Broker.Service
         /// </summary>
         public async Task<decimal> GetLatestPriceAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentNullException(nameof(symbol));
+
             var request = new LatestMarketDataRequest(symbol);
             var quote = await _dataClient.GetLatestTradeAsync(request);
             return quote.Price;

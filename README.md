@@ -291,6 +291,8 @@ Quant.Infra.Net/
 - **Binance IP 限制**：Binance API 对部分国家/地区的 IP 存在访问限制，如果你在运行 Binance 相关单元测试时遇到连接错误，这并非代码问题，请查阅 [Binance 官方文档](https://www.binance.com/en/support) 了解受限地区列表。
 - **合规免责声明**：本项目仅提供量化交易基础设施工具，不构成任何投资建议。用户需自行确保使用本库时符合所在国家/地区的法律法规及交易所合规要求，因使用本库产生的任何法律或财务后果由用户自行承担。
 
+**Quant.Infra.Net** is a professional quantitative trading infrastructure framework built on **.NET 8**. It is designed to provide a robust foundation for quant developers, covering market data ingestion, advanced statistical analysis, order execution, and automated monitoring.
+
 ---
 
 # English

@@ -27,6 +27,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         public BinanceSpotService(IConfiguration configuration)
         {
+            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             _apiKey = configuration["Exchange:ApiKey"];
             _apiSecret = configuration["Exchange:ApiSecret"];
             ExchangeEnvironment = (ExchangeEnvironment)Enum.Parse(typeof(ExchangeEnvironment), configuration["Exchange:Environment"]?.ToString() ?? "Testnet");
@@ -87,13 +88,16 @@ namespace Quant.Infra.Net.Broker.Service
         public async Task<IEnumerable<string>> GetAllSpotSymbolsEndingWithUSDTAsync()
         {
             var symbols = await GetSpotSymbolsAsync();
-            var usdtSymbols = symbols.Where(s => s.EndsWith("USDT", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (symbols == null) return new List<string>();
+            var usdtSymbols = symbols.Where(s => !string.IsNullOrWhiteSpace(s) && s.EndsWith("USDT", StringComparison.OrdinalIgnoreCase)).ToList();
             UtilityService.LogAndWriteLine(UtilityService.GenerateMessage($"Fetched {usdtSymbols.Count} USDT symbols."));
             return usdtSymbols;
         }
 
         public async Task<Ohlcvs> GetOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
+            if (startDt > endDt) throw new ArgumentException("startDt must be earlier than or equal to endDt.", nameof(startDt));
             var ohlcvs = new Ohlcvs
             {
                 Symbol = symbol,
@@ -142,6 +146,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         public async Task<bool> HasSpotPositionAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
             using var client = InitializeBinanceClient();
             var accountInfo = await ExecuteWithRetryAsync(() => client.SpotApi.Account.GetAccountInfoAsync());
             if (!accountInfo.Success)

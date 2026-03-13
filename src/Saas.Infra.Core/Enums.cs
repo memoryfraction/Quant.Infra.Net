@@ -66,4 +66,14 @@ namespace Saas.Infra.Core
         /// </summary>
         public const string AdminOrSuperAdmin = Admin + "," + SuperAdmin;
     }
+
+
+    public enum RuntimeEnvironment
+    {
+        LocalWindows,       // 本地 Windows 物理环境 (F5 直接运行)
+        LocalContainer,     // 本地 Docker 容器环境
+        AzureContainerApps, // Azure ACA 云端环境
+        OtherLinux          // 其他 Linux 环境 (如自建服务器)
+    }
+
 }

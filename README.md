@@ -1,4 +1,4 @@
-# Quant.Infra.Net
+﻿# Quant.Infra.Net
 
 [![NuGet](https://img.shields.io/nuget/v/Quant.Infra.Net?color=blue)](https://www.nuget.org/packages/Quant.Infra.Net)
 [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)
@@ -288,6 +288,8 @@ Quant.Infra.Net/
 - **ADF Python 模式**：`AugmentedDickeyFullerTestPython` 方法依赖本机 Python 环境，需安装 `numpy`、`pandas`、`statsmodels`。如果没有 Python 环境，请使用 `AugmentedDickeyFullerTest`（纯 .NET 实现）。
 - **API Key 配置**：Binance / Alpaca 等实盘接口需要在 `appsettings.json` 或 User Secrets 中配置 API Key 和 Secret。
 - **ExchangeEnvironment**：支持 `Testnet`（测试网）、`Paper`（模拟盘）、`Live`（实盘）三种环境，建议开发阶段使用 Testnet 或 Paper。
+- **Binance IP 限制**：Binance API 对部分国家/地区的 IP 存在访问限制，如果你在运行 Binance 相关单元测试时遇到连接错误，这并非代码问题，请查阅 [Binance 官方文档](https://www.binance.com/en/support) 了解受限地区列表。
+- **合规免责声明**：本项目仅提供量化交易基础设施工具，不构成任何投资建议。用户需自行确保使用本库时符合所在国家/地区的法律法规及交易所合规要求，因使用本库产生的任何法律或财务后果由用户自行承担。
 
 ---
 
@@ -546,6 +548,8 @@ Quant.Infra.Net/
 - **ADF Python mode**: `AugmentedDickeyFullerTestPython` requires a local Python environment with `numpy`, `pandas`, and `statsmodels`. If Python is not available, use `AugmentedDickeyFullerTest` (pure .NET implementation).
 - **API Key configuration**: Binance / Alpaca live trading requires API Key and Secret in `appsettings.json` or User Secrets.
 - **ExchangeEnvironment**: Supports `Testnet`, `Paper`, and `Live`. Use Testnet or Paper during development.
+- **Binance IP Restrictions**: The Binance API restricts access from certain countries/regions. If you encounter connection errors when running Binance-related unit tests, this is not a code issue. Please refer to the [Binance official documentation](https://www.binance.com/en/support) for the list of restricted regions.
+- **Compliance Disclaimer**: This project provides quantitative trading infrastructure tools only and does not constitute investment advice. Users are solely responsible for ensuring compliance with all applicable laws, regulations, and exchange rules in their jurisdiction. The authors assume no liability for any legal or financial consequences arising from the use of this library.
 
 ## License
 

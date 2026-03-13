@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Saas.Infra.Core; // UtilityService, RuntimeEnvironment
 using Saas.Infra.MVC.Middleware; // 引入自定义异常中间件
 using Serilog;
 using System.Security.Cryptography;
@@ -23,7 +24,7 @@ namespace Saas.Infra.MVC
                 .WriteTo.Console( // ✅ 核心新增：日志输出到控制台，解决黑框问题
                     outputTemplate: "[{Level:u3}] {Message:lj}{NewLine}") // 控制台简洁格式
                 .WriteTo.File( // 日志输出到文件（保留详细格式）
-                    path: $"{AppContext.BaseDirectory}Logs\\saas-log-.log", // 按天滚动日志
+                    path: Path.Combine(AppContext.BaseDirectory, "Logs", "saas-log-.log"), // 按天滚动日志（跨平台路径）
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 365, // 保留365天
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -36,6 +37,49 @@ namespace Saas.Infra.MVC
 
                 // ===================== 2. 替换默认日志为Serilog =====================
                 builder.Host.UseSerilog(); // 关键：让ASP.NET Core使用Serilog作为日志提供器
+
+                // ===================== 环境检测 + 云原生PEM密钥文件还原 =====================
+                // 使用 UtilityService.GetCurrentEnvironment() 精确判断当前运行环境
+                var runtimeEnv = UtilityService.GetCurrentEnvironment();
+                var envMessage = $"Runtime environment detected: {runtimeEnv}";
+                Console.WriteLine(envMessage);
+                Log.Information(envMessage);
+
+                // 容器环境(ACA / 本地Docker)：PEM密钥内容通过环境变量/ACA Secret注入，启动时还原为文件
+                // 本地Windows环境：直接读取已有的PEM文件，无需还原
+                if (runtimeEnv == RuntimeEnvironment.AzureContainerApps
+                    || runtimeEnv == RuntimeEnvironment.LocalContainer)
+                {
+                    var rsaPrivateKeyContent = builder.Configuration["RSA_PRIVATE_KEY_CONTENT"];
+                    var rsaPublicKeyContent = builder.Configuration["RSA_PUBLIC_KEY_CONTENT"];
+
+                    var privateKeyPathConfig = builder.Configuration["Jwt:PrivateKeyPath"] ?? "Secrets/sso_rsa_private.pem";
+                    var publicKeyPathConfig = builder.Configuration["Jwt:PublicKeyPath"] ?? "PublicKeys/sso_rsa_public.pem";
+
+                    if (!string.IsNullOrEmpty(rsaPrivateKeyContent))
+                    {
+                        var directory = Path.GetDirectoryName(privateKeyPathConfig);
+                        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+                        File.WriteAllText(privateKeyPathConfig, rsaPrivateKeyContent);
+                        Log.Information("RSA private key file restored from environment variable to {Path}", privateKeyPathConfig);
+                    }
+                    else
+                    {
+                        Log.Warning("Container environment ({Env}) detected but RSA_PRIVATE_KEY_CONTENT is not set", runtimeEnv);
+                    }
+
+                    if (!string.IsNullOrEmpty(rsaPublicKeyContent))
+                    {
+                        var directory = Path.GetDirectoryName(publicKeyPathConfig);
+                        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+                        File.WriteAllText(publicKeyPathConfig, rsaPublicKeyContent);
+                        Log.Information("RSA public key file restored from environment variable to {Path}", publicKeyPathConfig);
+                    }
+                    else
+                    {
+                        Log.Warning("Container environment ({Env}) detected but RSA_PUBLIC_KEY_CONTENT is not set", runtimeEnv);
+                    }
+                }
 
                 // ===================== 3. 读取JWT配置 + 加载RSA密钥（核心修改） =====================
                 // JWT基础配置
@@ -190,7 +234,10 @@ namespace Saas.Infra.MVC
                 builder.Services.AddScoped<Saas.Infra.Core.ITokenService, Saas.Infra.SSO.TokenService>();
 
                 // Register EF Core DbContext and repositories
-                var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection");
+                // 连接字符串优先级: ACA Secret/环境变量 > User Secrets > appsettings.json
+                // ACA中设置环境变量 ConnectionStrings__DefaultConnection 或 DATABASE_CONNECTION_STRING
+                var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
+                    ?? Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING");
                 if (!string.IsNullOrWhiteSpace(defaultConn))
                 {
                     // Use Npgsql (PostgreSQL) provider

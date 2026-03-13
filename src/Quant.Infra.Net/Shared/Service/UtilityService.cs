@@ -20,6 +20,10 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Shared.Service
 {
+    /// <summary>
+    /// 提供通用的工具方法，包括日志记录、数据格式转换、文件操作等。
+    /// Provides general utility methods including logging, data format conversion, file operations, etc.
+    /// </summary>
     public class UtilityService
     {
         private const int MessageIndent = 15;
@@ -65,12 +69,14 @@ namespace Quant.Infra.Net.Shared.Service
 
 
         /// <summary>
-        /// 输入spreads， 返回最新日期的HalfLife, 单位根据输入的spreads对应; e.g. spreads是日级别，返回的半衰期也是日级别;
+        /// 输入 spreads，返回最新日期的半衰期，单位与输入 spreads 的分辨率对应。
+        /// Calculates the half-life from the given spreads. The unit matches the resolution of the input spreads.
         /// </summary>
-        /// <param name="spreads">spreads.count应该>=halfLifeWindowLength</param>
-        /// <param name="halfLifeWindowLength">spreads.count应该>=halfLifeWindowLength</param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
+        /// <param name="spreads">Spread 数据集合，元素数量应 >= halfLifeWindowLength / The spread data collection. Count must be >= halfLifeWindowLength.</param>
+        /// <param name="halfLifeWindowLength">半衰期计算的窗口长度 / The window length for half-life calculation.</param>
+        /// <returns>计算得到的半衰期值 / The calculated half-life value.</returns>
+        /// <exception cref="ArgumentNullException">当 spreads 为 null 时抛出 / Thrown when spreads is null.</exception>
+        /// <exception cref="ArgumentException">当窗口长度无效或数据不足时抛出 / Thrown when window length is invalid or data is insufficient.</exception>
         public static double CalculateHalfLife(IEnumerable<Element> spreads, int halfLifeWindowLength)
         {
             // 检查输入的有效性，如果非法输出，抛出异常和错误
@@ -129,8 +135,11 @@ namespace Quant.Infra.Net.Shared.Service
 
 
         /// <summary>
-        /// Enhanced logging with structured output to both console and Serilog
+        /// 增强的日志记录方法，同时输出到控制台和 Serilog。
+        /// Enhanced logging with structured output to both console and Serilog.
         /// </summary>
+        /// <param name="message">日志消息内容 / The log message content.</param>
+        /// <param name="level">日志级别，默认为 Information / The log level, defaults to Information.</param>
         public static void LogAndWriteLine(string message, LogEventLevel level = LogEventLevel.Information)
         {
             var formattedMessage = FormatMessage(message, level);
@@ -185,6 +194,13 @@ namespace Quant.Infra.Net.Shared.Service
 
 
 
+        /// <summary>
+        /// 将 ResolutionLevel 转换为 Binance KlineInterval。
+        /// Converts a ResolutionLevel to the corresponding Binance KlineInterval.
+        /// </summary>
+        /// <param name="resolutionLevel">分辨率级别 / The resolution level.</param>
+        /// <returns>对应的 KlineInterval / The corresponding KlineInterval.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">当分辨率级别不受支持时抛出 / Thrown when the resolution level is unsupported.</exception>
         public static KlineInterval ConvertToKlineInterval(ResolutionLevel resolutionLevel)
         {
             return resolutionLevel switch
@@ -202,7 +218,11 @@ namespace Quant.Infra.Net.Shared.Service
 
         /// <summary>
         /// 将 KlineInterval 枚举转换为 TimeSpan，用于时间计算。
+        /// Converts a KlineInterval enum to a TimeSpan for time calculations.
         /// </summary>
+        /// <param name="interval">K线间隔 / The Kline interval.</param>
+        /// <returns>对应的时间间隔 / The corresponding TimeSpan.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">当 KlineInterval 不受支持时抛出 / Thrown when the KlineInterval is unsupported.</exception>
         public static TimeSpan KlineIntervalToTimeSpan(KlineInterval interval)
         {
             switch (interval)
@@ -220,6 +240,13 @@ namespace Quant.Infra.Net.Shared.Service
         }
 
 
+        /// <summary>
+        /// 将 ResolutionLevel 转换为 TimeSpan。
+        /// Converts a ResolutionLevel to a TimeSpan.
+        /// </summary>
+        /// <param name="resolutionLevel">分辨率级别 / The resolution level.</param>
+        /// <returns>对应的时间间隔 / The corresponding TimeSpan.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">当分辨率级别不受支持时抛出 / Thrown when the resolution level is unsupported.</exception>
         public static TimeSpan ResolutionLevelToTimeSpan(ResolutionLevel resolutionLevel)
         {
             switch (resolutionLevel)
@@ -255,11 +282,12 @@ namespace Quant.Infra.Net.Shared.Service
         }
 
         /// <summary>
-        /// 结构化输出
+        /// 生成结构化的日志消息。
+        /// Generates a structured log message.
         /// </summary>
-        /// <param name="dataContent"></param>
-        /// <param name="errors"></param>
-        /// <returns></returns>
+        /// <param name="dataContent">数据内容 / The data content.</param>
+        /// <param name="errors">错误列表（可选） / Optional list of errors.</param>
+        /// <returns>格式化的消息字符串 / The formatted message string.</returns>
         public static string GenerateMessage(string dataContent, IEnumerable<string> errors = null)
         {
             var sb = new System.Text.StringBuilder();
@@ -287,11 +315,17 @@ namespace Quant.Infra.Net.Shared.Service
 
 
         /// <summary>
-        /// 生成日志, 包含以下信息: UsdtBalance， HoldingPositions (不同symbol的持仓数量)， UnRealizedProfit， UnRealizedProfitRate
+        /// 生成 Binance 账户快照消息，包含总市值、持仓符号、未实现利润和利润率。
+        /// Generates a Binance account snapshot message containing total market value, holding symbols, unrealized profit, and profit rate.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="usdBalance">USD 余额 / The USD balance.</param>
+        /// <param name="positions">持仓列表 / The list of positions.</param>
+        /// <returns>格式化的账户快照消息 / The formatted account snapshot message.</returns>
         public static string GenerateBinanceAccountSnapShotMessage(decimal usdBalance, IEnumerable<BinancePositionDetailsUsdt> positions)
         {
+            if (positions == null)
+                throw new ArgumentNullException(nameof(positions));
+
             // 初始化统计变量
             decimal totalUnRealizedProfit = 0;
             decimal totalMarketValue = usdBalance;
@@ -350,11 +384,17 @@ namespace Quant.Infra.Net.Shared.Service
         }
 
         /// <summary>
-        /// 生成日志, 包含以下信息: UsdtBalance， HoldingPositions (不同symbol的持仓数量)， UnRealizedProfit， UnRealizedProfitRate
+        /// 生成 Alpaca 账户快照消息，包含总市值、持仓符号、未实现利润和利润率。
+        /// Generates an Alpaca account snapshot message containing total market value, holding symbols, unrealized profit, and profit rate.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="usdBalance">USD 余额 / The USD balance.</param>
+        /// <param name="positions">持仓列表 / The list of positions.</param>
+        /// <returns>格式化的账户快照消息 / The formatted account snapshot message.</returns>
         public static string GenerateAlpacaAccountSnapShotMessage(decimal usdBalance, IEnumerable<BinancePositionDetailsUsdt> positions)
         {
+            if (positions == null)
+                throw new ArgumentNullException(nameof(positions));
+
             // 初始化统计变量
             decimal totalUnRealizedProfit = 0;
             decimal totalMarketValue = usdBalance;
@@ -571,13 +611,17 @@ namespace Quant.Infra.Net.Shared.Service
 
        
         /// <summary>
-        /// 读取CSV文件，返回DataFrame
-        /// Title Row: DateTime, Open, High, Low, Close, Volume
+        /// 读取CSV文件，返回DataFrame。标题行：DateTime, Open, High, Low, Close, Volume。
+        /// Reads a CSV file and returns a DataFrame. Title row: DateTime, Open, High, Low, Close, Volume.
         /// </summary>
-        /// <param name="fullPathFileName"></param>
-        /// <returns></returns>
+        /// <param name="fullPathFileName">CSV 文件的完整路径 / Full path of the CSV file.</param>
+        /// <returns>包含 DateTime 和 Close 列的 DataFrame / A DataFrame containing DateTime and Close columns.</returns>
+        /// <exception cref="ArgumentNullException">当文件路径为空时抛出 / Thrown when the file path is null or empty.</exception>
         public static DataFrame LoadCsvToDataFrame(string fullPathFileName)
         {
+            if (string.IsNullOrEmpty(fullPathFileName))
+                throw new ArgumentNullException(nameof(fullPathFileName));
+
             var dateTimeColumn = new PrimitiveDataFrameColumn<DateTime>("DateTime");
             var closeColumn = new DoubleDataFrameColumn("Close");
 
@@ -603,12 +647,17 @@ namespace Quant.Infra.Net.Shared.Service
 
 
         /// <summary>
-        /// 读取Csv文件，返回Close列(List<double>)
+        /// 读取 CSV 文件，返回 Close 列的数据列表。
+        /// Reads a CSV file and returns the Close column as a list of doubles.
         /// </summary>
-        /// <param name="filePath"></param>
-        /// <returns>返回Close列</returns>
+        /// <param name="fullPathFileName">CSV 文件的完整路径 / Full path of the CSV file.</param>
+        /// <returns>Close 列的数据列表 / A list of Close column values.</returns>
+        /// <exception cref="ArgumentNullException">当文件路径为空时抛出 / Thrown when the file path is null or empty.</exception>
         public static List<double> ReadCloseColFromCsv(string fullPathFileName)
         {
+            if (string.IsNullOrEmpty(fullPathFileName))
+                throw new ArgumentNullException(nameof(fullPathFileName));
+
             var config = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 HasHeaderRecord = true,

@@ -3,7 +3,8 @@
 namespace Quant.Infra.Net.Shared.Model
 {
     /// <summary>
-    /// 交易所环境：测试、实盘
+    /// 交易所环境：测试、实盘、模拟盘。
+    /// Exchange environment: testnet, live, or paper.
     /// </summary>
     public enum ExchangeEnvironment
     {
@@ -12,13 +13,33 @@ namespace Quant.Infra.Net.Shared.Model
         Paper=2
     }
 
+    /// <summary>
+    /// 启动模式：定义定时任务的触发时机。
+    /// Start mode: defines the trigger timing for scheduled tasks.
+    /// </summary>
     public enum StartMode
     {
+        /// <summary>
+        /// 下一秒触发 / Trigger at the next second.
+        /// </summary>
         NextSecond = 0,
+        /// <summary>
+        /// 下一分钟触发 / Trigger at the next minute.
+        /// </summary>
         NextMinute = 1,
+        /// <summary>
+        /// 下一小时触发 / Trigger at the next hour.
+        /// </summary>
         NextHour = 2,
+        /// <summary>
+        /// 下一天触发 / Trigger at the next day.
+        /// </summary>
         NextDay = 3,
-        TodayBeforeUSMarketClose = 4 // 通常指美东时间下午四点
+        /// <summary>
+        /// 美股收盘前触发（通常指美东时间下午16:00）
+        /// Trigger before US market close (typically 4:00 PM Eastern Time).
+        /// </summary>
+        TodayBeforeUSMarketClose = 4
     }
 
 
@@ -53,6 +74,10 @@ namespace Quant.Infra.Net.Shared.Model
         EuEquityMarket = 4
     }
 
+    /// <summary>
+    /// 经纪商枚举：定义支持的交易经纪商。
+    /// Broker enum: defines supported trading brokers.
+    /// </summary>
     public enum Broker
     {
         Binance = 1,              // Binance
@@ -120,6 +145,10 @@ namespace Quant.Infra.Net.Shared.Model
     }
 
 
+    /// <summary>
+    /// 资产类型枚举：定义不同的资产类型。
+    /// Asset type enum: defines different asset types.
+    /// </summary>
     public enum AssetType
     {
         Other = 0,
@@ -132,6 +161,10 @@ namespace Quant.Infra.Net.Shared.Model
         CryptoOption = 7               // Cryptocurrency Option
     }
 
+    /// <summary>
+    /// 分辨率级别：定义时间序列的分辨率。
+    /// Resolution level: defines the resolution of time series data.
+    /// </summary>
     public enum ResolutionLevel
     {
         [EnumMember(Value = "t")]
@@ -159,6 +192,10 @@ namespace Quant.Infra.Net.Shared.Model
         Other = 7
     }
 
+    /// <summary>
+    /// 数据源枚举：定义支持的数据源。
+    /// Data source enum: defines supported data sources.
+    /// </summary>
     public enum DataSource
     {
         YahooFinance = 0,
@@ -166,18 +203,36 @@ namespace Quant.Infra.Net.Shared.Model
         MongoDBWebApi = 2
     }
 
+    /// <summary>
+    /// 交易方向：做多或做空。
+    /// Trade direction: long or short.
+    /// </summary>
     public enum TradeDirection
     {
-        Long = 0,  // 做多
-        Short = 1  // 做空
+        /// <summary>
+        /// 做多 / Long position.
+        /// </summary>
+        Long = 0,
+        /// <summary>
+        /// 做空 / Short position.
+        /// </summary>
+        Short = 1
     }
 
+    /// <summary>
+    /// 经纪账户类型：现金账户或保证金账户。
+    /// Broker account type: cash or margin account.
+    /// </summary>
     public enum BrokerAccountType
     {
         Cash = 0,
         Margin = 1
     }
 
+    /// <summary>
+    /// 订单操作类型：买入或卖出。
+    /// Order action type: buy or sell.
+    /// </summary>
     public enum OrderActionType
     {
         Buy = 0,
@@ -185,6 +240,10 @@ namespace Quant.Infra.Net.Shared.Model
     }
 
 
+    /// <summary>
+    /// 订单执行类型：定义不同的订单执行方式。
+    /// Order execution type: defines different order execution methods.
+    /// </summary>
     public enum OrderExecutionType
     {
         /// <summary>
@@ -268,33 +327,77 @@ namespace Quant.Infra.Net.Shared.Model
     }
 
 
+    /// <summary>
+    /// 货币类型枚举。
+    /// Currency type enum.
+    /// </summary>
     public enum Currency
     {
-        USD=0,  // 美元
-        CNY=1,  // 人民币
-        HKD=2,  // 港币
-        USDT=3, // 泰达币
-        USDC=4  // USD Coi
-
-        // 可以根据需要添加更多货币
+        /// <summary>
+        /// 美元 / US Dollar.
+        /// </summary>
+        USD=0,
+        /// <summary>
+        /// 人民币 / Chinese Yuan.
+        /// </summary>
+        CNY=1,
+        /// <summary>
+        /// 港币 / Hong Kong Dollar.
+        /// </summary>
+        HKD=2,
+        /// <summary>
+        /// 泰达币 / Tether (USDT).
+        /// </summary>
+        USDT=3,
+        /// <summary>
+        /// USD Coin / USD Coin (USDC).
+        /// </summary>
+        USDC=4
     }
 
 
+    /// <summary>
+    /// 配对交易操作类型。
+    /// Pair trading action type.
+    /// </summary>
     public enum PairTradingActionType
     {
-        Open=0, // 开仓
+        /// <summary>
+        /// 开仓 / Open position.
+        /// </summary>
+        Open=0,
+        /// <summary>
+        /// 止盈 / Take profit.
+        /// </summary>
         TakeProfit=1,
+        /// <summary>
+        /// 止损 / Stop loss.
+        /// </summary>
         StopLoss=2,
+        /// <summary>
+        /// 均值回归退出 / Mean reversion exit.
+        /// </summary>
         MeanReverseExit=3,
+        /// <summary>
+        /// 不操作 / Do nothing.
+        /// </summary>
         DoNothing=4
-
-        // 可以根据需要添加更多操作类型
     }
 
+    /// <summary>
+    /// 下载类型：现货或永续合约。
+    /// Download type: spot or perpetual contract.
+    /// </summary>
     public enum DownloadType
     {
-        Spot,           // 现货
-        PerpetualContract // 永续合约
+        /// <summary>
+        /// 现货 / Spot.
+        /// </summary>
+        Spot,
+        /// <summary>
+        /// 永续合约 / Perpetual contract.
+        /// </summary>
+        PerpetualContract
     }
 
 }

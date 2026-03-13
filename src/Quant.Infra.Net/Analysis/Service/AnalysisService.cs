@@ -11,35 +11,39 @@ using System.Linq;
 
 namespace Quant.Infra.Net.Analysis.Service
 {
+    /// <summary>
+    /// 分析服务实现，提供相关性计算、ADF 检验、OLS 回归、Z-Score 等分析功能。
+    /// Analysis service implementation providing correlation calculation, ADF test, OLS regression, Z-Score, and other analysis features.
+    /// </summary>
     public class AnalysisService : IAnalysisService
     {
         /// <summary>
-        /// 计算两个时间序列的相关性。
+        /// 计算两个时间序列的 Pearson 相关性。
+        /// Calculates the Pearson correlation between two time series.
         /// </summary>
-        /// <param name="seriesA">时间序列A</param>
-        /// <param name="seriesB">时间序列B</param>
-        /// <returns>相关性系数</returns>
+        /// <param name="seriesA">时间序列A / Time series A.</param>
+        /// <param name="seriesB">时间序列B / Time series B.</param>
+        /// <returns>相关性系数 / The correlation coefficient.</returns>
+        /// <exception cref="ArgumentNullException">当参数为 null 时抛出 / Thrown when parameters are null.</exception>
         public double CalculateCorrelation(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
+            if (seriesA == null) throw new ArgumentNullException(nameof(seriesA));
+            if (seriesB == null) throw new ArgumentNullException(nameof(seriesB));
+
             return Correlation.Pearson(seriesA, seriesB);
         }
 
         /// <summary>
-        /// 进行ADF检验来测试时间序列的平稳性。
+        /// 进行 ADF 检验来测试时间序列的平稳性。
+        /// Performs ADF test to check the stationarity of a time series.
         /// </summary>
-        /// <param name="series">时间序列</param>
-        /// <param name="threshold">显著性水平阈值（例如：0.01, 0.05, 0.1）</param>
-        /// <returns>是否拒绝原假设（即时间序列是否平稳）</returns>
-        /// <remarks>
-        /// 阈值分类：
-        /// 0.01 - 非常显著
-        /// 0.05 - 显著
-        /// 0.1  - 较显著
-        /// </remarks>
+        /// <param name="timeSeries">时间序列数据 / The time series data.</param>
+        /// <param name="adfTestStatisticThreshold">显著性水平阈值 / Significance level threshold.</param>
+        /// <returns>是否拒绝原假设（时间序列是否平稳） / Whether to reject the null hypothesis (whether the time series is stationary).</returns>
+        /// <exception cref="ArgumentException">当时间序列为 null 或为空时抛出 / Thrown when the time series is null or empty.</exception>
         public bool AugmentedDickeyFullerTest(IEnumerable<double> timeSeries, double adfTestStatisticThreshold = -2.86)
         {
-            // Ensure the input time series is not null or empty
-            if (timeSeries == null || timeSeries.Count() == 0)
+            if (timeSeries == null || !timeSeries.Any())
             {
                 throw new ArgumentException("The time series data must not be null or empty.");
             }
@@ -53,11 +57,12 @@ namespace Quant.Infra.Net.Analysis.Service
         }
 
         /// <summary>
-        /// todo: 这个方法不准确，还是需要通过Python statsmodels.tsa.stattools 做底层实现;
+        /// 进行 ADF 检验，返回统计量和 P 值（C# 实现，为近似值）。
+        /// Performs ADF test and returns the statistic and P-value (C# implementation, approximate values).
         /// </summary>
-        /// <param name="timeSeries"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
+        /// <param name="timeSeries">时间序列数据 / The time series data.</param>
+        /// <returns>ADF 检验结果 / The ADF test result.</returns>
+        /// <exception cref="ArgumentException">当时间序列太短时抛出 / Thrown when the time series is too short.</exception>
         public AdfTestResult AugmentedDickeyFullerTest(IEnumerable<double> timeSeries)
         {
             int lag = 1;
@@ -174,49 +179,57 @@ namespace Quant.Infra.Net.Analysis.Service
 
 
         /// <summary>
-        /// 进行最小二乘法(Ordinary Least Squares Regression)回归分析并返回斜率和截距。
+        /// 进行最小二乘法（OLS）回归分析并返回斜率和截距。
+        /// Performs OLS (Ordinary Least Squares) regression and returns the slope and intercept.
         /// </summary>
-        /// <param name="seriesA">时间序列A</param>
-        /// <param name="seriesB">时间序列B</param>
-        /// <returns>斜率和截距</returns>
+        /// <param name="seriesA">时间序列A / Time series A.</param>
+        /// <param name="seriesB">时间序列B / Time series B.</param>
+        /// <returns>斜率和截距的元组 / A tuple of slope and intercept.</returns>
+        /// <exception cref="ArgumentNullException">当参数为 null 时抛出 / Thrown when parameters are null.</exception>
         public (double Slope, double Intercept) PerformOLSRegression(IEnumerable<double> seriesA, IEnumerable<double> seriesB)
         {
+            if (seriesA == null) throw new ArgumentNullException(nameof(seriesA));
+            if (seriesB == null) throw new ArgumentNullException(nameof(seriesB));
+
             var regression = SimpleRegression.Fit(seriesA.ToArray(), seriesB.ToArray());
             return (Math.Round(regression.Item2, 6), Math.Round(regression.Item1, 6)); // Slope, Intercept
         }
 
         /// <summary>
-        /// 正态分布检验
+        /// 正态分布检验（Shapiro-Wilk 检验）。
+        /// Normal distribution test (Shapiro-Wilk test).
         /// </summary>
-        /// <param name="timeSeries"></param>
-        /// <param name="threshold"></param>
-        /// <returns></returns>
+        /// <param name="timeSeries">时间序列数据 / The time series data.</param>
+        /// <param name="threshold">显著性水平阈值 / Significance level threshold.</param>
+        /// <returns>是否符合正态分布 / Whether the sample conforms to a normal distribution.</returns>
+        /// <exception cref="ArgumentNullException">当时间序列为 null 时抛出 / Thrown when the time series is null.</exception>
         public bool PerformShapiroWilkTest(IEnumerable<double> timeSeries, double threshold = 0.05)
         {
-            // 创建Shapiro-Wilk检验对象
+            if (timeSeries == null) throw new ArgumentNullException(nameof(timeSeries));
+
             var swTest = new ShapiroWilkTest(timeSeries.ToArray());
 
-            // 获取统计值和p值
             double W = swTest.Statistic;
             double pValue = swTest.PValue;
 
-            // 输出结果
             Console.WriteLine($"Shapiro-Wilk W: {W}");
             Console.WriteLine($"p-value: {pValue}");
 
-            // 根据阈值判断样本是否符合正态分布
-            if (pValue > threshold)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return pValue > threshold;
         }
 
+        /// <summary>
+        /// 计算 Z-Score（decimal 版本）。
+        /// Calculates the Z-Score (decimal version).
+        /// </summary>
+        /// <param name="data">数据集合 / The data collection.</param>
+        /// <param name="value">要计算 Z-Score 的值 / The value to calculate the Z-Score for.</param>
+        /// <returns>Z-Score 值 / The Z-Score value.</returns>
+        /// <exception cref="ArgumentNullException">当 data 为 null 时抛出 / Thrown when data is null.</exception>
         public static decimal CalculateZScores(IEnumerable<decimal> data, decimal value)
         {
+            if (data == null) throw new ArgumentNullException(nameof(data));
+
             var doubleData = data.Select(x => (double)x).ToList();
             var doubleValue = (double)value;
 
@@ -225,14 +238,31 @@ namespace Quant.Infra.Net.Analysis.Service
             return Convert.ToDecimal((doubleValue - mean) / stdDev);
         }
 
+        /// <summary>
+        /// 计算 Z-Score（double 版本）。
+        /// Calculates the Z-Score (double version).
+        /// </summary>
+        /// <param name="data">数据集合 / The data collection.</param>
+        /// <param name="value">要计算 Z-Score 的值 / The value to calculate the Z-Score for.</param>
+        /// <returns>Z-Score 值 / The Z-Score value.</returns>
+        /// <exception cref="ArgumentNullException">当 data 为 null 时抛出 / Thrown when data is null.</exception>
         public double CalculateZScores(IEnumerable<double> data, double value)
         {
+            if (data == null) throw new ArgumentNullException(nameof(data));
+
             double mean = data.Average();
             double stdDev = Math.Sqrt(data.Average(x => Math.Pow(x - mean, 2)));
             return (value - mean) / stdDev;
         }
 
-
+        /// <summary>
+        /// 根据已知的均值和标准差计算 Z-Score。
+        /// Calculates the Z-Score from the given mean and standard deviation.
+        /// </summary>
+        /// <param name="mean">均值 / The mean.</param>
+        /// <param name="stdDev">标准差 / The standard deviation.</param>
+        /// <param name="value">要计算 Z-Score 的值 / The value to calculate the Z-Score for.</param>
+        /// <returns>Z-Score 值 / The Z-Score value.</returns>
         public double CalculateZScores(double mean, double stdDev, double value)
         {
             return (value - mean) / stdDev;

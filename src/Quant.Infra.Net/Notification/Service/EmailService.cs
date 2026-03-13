@@ -6,8 +6,20 @@ using Quant.Infra.Net.Shared.Service;
 
 namespace Quant.Infra.Net.Notification.Service
 {
+	/// <summary>
+	/// 个人邮件发送服务实现。
+	/// Personal email sending service implementation.
+	/// </summary>
 	public class PersonalEmailService : IEmailService
 	{
+		/// <summary>
+		/// 异步批量发送邮件。
+		/// Sends bulk emails asynchronously.
+		/// </summary>
+		/// <param name="message">邮件消息 / The email message.</param>
+		/// <param name="setting">邮件配置 / The email settings.</param>
+		/// <returns>是否发送成功 / Whether the sending was successful.</returns>
+		/// <exception cref="ArgumentNullException">当 setting 为 null 时抛出 / Thrown when setting is null.</exception>
 		public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
 		{
 			if (setting == null) throw new ArgumentNullException(nameof(setting));
@@ -52,7 +64,7 @@ namespace Quant.Infra.Net.Notification.Service
 			}
 			catch (Exception ex)
 			{
-				UtilityService.LogAndWriteLine($"[PersonalEmailService] 错误: {ex.Message}");
+				UtilityService.LogAndWriteLine($"[PersonalEmailService] Error: {ex.Message}");
 				return false;
 			}
 		}

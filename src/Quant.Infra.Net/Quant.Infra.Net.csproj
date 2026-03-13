@@ -3,7 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
 	<LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
-	<Version>1.2.2</Version>   <!-- NuGet 包版本 -->
+	<Version>1.2.3</Version>   <!-- NuGet 包版本 -->
 	<UserSecretsId>8b042025-ae24-4b48-b89b-12b7001ca6e7</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>

@@ -10,6 +10,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         public BrokerServiceFactory(IConfiguration configuration)
         {
+            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             _configuration = configuration;
         }
 

@@ -15,10 +15,22 @@ namespace Quant.Infra.Net
     /// </summary>
     public interface IBinanceOrderService
     {
+        /// <summary>
+        /// Get all trading symbols available on the exchange.
+        /// 获取交易所中所有可用的交易对符号。
+        /// </summary>
         Task<IEnumerable<string>> GetAllSymbolsAsync();
 
+        /// <summary>
+        /// Place a spot order.
+        /// 下达现货订单。
+        /// </summary>
         Task<BinancePlacedOrder> PlaceSpotOrderAsync(string symbol, OrderSide orderSide, OrderActionType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3);
 
+        /// <summary>
+        /// Get a specific spot order by order id.
+        /// 根据订单 ID 获取现货订单。
+        /// </summary>
         Task<BinanceOrder> GetSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3);
 
         Task<IEnumerable<BinanceOrder>> GetAllSpotOpenOrdersAsync(string symbol = null, int retryAttempts = 3);

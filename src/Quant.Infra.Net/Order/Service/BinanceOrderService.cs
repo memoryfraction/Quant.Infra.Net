@@ -21,11 +21,14 @@ namespace Quant.Infra.Net
 
         public BinanceOrderService(IMapper mapper)
         {
+            if (mapper == null) throw new ArgumentNullException(nameof(mapper));
             _mapper = mapper;
         }
 
         public async Task<BinanceOrderBase> CancelSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
+            if (orderId <= 0) throw new ArgumentOutOfRangeException(nameof(orderId), "orderId must be positive.");
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var result = await ExecuteWithRetry(() => client.SpotApi.Trading.CancelOrderAsync(symbol, orderId), retryAttempts);
@@ -33,9 +36,13 @@ namespace Quant.Infra.Net
             }
         }
 
-        ///
+        /// <summary>
+        /// Place a spot order on Binance.
+        /// </summary>
         public async Task<BinancePlacedOrder> PlaceSpotOrderAsync(string symbol, OrderSide orderSide, OrderActionType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
+            if (quantity == null && quoteQuantity == null) throw new ArgumentException("Either quantity or quoteQuantity must be provided.");
             var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
             var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(spotOrderType);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
@@ -47,6 +54,7 @@ namespace Quant.Infra.Net
 
         public async Task<BinancePlacedOrder> PlaceMarginOrderAsync(string symbol, OrderSide orderSide, OrderActionType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
             var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
             var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(spotOrderType);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
@@ -58,6 +66,7 @@ namespace Quant.Infra.Net
 
         public async Task<IEnumerable<BinanceOrder>> GetAllSpotOpenOrdersAsync(string symbol = null, int retryAttempts = 3)
         {
+            if (symbol != null && string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be empty when provided.", nameof(symbol));
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var result = await ExecuteWithRetry(() => client.SpotApi.Trading.GetOpenOrdersAsync(symbol), retryAttempts);
@@ -67,6 +76,8 @@ namespace Quant.Infra.Net
 
         public async Task<BinanceOrder> GetSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
+            if (orderId <= 0) throw new ArgumentOutOfRangeException(nameof(orderId), "orderId must be positive.");
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var result = await ExecuteWithRetry(() => client.SpotApi.Trading.GetOrderAsync(symbol, orderId), retryAttempts);
@@ -76,6 +87,7 @@ namespace Quant.Infra.Net
 
         public async Task<BinanceReplaceOrderResult> ReplaceSpotOrderAsync(string symbol, OrderSide orderSide, OrderActionType orderType, CancelReplaceMode cancelReplaceMode, long? cancelOrderId = null, string? cancelClientOrderId = null, string? newCancelClientOrderId = null, string? newClientOrderId = null, decimal? quantity = null, decimal? quoteQuantity = null, decimal? price = null, TimeInForce? timeInForce = null, decimal? stopPrice = null, decimal? icebergQty = null, OrderResponseType? orderResponseType = null, int? trailingDelta = null, int? strategyId = null, int? strategyType = null, CancelRestriction? cancelRestriction = null, int? receiveWindow = null, CancellationToken ct = default(CancellationToken), int retryAttempts = 3)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
             var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
             var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(orderType);
             var binanceCancelReplaceMode = _mapper.Map<Binance.Net.Enums.CancelReplaceMode>(cancelReplaceMode);
@@ -88,6 +100,9 @@ namespace Quant.Infra.Net
 
         public void SetBinanceCredential(string apiKey, string apiSecret)
         {
+            if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("apiKey must not be null or empty.", nameof(apiKey));
+            if (string.IsNullOrWhiteSpace(apiSecret)) throw new ArgumentException("apiSecret must not be null or empty.", nameof(apiSecret));
+
             _apiKey = apiKey;
             _apiSecret = apiSecret;
 
@@ -117,6 +132,8 @@ namespace Quant.Infra.Net
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var exchangeInfo = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
+                if (exchangeInfo == null || !exchangeInfo.Success || exchangeInfo.Data?.Symbols == null)
+                    return new List<string>();
                 var symbols = exchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
                 return symbols;
             }
@@ -155,6 +172,8 @@ namespace Quant.Infra.Net
 
         public async Task<BinanceUsdFuturesOrder> PlaceUsdFutureOrderAsync(string symbol, OrderSide orderSide, decimal quantity, PositionSide positionSide, FuturesOrderType orderType = FuturesOrderType.Market)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
+            if (quantity == 0) throw new ArgumentException("quantity must not be zero.", nameof(quantity));
             var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
@@ -174,6 +193,7 @@ namespace Quant.Infra.Net
 
         public async Task<IEnumerable<BinancePositionDetailsUsdt>> GetHoldingPositionAsync(string symbol)
         {
+            if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();

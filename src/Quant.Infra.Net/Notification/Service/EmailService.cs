@@ -23,6 +23,8 @@ namespace Quant.Infra.Net.Notification.Service
 		public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
 		{
 			if (setting == null) throw new ArgumentNullException(nameof(setting));
+			if (message == null) throw new ArgumentNullException(nameof(message));
+			if (message.To == null || message.To.Count == 0) throw new ArgumentException("message.To must contain at least one recipient.", nameof(message));
 
 			// 明确指定使用 MailKit 的 SmtpClient，防止和 System.Net.Mail 冲突
 			using var client = new MailKit.Net.Smtp.SmtpClient();
@@ -64,7 +66,7 @@ namespace Quant.Infra.Net.Notification.Service
 			}
 			catch (Exception ex)
 			{
-				UtilityService.LogAndWriteLine($"[PersonalEmailService] Error: {ex.Message}");
+				UtilityService.LogAndWriteLine($"[PersonalEmailService] Error: {ex.Message}", Serilog.Events.LogEventLevel.Error);
 				return false;
 			}
 		}

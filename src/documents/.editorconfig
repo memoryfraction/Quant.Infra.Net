@@ -1,0 +1,21 @@
+root = true
+
+[*.{cs,vb}]
+# C# coding conventions (basic)
+indent_style = space
+indent_size = 4
+charset = utf-8-bom
+end_of_line = crlf
+insert_final_newline = true
+
+# Require XML documentation for publicly visible types and members
+dotnet_diagnostic.CS1591.severity = warning
+
+# Encourage argument validation: enable CA1062 (validate arguments) if available
+dotnet_diagnostic.CA1062.severity = warning
+
+# Treat analyzer diagnostics as warnings by default
+dotnet_analyzer_diagnostic.severity = warning
+
+# File header can be disabled here if needed
+# file_header_template = ""

@@ -1,7 +1,8 @@
-﻿using Serilog;
+using Serilog;
 using Serilog.Events;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Saas.Infra.Core
@@ -75,13 +76,46 @@ namespace Saas.Infra.Core
 			LogToSerilog(message, level);
 		}
 
-		/// <summary>
-		/// 根据日志级别获取对应的控制台颜色。
-		/// Gets the console color corresponding to the log level.
-		/// </summary>
-		/// <param name="level">日志级别。 / The log level.</param>
-		/// <returns>对应的控制台颜色。 / The corresponding console color.</returns>
-		private static ConsoleColor GetConsoleColor(LogEventLevel level)
+        /// <summary>
+        /// 获取当前运行时的精确环境类型。
+        /// Detects the current runtime environment accurately.
+        /// </summary>
+        /// <returns>RuntimeEnvironment 枚举值。</returns>
+        public static RuntimeEnvironment GetCurrentEnvironment()
+        {
+            // 1. 检查 Azure Container Apps 特有环境变量 (优先级最高)
+            // CONTAINER_APP_NAME 是 ACA 平台强制注入的
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CONTAINER_APP_NAME")))
+            {
+                return RuntimeEnvironment.AzureContainerApps;
+            }
+
+            // 2. 检查是否在容器内运行 (无论本地还是云端)
+            // DOTNET_RUNNING_IN_CONTAINER 是 .NET 官方镜像默认设置的
+            bool isContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true"
+                               || File.Exists("/.dockerenv");
+
+            if (isContainer)
+            {
+                return RuntimeEnvironment.LocalContainer;
+            }
+
+            // 3. 检查操作系统平台
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return RuntimeEnvironment.LocalWindows;
+            }
+
+            return RuntimeEnvironment.OtherLinux;
+        }
+
+        /// <summary>
+        /// 根据日志级别获取对应的控制台颜色。
+        /// Gets the console color corresponding to the log level.
+        /// </summary>
+        /// <param name="level">日志级别。 / The log level.</param>
+        /// <returns>对应的控制台颜色。 / The corresponding console color.</returns>
+        private static ConsoleColor GetConsoleColor(LogEventLevel level)
 		{
 			return level switch
 			{

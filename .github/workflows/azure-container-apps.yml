@@ -12,7 +12,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Build project
+      - name: Build and Publish
         working-directory: ./src
         run: |
           dotnet restore Saas.Infra.Net.slnx
@@ -23,4 +23,10 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Deploy to ACA
-        uses: azure
+        uses: azure/aca-deploy@v1
+        with:
+          app-name: saas-web-app-02
+          resource-group: saas-infra-group
+          image: mcr.microsoft.com/dotnet/aspnet:10.0
+          ingress: true
+          target-port: 80

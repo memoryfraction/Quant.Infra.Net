@@ -43,12 +43,19 @@
 
 ## 快速开始
 
+> **关于数据源的说明**
+>
+> C# 包 `YahooFinanceApi` 的更新速度跟不上 Yahoo Finance API 的频繁变动，经常出现 `401 Unauthorized` 等错误。
+> Python 社区的 [`yfinance`](https://github.com/ranaroussi/yfinance) 包更新更快、更稳定。因此本项目通过 [`pythonnet`](https://github.com/pythonnet/pythonnet) 在 C# 中调用本地 Anaconda 虚拟环境中的 `yfinance` 来获取行情数据。
+
 ### 第一步：安装
 
 ```bash
 dotnet new console -n MyQuantApp
 cd MyQuantApp
 dotnet add package Quant.Infra.Net
+dotnet add package pythonnet
+dotnet add package Microsoft.Extensions.DependencyInjection
 ```
 
 如果你在仓库内开发，也可以用 ProjectReference：
@@ -57,66 +64,128 @@ dotnet add package Quant.Infra.Net
 <ProjectReference Include="..\Quant.Infra.Net\Quant.Infra.Net.csproj" />
 ```
 
-### 第二步：复制以下 Program.cs 直接运行（无需 API Key）
+### 第二步：创建 Python 虚拟环境（一次性配置）
+
+1. 安装 [Anaconda](https://www.anaconda.com/download) 或 [Miniconda](https://docs.conda.io/en/latest/miniconda.html)。
+
+2. 创建虚拟环境并安装 `yfinance`：
+
+```bash
+conda create -n quant python=3.9 -y
+conda activate quant
+pip install yfinance
+```
+
+3. 记录虚拟环境路径和 Python DLL 文件名，后续代码中需要用到：
+
+```
+# Windows 示例
+环境路径：  D:\ProgramData\PythonVirtualEnvs\pair_trading
+          或  C:\Users\<你的用户名>\miniconda3\envs\quant
+Python DLL：python39.dll    （对应 Python 3.9）
+```
+
+### 第三步：修改 Program.cs 中的 Python 环境路径
+
+将以下两个常量修改为你的实际路径：
 
 ```csharp
-using System;
-using System.Linq;
-using System.Threading.Tasks;
+private const string CondaEnvPath  = @"D:\ProgramData\PythonVirtualEnvs\pair_trading";
+private const string PythonDllName = "python39.dll";
+```
+
+### 第四步：复制以下 Program.cs 直接运行
+
+```csharp
 using Microsoft.Extensions.DependencyInjection;
-using Quant.Infra.Net.SourceData.Service;
+using Python.Runtime;
 using Quant.Infra.Net.Analysis.Service;
 using Quant.Infra.Net.Shared.Model;
 
 class Program
 {
+    private const string CondaEnvPath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading";
+    private const string PythonDllName = "python39.dll";
+
     static async Task Main(string[] args)
     {
-        // 1. 注册服务
+        // 1. Register services
         var services = new ServiceCollection();
-        services.AddScoped<ITraditionalFinanceSourceDataService, TraditionalFinanceSourceDataService>();
         services.AddScoped<IAnalysisService, AnalysisService>();
         var provider = services.BuildServiceProvider();
+        var analysis = provider.GetRequiredService<IAnalysisService>();
 
-        var dataService = provider.GetRequiredService<ITraditionalFinanceSourceDataService>();
-        var analysis   = provider.GetRequiredService<IAnalysisService>();
-
-        // 2. 下载 AAPL 和 MSFT 最近一年日线（Yahoo Finance，无需 Key）
-        var end   = DateTime.UtcNow;
+        // 2. Download AAPL & MSFT via Python yfinance
+        var end = DateTime.UtcNow;
         var start = end.AddYears(-1);
 
-        Console.WriteLine("正在下载 AAPL 日线数据...");
-        var aapl = await dataService.DownloadOhlcvListAsync("AAPL", start, end, ResolutionLevel.Daily);
-        Console.WriteLine($"AAPL 行数: {aapl?.Count ?? 0}");
+        InitializePython();
 
-        Console.WriteLine("正在下载 MSFT 日线数据...");
-        var msft = await dataService.DownloadOhlcvListAsync("MSFT", start, end, ResolutionLevel.Daily);
-        Console.WriteLine($"MSFT 行数: {msft?.Count ?? 0}");
+        Console.WriteLine("Downloading AAPL daily OHLCV via yfinance...");
+        var aaplClose = DownloadCloseViaYFinance("AAPL", start, end);
+        Console.WriteLine($"AAPL rows: {aaplClose.Count}");
 
-        // 3. 计算收盘价相关性
-        if (aapl?.Count > 10 && msft?.Count > 10)
+        Console.WriteLine("Downloading MSFT daily OHLCV via yfinance...");
+        var msftClose = DownloadCloseViaYFinance("MSFT", start, end);
+        Console.WriteLine($"MSFT rows: {msftClose.Count}");
+
+        // 3. Correlation
+        int minLen = Math.Min(aaplClose.Count, msftClose.Count);
+        aaplClose = aaplClose.Take(minLen).ToList();
+        msftClose = msftClose.Take(minLen).ToList();
+
+        double corr = analysis.CalculateCorrelation(aaplClose, msftClose);
+        Console.WriteLine($"AAPL vs MSFT correlation: {corr:F4}");
+
+        // 4. OLS regression
+        var (slope, intercept) = analysis.PerformOLSRegression(aaplClose, msftClose);
+        Console.WriteLine($"OLS regression: Slope={slope:F4}, Intercept={intercept:F4}");
+
+        // 5. ADF stationarity test
+        var spread = msftClose
+            .Zip(aaplClose, (m, a) => m - slope * a - intercept).ToList();
+        bool isStationary = analysis.AugmentedDickeyFullerTest(spread, adfTestStatisticThreshold: -2.86);
+        Console.WriteLine($"Spread ADF stationary: {isStationary}");
+
+        // 6. Z-Score
+        double zScore = analysis.CalculateZScores(spread, spread.Last());
+        Console.WriteLine($"Latest Z-Score: {zScore:F4}");
+
+        await Task.CompletedTask;
+    }
+
+    private static bool _pythonInitialized;
+    private static readonly object _initLock = new();
+
+    private static void InitializePython()
+    {
+        if (_pythonInitialized) return;
+        lock (_initLock)
         {
-            var aaplClose = aapl.Select(x => (double)x.Close).ToList();
-            var msftClose = msft.Select(x => (double)x.Close).ToList();
+            if (_pythonInitialized) return;
+            var infra = PythonNetInfra.GetPythonInfra(CondaEnvPath, PythonDllName);
+            Runtime.PythonDLL = infra.PythonDLL;
+            PythonEngine.PythonHome = infra.PythonHome;
+            PythonEngine.PythonPath = infra.PythonPath;
+            PythonEngine.Initialize();
+            _pythonInitialized = true;
+        }
+    }
 
-            double corr = analysis.CalculateCorrelation(aaplClose, msftClose);
-            Console.WriteLine($"AAPL vs MSFT 收盘价相关性: {corr:F4}");
-
-            // 4. OLS 回归
-            var (slope, intercept) = analysis.PerformOLSRegression(aaplClose, msftClose);
-            Console.WriteLine($"OLS 回归: Slope={slope:F4}, Intercept={intercept:F4}");
-
-            // 5. 计算价差并做 ADF 平稳性检验
-            var spread = msftClose
-                .Zip(aaplClose, (m, a) => m - slope * a - intercept)
-                .ToList();
-
-            bool isStationary = analysis.AugmentedDickeyFullerTest(spread);
-            Console.WriteLine($"价差 ADF 检验（平稳）: {isStationary}");
-
-            // 6. 计算最新 Z-Score
-            double zScore = analysis.CalculateZScores(spread, spread.Last());
-            Console.WriteLine($"最新 Z-Score: {zScore:F4}");
+    private static List<double> DownloadCloseViaYFinance(string symbol, DateTime start, DateTime end)
+    {
+        using (Py.GIL())
+        {
+            dynamic yf = Py.Import("yfinance");
+            string startStr = start.ToString("yyyy-MM-dd");
+            string endStr = end.ToString("yyyy-MM-dd");
+            dynamic df = yf.download(symbol, start: startStr, end: endStr, auto_adjust: true);
+            dynamic closeSeries = df.__getitem__("Close");
+            dynamic pyList = closeSeries.values.flatten().tolist();
+            var result = new List<double>();
+            foreach (dynamic item in pyList)
+                result.Add((double)item);
+            return result;
         }
     }
 }
@@ -131,14 +200,14 @@ dotnet run
 预期输出示例：
 
 ```
-正在下载 AAPL 日线数据...
-AAPL 行数: 252
-正在下载 MSFT 日线数据...
-MSFT 行数: 252
-AAPL vs MSFT 收盘价相关性: 0.9213
-OLS 回归: Slope=1.8472, Intercept=23.5610
-价差 ADF 检验（平稳）: True
-最新 Z-Score: -0.3172
+Downloading AAPL daily OHLCV via yfinance...
+AAPL rows: 251
+Downloading MSFT daily OHLCV via yfinance...
+MSFT rows: 251
+AAPL vs MSFT correlation: 0.9213
+OLS regression: Slope=1.8472, Intercept=23.5610
+Spread ADF stationary: True
+Latest Z-Score: -0.3172
 ```
 
 ## 更多使用场景
@@ -323,12 +392,19 @@ In short: **stop reinventing the wheel — focus on your strategy.**
 
 ## Quick Start
 
+> **Note on Data Sources**
+>
+> The C# package `YahooFinanceApi` cannot keep up with Yahoo Finance's frequent API changes and often returns `401 Unauthorized`.
+> The Python [`yfinance`](https://github.com/ranaroussi/yfinance) package is maintained more actively by a large community. This project uses [`pythonnet`](https://github.com/pythonnet/pythonnet) to call `yfinance` from C# via a local Anaconda virtual environment.
+
 ### Step 1: Install
 
 ```bash
 dotnet new console -n MyQuantApp
 cd MyQuantApp
 dotnet add package Quant.Infra.Net
+dotnet add package pythonnet
+dotnet add package Microsoft.Extensions.DependencyInjection
 ```
 
 Or use a ProjectReference when developing inside the repo:
@@ -337,66 +413,130 @@ Or use a ProjectReference when developing inside the repo:
 <ProjectReference Include="..\Quant.Infra.Net\Quant.Infra.Net.csproj" />
 ```
 
-### Step 2: Copy This Program.cs and Run (No API Key Needed)
+### Step 2: Create a Python Virtual Environment (One-Time Setup)
+
+> **Why Python?** The C# package `YahooFinanceApi` cannot keep up with Yahoo Finance's frequent API changes and often returns `401 Unauthorized`. The Python [`yfinance`](https://github.com/ranaroussi/yfinance) package is maintained more actively by a large community. This project uses [`pythonnet`](https://github.com/pythonnet/pythonnet) to call `yfinance` from C# via a local Anaconda virtual environment.
+
+1. Install [Anaconda](https://www.anaconda.com/download) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+
+2. Create a virtual environment and install `yfinance`:
+
+```bash
+conda create -n quant python=3.9 -y
+conda activate quant
+pip install yfinance
+```
+
+3. Note the environment path and Python DLL filename for the code:
+
+```
+# Windows example
+Env path:    D:\ProgramData\PythonVirtualEnvs\pair_trading
+         or  C:\Users\<you>\miniconda3\envs\quant
+Python DLL:  python39.dll    (for Python 3.9)
+```
+
+### Step 3: Update Python Environment Path in Program.cs
+
+Set these two constants to match your environment:
 
 ```csharp
-using System;
-using System.Linq;
-using System.Threading.Tasks;
+private const string CondaEnvPath  = @"D:\ProgramData\PythonVirtualEnvs\pair_trading";
+private const string PythonDllName = "python39.dll";
+```
+
+### Step 4: Copy This Program.cs and Run
+
+```csharp
 using Microsoft.Extensions.DependencyInjection;
-using Quant.Infra.Net.SourceData.Service;
+using Python.Runtime;
 using Quant.Infra.Net.Analysis.Service;
 using Quant.Infra.Net.Shared.Model;
 
 class Program
 {
+    private const string CondaEnvPath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading";
+    private const string PythonDllName = "python39.dll";
+
     static async Task Main(string[] args)
     {
         // 1. Register services
         var services = new ServiceCollection();
-        services.AddScoped<ITraditionalFinanceSourceDataService, TraditionalFinanceSourceDataService>();
         services.AddScoped<IAnalysisService, AnalysisService>();
         var provider = services.BuildServiceProvider();
+        var analysis = provider.GetRequiredService<IAnalysisService>();
 
-        var dataService = provider.GetRequiredService<ITraditionalFinanceSourceDataService>();
-        var analysis   = provider.GetRequiredService<IAnalysisService>();
-
-        // 2. Download AAPL & MSFT 1-year daily bars (Yahoo Finance, no key needed)
-        var end   = DateTime.UtcNow;
+        // 2. Download AAPL & MSFT via Python yfinance
+        var end = DateTime.UtcNow;
         var start = end.AddYears(-1);
 
-        Console.WriteLine("Downloading AAPL daily OHLCV...");
-        var aapl = await dataService.DownloadOhlcvListAsync("AAPL", start, end, ResolutionLevel.Daily);
-        Console.WriteLine($"AAPL rows: {aapl?.Count ?? 0}");
+        InitializePython();
 
-        Console.WriteLine("Downloading MSFT daily OHLCV...");
-        var msft = await dataService.DownloadOhlcvListAsync("MSFT", start, end, ResolutionLevel.Daily);
-        Console.WriteLine($"MSFT rows: {msft?.Count ?? 0}");
+        Console.WriteLine("Downloading AAPL daily OHLCV via yfinance...");
+        var aaplClose = DownloadCloseViaYFinance("AAPL", start, end);
+        Console.WriteLine($"AAPL rows: {aaplClose.Count}");
 
-        // 3. Compute close-price correlation
-        if (aapl?.Count > 10 && msft?.Count > 10)
+        Console.WriteLine("Downloading MSFT daily OHLCV via yfinance...");
+        var msftClose = DownloadCloseViaYFinance("MSFT", start, end);
+        Console.WriteLine($"MSFT rows: {msftClose.Count}");
+
+        // 3. Correlation
+        int minLen = Math.Min(aaplClose.Count, msftClose.Count);
+        aaplClose = aaplClose.Take(minLen).ToList();
+        msftClose = msftClose.Take(minLen).ToList();
+
+        double corr = analysis.CalculateCorrelation(aaplClose, msftClose);
+        Console.WriteLine($"AAPL vs MSFT correlation: {corr:F4}");
+
+        // 4. OLS regression
+        var (slope, intercept) = analysis.PerformOLSRegression(aaplClose, msftClose);
+        Console.WriteLine($"OLS regression: Slope={slope:F4}, Intercept={intercept:F4}");
+
+        // 5. ADF stationarity test
+        var spread = msftClose
+            .Zip(aaplClose, (m, a) => m - slope * a - intercept).ToList();
+        bool isStationary = analysis.AugmentedDickeyFullerTest(spread, adfTestStatisticThreshold: -2.86);
+        Console.WriteLine($"Spread ADF stationary: {isStationary}");
+
+        // 6. Z-Score
+        double zScore = analysis.CalculateZScores(spread, spread.Last());
+        Console.WriteLine($"Latest Z-Score: {zScore:F4}");
+
+        await Task.CompletedTask;
+    }
+
+    private static bool _pythonInitialized;
+    private static readonly object _initLock = new();
+
+    private static void InitializePython()
+    {
+        if (_pythonInitialized) return;
+        lock (_initLock)
         {
-            var aaplClose = aapl.Select(x => (double)x.Close).ToList();
-            var msftClose = msft.Select(x => (double)x.Close).ToList();
+            if (_pythonInitialized) return;
+            var infra = PythonNetInfra.GetPythonInfra(CondaEnvPath, PythonDllName);
+            Runtime.PythonDLL = infra.PythonDLL;
+            PythonEngine.PythonHome = infra.PythonHome;
+            PythonEngine.PythonPath = infra.PythonPath;
+            PythonEngine.Initialize();
+            _pythonInitialized = true;
+        }
+    }
 
-            double corr = analysis.CalculateCorrelation(aaplClose, msftClose);
-            Console.WriteLine($"AAPL vs MSFT correlation: {corr:F4}");
-
-            // 4. OLS regression
-            var (slope, intercept) = analysis.PerformOLSRegression(aaplClose, msftClose);
-            Console.WriteLine($"OLS: Slope={slope:F4}, Intercept={intercept:F4}");
-
-            // 5. Compute spread and run ADF stationarity test
-            var spread = msftClose
-                .Zip(aaplClose, (m, a) => m - slope * a - intercept)
-                .ToList();
-
-            bool isStationary = analysis.AugmentedDickeyFullerTest(spread);
-            Console.WriteLine($"Spread ADF stationary: {isStationary}");
-
-            // 6. Latest Z-Score
-            double zScore = analysis.CalculateZScores(spread, spread.Last());
-            Console.WriteLine($"Latest Z-Score: {zScore:F4}");
+    private static List<double> DownloadCloseViaYFinance(string symbol, DateTime start, DateTime end)
+    {
+        using (Py.GIL())
+        {
+            dynamic yf = Py.Import("yfinance");
+            string startStr = start.ToString("yyyy-MM-dd");
+            string endStr = end.ToString("yyyy-MM-dd");
+            dynamic df = yf.download(symbol, start: startStr, end: endStr, auto_adjust: true);
+            dynamic closeSeries = df.__getitem__("Close");
+            dynamic pyList = closeSeries.values.flatten().tolist();
+            var result = new List<double>();
+            foreach (dynamic item in pyList)
+                result.Add((double)item);
+            return result;
         }
     }
 }
@@ -411,12 +551,12 @@ dotnet run
 Expected output:
 
 ```
-Downloading AAPL daily OHLCV...
-AAPL rows: 252
-Downloading MSFT daily OHLCV...
-MSFT rows: 252
+Downloading AAPL daily OHLCV via yfinance...
+AAPL rows: 251
+Downloading MSFT daily OHLCV via yfinance...
+MSFT rows: 251
 AAPL vs MSFT correlation: 0.9213
-OLS: Slope=1.8472, Intercept=23.5610
+OLS regression: Slope=1.8472, Intercept=23.5610
 Spread ADF stationary: True
 Latest Z-Score: -0.3172
 ```

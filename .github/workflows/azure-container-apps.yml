@@ -8,6 +8,7 @@ name: Deploy .NET 8 to Azure Container Apps
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:      # ✅ 只需要增加这一行，GitHub 界面就会出现 "Run workflow" 按钮
 
 jobs:
   build-and-deploy:

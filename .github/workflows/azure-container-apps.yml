@@ -7,7 +7,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: Development          # ← 重要！讓 workflow 能讀取「Environment secrets」
+    environment: Development          # 讀取 Environment secrets
 
     steps:
       - name: Checkout code
@@ -32,7 +32,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Container Apps
+      - name: Deploy source code (Oryx build)
         uses: azure/container-apps-deploy@v1
         with:
           appName: saas-web-app3
@@ -40,12 +40,16 @@ jobs:
           source: ./publish
           targetPort: 8080
           ingress: external
+          # ← 這裡不再放 environmentVariables（多行會壞）
 
-          # === 關鍵：把 GitHub Secrets 推到 ACA 環境變數 ===
-          environmentVariables: |
-            environmentVariables: |
-            CONNECTIONSTRINGS__DefaultConnection=${{ secrets.CONNECTIONSTRINGS__DefaultConnection }}
-            RSA_PRIVATE_KEY_CONTENT=${{ secrets.RSA_PRIVATE_KEY_CONTENT }}
-            RSA_PUBLIC_KEY_CONTENT=${{ secrets.RSA_PUBLIC_KEY_CONTENT }}
-            STRIPE_PUBLISHABLEKEY=${{ secrets.STRIPE_PUBLISHABLEKEY }}
-            STRIPE_SECRETKEY=${{ secrets.STRIPE_SECRETKEY }}
+      - name: Update environment variables（含多行 RSA PEM 金鑰）
+        run: |
+          az containerapp update \
+            --name saas-web-app3 \
+            --resource-group saas-infra-group \
+            --set-env-vars \
+              "RSA_PRIVATE_KEY_CONTENT=${{ secrets.RSA_PRIVATE_KEY_CONTENT }}" \
+              "RSA_PUBLIC_KEY_CONTENT=${{ secrets.RSA_PUBLIC_KEY_CONTENT }}" \
+              "CONNECTIONSTRINGS__DefaultConnection=${{ secrets.CONNECTIONSTRINGS__DefaultConnection }}" \
+              "STRIPE_PUBLISHABLEKEY=${{ secrets.STRIPE_PUBLISHABLEKEY }}" \
+              "STRIPE_SECRETKEY=${{ secrets.STRIPE_SECRETKEY }}"

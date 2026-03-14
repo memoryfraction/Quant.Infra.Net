@@ -27,6 +27,6 @@ jobs:
         with:
           app-name: saas-web-app-02
           resource-group: saas-infra-group
-          image: mcr.microsoft.com/dotnet/aspnet:10.0
+          image: mcr.microsoft.com/dotnet/aspnet:10.0-jammy-chiseled
           ingress: true
           target-port: 80

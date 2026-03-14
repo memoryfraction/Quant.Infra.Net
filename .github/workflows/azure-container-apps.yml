@@ -7,12 +7,12 @@ name: Deploy .NET 8 to Azure Container Apps
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:      # 启用手动运行按钮
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: Development          # 确保读取 GitHub Environment Secrets
+    environment: Development
 
     steps:
       - name: Checkout code
@@ -24,15 +24,13 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        # 指定在 src 目录下执行，并明确指向 .slnx 文件
-        run: dotnet restore src/Saas.Infra.Net.slnx
+        run: dotnet restore src/Saas.Infra.Net.sln
 
       - name: Build project
-        run: dotnet build src/Saas.Infra.Net.slnx --configuration Release --no-restore
+        run: dotnet build src/Saas.Infra.Net.sln --configuration Release --no-restore
 
       - name: Publish project
-        # 将编译产物输出到根目录下的 publish 文件夹，方便后续部署步骤读取
-        run: dotnet publish src/Saas.Infra.Net.slnx --configuration Release --output ./publish --no-restore
+        run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --output ./publish --no-restore
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -44,21 +42,18 @@ jobs:
         with:
           appName: saas-web-app3
           resourceGroup: saas-infra-group
-          source: ./publish          # 对应上面 publish 的输出路径
+          source: ./publish
           targetPort: 8080
           ingress: external
 
       - name: Update environment variables
         run: |
-          # 1. 转换为单行 Base64 字符串
-          B64_PRIVATE=$(printf "%s" "${{ secrets.RSA_PRIVATE_KEY_CONTENT }}" | base64 -w 0)
-          B64_PUBLIC=$(printf "%s" "${{ secrets.RSA_PUBLIC_KEY_CONTENT }}" | base64 -w 0)
-
-          # 2. 更新 ACA 环境变量
-          # 使用双下划线 __ 是 .NET 映射环境变量的 standard 做法
+          B64_PRIVATE=$(echo -n "${{ secrets.RSA_PRIVATE_KEY_CONTENT }}" | base64)
+          B64_PUBLIC=$(echo -n "${{ secrets.RSA_PUBLIC_KEY_CONTENT }}" | base64)
+          
           az containerapp update \
             --name saas-web-app3 \
-            --resource-group saas-infra-group \
+            --resourceGroup saas-infra-group \
             --set-env-vars \
               "RSA_PRIVATE_KEY_B64=$B64_PRIVATE" \
               "RSA_PUBLIC_KEY_B64=$B64_PUBLIC" \

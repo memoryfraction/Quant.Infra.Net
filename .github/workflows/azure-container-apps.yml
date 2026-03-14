@@ -1,0 +1,25 @@
+name: Deploy .NET 10 to ACA
+on:
+  push:
+    branches: [ main ]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore
+      - run: dotnet build --configuration Release --no-restore
+      - run: dotnet publish --configuration Release --output ./publish
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: azure/container-apps-deploy-action@v2
+        with:
+          appName: saas-web-app2
+          resourceGroup: saas-infra-group
+          image: mcr.microsoft.com/dotnet/aspnet:10.0
+          source: ./publish

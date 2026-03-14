@@ -22,8 +22,9 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore dependencies (修复测试项目还原问题)
-        run: dotnet restore ./src
+      # ✅ 关键修复：对整个解决方案执行完整 NuGet 还原（包含测试项目）
+      - name: Restore all dependencies (including test projects)
+        run: dotnet restore src/Saas.Infra.Net.sln
 
       - name: Build project
         run: dotnet build src/Saas.Infra.Net.sln --configuration Release --no-restore
@@ -45,8 +46,5 @@ jobs:
           source: ./publish          
           targetPort: 8080
           ingress: external
-          # 只传递固定环境标识，敏感变量全部删除
           environmentVariables: |
             ASPNETCORE_ENVIRONMENT=Production
-
-      # 移除所有变量更新逻辑（无需兜底，ACA已手动配置）

@@ -7,12 +7,12 @@ name: Deploy .NET 8 to Azure Container Apps
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch:      # 启用手动运行按钮
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: Development
+    environment: Development          # 确保读取 GitHub Environment Secrets
 
     steps:
       - name: Checkout code
@@ -23,13 +23,15 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore src/Saas.Infra.Net.sln
+      - name: Restore dependencies (修复测试项目还原问题)
+        # 关键修改：还原整个src目录下所有项目，包括测试项目
+        run: dotnet restore ./src
 
       - name: Build project
         run: dotnet build src/Saas.Infra.Net.sln --configuration Release --no-restore
 
       - name: Publish project
+        # 将编译产物输出到根目录下的 publish 文件夹，方便后续部署步骤读取
         run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --output ./publish --no-restore
 
       - name: Login to Azure
@@ -42,18 +44,21 @@ jobs:
         with:
           appName: saas-web-app3
           resourceGroup: saas-infra-group
-          source: ./publish
+          source: ./publish          # 对应上面 publish 的输出路径
           targetPort: 8080
           ingress: external
 
       - name: Update environment variables
         run: |
-          B64_PRIVATE=$(echo -n "${{ secrets.RSA_PRIVATE_KEY_CONTENT }}" | base64)
-          B64_PUBLIC=$(echo -n "${{ secrets.RSA_PUBLIC_KEY_CONTENT }}" | base64)
-          
+          # 1. 转换为单行 Base64 字符串（显式指定 -w 0 跨系统兼容）
+          B64_PRIVATE=$(echo -n "${{ secrets.RSA_PRIVATE_KEY_CONTENT }}" | base64 -w 0)
+          B64_PUBLIC=$(echo -n "${{ secrets.RSA_PUBLIC_KEY_CONTENT }}" | base64 -w 0)
+
+          # 2. 更新 ACA 环境变量
+          # 使用双下划线 __ 是 .NET 映射环境变量的 standard 做法
           az containerapp update \
             --name saas-web-app3 \
-            --resourceGroup saas-infra-group \
+            --resource-group saas-infra-group \
             --set-env-vars \
               "RSA_PRIVATE_KEY_B64=$B64_PRIVATE" \
               "RSA_PUBLIC_KEY_B64=$B64_PUBLIC" \

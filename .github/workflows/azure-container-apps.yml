@@ -39,7 +39,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy source code (Oryx build)
-        uses: azure/container-apps-deploy@v1 # ✅ 这个也是对的
+        uses: azure/container-apps-deploy-action@v1 # ✅ 加上 "-action" 后缀
         with:
           appName: saas-web-app3
           resourceGroup: saas-infra-group

@@ -50,11 +50,11 @@ namespace Saas.Infra.MVC
                 if (runtimeEnv == RuntimeEnvironment.AzureContainerApps
                     || runtimeEnv == RuntimeEnvironment.LocalContainer)
                 {
-                    var rsaPrivateKeyContent = builder.Configuration["RSA_PRIVATE_KEY_CONTENT"];
-                    var rsaPublicKeyContent = builder.Configuration["RSA_PUBLIC_KEY_CONTENT"];
+                    var rsaPrivateKeyContent = builder.Configuration["RSA-PRIVATE-KEY-CONTENT"];
+                    var rsaPublicKeyContent = builder.Configuration["RSA-PUBLIC-KEY-CONTENT"];
 
-                    var privateKeyPathConfig = builder.Configuration["Jwt:PrivateKeyPath"] ?? "Secrets/sso_rsa_private.pem";
-                    var publicKeyPathConfig = builder.Configuration["Jwt:PublicKeyPath"] ?? "PublicKeys/sso_rsa_public.pem";
+                    var privateKeyPathConfig = builder.Configuration["Jwt:PrivateKeyPath"] ?? "Secrets/sso-rsa-private.pem";
+                    var publicKeyPathConfig = builder.Configuration["Jwt:PublicKeyPath"] ?? "PublicKeys/sso-rsa-public.pem";
 
                     if (!string.IsNullOrEmpty(rsaPrivateKeyContent))
                     {
@@ -65,7 +65,7 @@ namespace Saas.Infra.MVC
                     }
                     else
                     {
-                        Log.Warning("Container environment ({Env}) detected but RSA_PRIVATE_KEY_CONTENT is not set", runtimeEnv);
+                        Log.Warning("Container environment ({Env}) detected but RSA-PRIVATE-KEY-CONTENT is not set", runtimeEnv);
                     }
 
                     if (!string.IsNullOrEmpty(rsaPublicKeyContent))
@@ -77,7 +77,7 @@ namespace Saas.Infra.MVC
                     }
                     else
                     {
-                        Log.Warning("Container environment ({Env}) detected but RSA_PUBLIC_KEY_CONTENT is not set", runtimeEnv);
+                        Log.Warning("Container environment ({Env}) detected but RSA-PUBLIC-KEY-CONTENT is not set", runtimeEnv);
                     }
                 }
 
@@ -235,9 +235,9 @@ namespace Saas.Infra.MVC
 
                 // Register EF Core DbContext and repositories
                 // 连接字符串优先级: ACA Secret/环境变量 > User Secrets > appsettings.json
-                // ACA中设置环境变量 ConnectionStrings__DefaultConnection 或 DATABASE_CONNECTION_STRING
+                // ACA中设置环境变量 ConnectionStrings--DefaultConnection 或 DATABASE-CONNECTION-STRING
                 var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
-                    ?? Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING");
+                    ?? Environment.GetEnvironmentVariable("DATABASE-CONNECTION-STRING");
                 if (!string.IsNullOrWhiteSpace(defaultConn))
                 {
                     // Use Npgsql (PostgreSQL) provider

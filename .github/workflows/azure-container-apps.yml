@@ -34,7 +34,7 @@ jobs:
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy@v1
         with:
-          appName: saas-web-app-02
+          appName: saas-web-app3
           resourceGroup: saas-infra-group
           source: ./publish                 # Oryx 會從這裡建置成容器映像
           targetPort: 8080                  # .NET 8 容器預設 8080（正確！）

@@ -7,6 +7,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment: Development          # ← 重要！讓 workflow 能讀取「Environment secrets」
 
     steps:
       - name: Checkout code
@@ -15,7 +16,7 @@ jobs:
       - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'  # 自動用最新 patch，穩定
+          dotnet-version: '8.0.x'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -36,9 +37,15 @@ jobs:
         with:
           appName: saas-web-app3
           resourceGroup: saas-infra-group
-          source: ./publish                 # Oryx 會從這裡建置成容器映像
-          targetPort: 8080                  # .NET 8 容器預設 8080（正確！）
-          ingress: external                 # 公開訪問；內部測試可改 internal
-          # env:                            # 如果需要加環境變數，可加這裡
-          #   - name: ASPNETCORE_ENVIRONMENT
-          #     value: Production
+          source: ./publish
+          targetPort: 8080
+          ingress: external
+
+          # === 關鍵：把 GitHub Secrets 推到 ACA 環境變數 ===
+          environmentVariables: |
+            environmentVariables: |
+            CONNECTIONSTRINGS__DefaultConnection=${{ secrets.CONNECTIONSTRINGS__DefaultConnection }}
+            RSA_PRIVATE_KEY_CONTENT=${{ secrets.RSA_PRIVATE_KEY_CONTENT }}
+            RSA_PUBLIC_KEY_CONTENT=${{ secrets.RSA_PUBLIC_KEY_CONTENT }}
+            STRIPE_PUBLISHABLEKEY=${{ secrets.STRIPE_PUBLISHABLEKEY }}
+            STRIPE_SECRETKEY=${{ secrets.STRIPE_SECRETKEY }}

@@ -8,7 +8,7 @@ name: Deploy .NET 8 to Azure Container Apps
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:      # ✅ 只需要增加这一行，GitHub 界面就会出现 "Run workflow" 按钮
+  workflow_dispatch:      # 启用手动运行按钮
 
 jobs:
   build-and-deploy:
@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: azure/checkout@v4
+        uses: actions/checkout@v4     # ✅ 修正：是 actions/checkout，不是 azure/checkout
 
       - name: Setup .NET 8 SDK
-        uses: azure/setup-dotnet@v4
+        uses: actions/setup-dotnet@v4 # ✅ 修正：是 actions/setup-dotnet，不是 azure/setup-dotnet
         with:
           dotnet-version: '8.0.x'
 
@@ -34,12 +34,12 @@ jobs:
         run: dotnet publish --configuration Release --output ./publish --no-restore
 
       - name: Login to Azure
-        uses: azure/login@v2
+        uses: azure/login@v2          # ✅ 这个是对的
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy source code (Oryx build)
-        uses: azure/container-apps-deploy@v1
+        uses: azure/container-apps-deploy@v1 # ✅ 这个也是对的
         with:
           appName: saas-web-app3
           resourceGroup: saas-infra-group
@@ -49,14 +49,11 @@ jobs:
 
       - name: Update environment variables
         run: |
-          # 1. 转换为单行 Base64 字符串（-w 0 确保不产生额外的换行）
-          # 使用 printf 确保内容被原样处理，不受 echo 转义影响
+          # 1. 转换为单行 Base64 字符串
           B64_PRIVATE=$(printf "%s" "${{ secrets.RSA_PRIVATE_KEY_CONTENT }}" | base64 -w 0)
           B64_PUBLIC=$(printf "%s" "${{ secrets.RSA_PUBLIC_KEY_CONTENT }}" | base64 -w 0)
 
           # 2. 推送到 Azure Container Apps
-          # 注意：双下划线 __ 是 .NET 映射环境变量到配置层级的标准做法 (Stripe:SecretKey)
-          # 注意：az containerapp update --set-env-vars 会合并/更新变量。
           az containerapp update \
             --name saas-web-app3 \
             --resource-group saas-infra-group \

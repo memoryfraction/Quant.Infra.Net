@@ -5,6 +5,7 @@ using Saas.Infra.Core; // UtilityService, RuntimeEnvironment
 using Saas.Infra.MVC.Middleware; // 引入自定义异常中间件
 using Serilog;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Saas.Infra.MVC
 {
@@ -50,34 +51,64 @@ namespace Saas.Infra.MVC
                 if (runtimeEnv == RuntimeEnvironment.AzureContainerApps
                     || runtimeEnv == RuntimeEnvironment.LocalContainer)
                 {
-                    var rsaPrivateKeyContent = builder.Configuration["RSA_PRIVATE_KEY_CONTENT"];
-                    var rsaPublicKeyContent = builder.Configuration["RSA_PUBLIC_KEY_CONTENT"];
+                    // --- 仅在此部分精确修改 ---
+
+                    // 1. 处理私钥：优先读取 B64 变量，没有则读原变量
+                    var rsaPrivateKeyRaw = builder.Configuration["RSA_PRIVATE_KEY_CONTENT"];
+                    var rsaPrivateKeyB64 = builder.Configuration["RSA_PRIVATE_KEY_B64"];
+                    string finalPrivateKey = null;
+
+                    if (!string.IsNullOrEmpty(rsaPrivateKeyB64))
+                    {
+                        finalPrivateKey = Encoding.UTF8.GetString(Convert.FromBase64String(rsaPrivateKeyB64));
+                    }
+                    else
+                    {
+                        finalPrivateKey = rsaPrivateKeyRaw;
+                    }
 
                     var privateKeyPathConfig = builder.Configuration["Jwt:PrivateKeyPath"] ?? "Secrets/sso_rsa_private.pem";
-                    var publicKeyPathConfig = builder.Configuration["Jwt:PublicKeyPath"] ?? "PublicKeys/sso_rsa_public.pem";
 
-                    if (!string.IsNullOrEmpty(rsaPrivateKeyContent))
+                    if (!string.IsNullOrEmpty(finalPrivateKey))
                     {
                         var directory = Path.GetDirectoryName(privateKeyPathConfig);
                         if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-                        File.WriteAllText(privateKeyPathConfig, rsaPrivateKeyContent);
-                        Log.Information("RSA private key file restored from environment variable to {Path}", privateKeyPathConfig);
+                        File.WriteAllText(privateKeyPathConfig, finalPrivateKey);
+                        Log.Information("RSA private key file restored (Source: {Src}) to {Path}",
+                            !string.IsNullOrEmpty(rsaPrivateKeyB64) ? "Base64" : "Raw", privateKeyPathConfig);
                     }
                     else
                     {
-                        Log.Warning("Container environment ({Env}) detected but RSA_PRIVATE_KEY_CONTENT is not set", runtimeEnv);
+                        Log.Warning("Container environment ({Env}) detected but RSA_PRIVATE_KEY_CONTENT/B64 is not set", runtimeEnv);
                     }
 
-                    if (!string.IsNullOrEmpty(rsaPublicKeyContent))
+                    // 2. 处理公钥：优先读取 B64 变量，没有则读原变量
+                    var rsaPublicKeyRaw = builder.Configuration["RSA_PUBLIC_KEY_CONTENT"];
+                    var rsaPublicKeyB64 = builder.Configuration["RSA_PUBLIC_KEY_B64"];
+                    string finalPublicKey = null;
+
+                    if (!string.IsNullOrEmpty(rsaPublicKeyB64))
+                    {
+                        finalPublicKey = Encoding.UTF8.GetString(Convert.FromBase64String(rsaPublicKeyB64));
+                    }
+                    else
+                    {
+                        finalPublicKey = rsaPublicKeyRaw;
+                    }
+
+                    var publicKeyPathConfig = builder.Configuration["Jwt:PublicKeyPath"] ?? "PublicKeys/sso_rsa_public.pem";
+
+                    if (!string.IsNullOrEmpty(finalPublicKey))
                     {
                         var directory = Path.GetDirectoryName(publicKeyPathConfig);
                         if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-                        File.WriteAllText(publicKeyPathConfig, rsaPublicKeyContent);
-                        Log.Information("RSA public key file restored from environment variable to {Path}", publicKeyPathConfig);
+                        File.WriteAllText(publicKeyPathConfig, finalPublicKey);
+                        Log.Information("RSA public key file restored (Source: {Src}) to {Path}",
+                            !string.IsNullOrEmpty(rsaPublicKeyB64) ? "Base64" : "Raw", publicKeyPathConfig);
                     }
                     else
                     {
-                        Log.Warning("Container environment ({Env}) detected but RSA_PUBLIC_KEY_CONTENT is not set", runtimeEnv);
+                        Log.Warning("Container environment ({Env}) detected but RSA_PUBLIC_KEY_CONTENT/B64 is not set", runtimeEnv);
                     }
                 }
 

@@ -1,6 +1,6 @@
 # 使用.NET 8 来部署 Azure Container Apps，以确保兼容性和稳定性。
 # 原生 .NET 部署 (Oryx)，不使用 DOCKER
-# 多行 PEM 密钥在推送至 ACA 时会损坏，因此使用 Base64 传输，程序启动时还原。
+# 变量全部手动配置在ACA中，不再通过GitHub Secrets传递
 
 name: Deploy .NET 8 to Azure Container Apps
 on:
@@ -11,7 +11,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: Development          # 确保读取 GitHub Environment Secrets
+    environment: Development          # 仅保留登录Azure所需的ENV，无其他Secret依赖
 
     steps:
       - name: Checkout code
@@ -31,20 +31,12 @@ jobs:
       - name: Publish project
         run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --output ./publish --no-restore
 
-      # 关键修复：先把RSA密钥转成Base64（用Ubuntu原生命令，避免语法错误）
-      - name: Encode RSA keys to Base64
-        id: encode_keys
-        run: |
-          # 将GitHub Secrets里的RSA私钥/公钥转成Base64（-w 0 确保单行，无换行）
-          echo "PRIVATE_KEY_B64=$(echo -n '${{ secrets.RSA_PRIVATE_KEY_CONTENT }}' | base64 -w 0)" >> $GITHUB_ENV
-          echo "PUBLIC_KEY_B64=$(echo -n '${{ secrets.RSA_PUBLIC_KEY_CONTENT }}' | base64 -w 0)" >> $GITHUB_ENV
-
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}  # 仅保留登录Azure的必要Secret
 
-      # 部署时注入环境变量（用上面生成的Base64变量）
+      # 仅部署代码，不传递任何业务变量（变量全部在ACA手动配置）
       - name: Deploy source code (Oryx build)
         uses: azure/container-apps-deploy-action@v1
         with:
@@ -53,24 +45,8 @@ jobs:
           source: ./publish          
           targetPort: 8080
           ingress: external
+          # 只传递固定环境标识，敏感变量全部删除
           environmentVariables: |
             ASPNETCORE_ENVIRONMENT=Production
-            # 使用上面步骤生成的Base64变量（无语法错误）
-            RSA_PRIVATE_KEY_B64=${{ env.PRIVATE_KEY_B64 }}
-            RSA_PUBLIC_KEY_B64=${{ env.PUBLIC_KEY_B64 }}
-            ConnectionStrings__DefaultConnection=${{ secrets.CONNECTIONSTRINGS__DefaultConnection }}
-            Stripe__SecretKey=${{ secrets.STRIPE__SECRETKEY }}
 
-      # 兜底更新变量（确保生效）
-      - name: Ensure environment variables are set
-        run: |
-          az containerapp update \
-            --name saas-web-app3 \
-            --resource-group saas-infra-group \
-            --set-env-vars \
-              "RSA_PRIVATE_KEY_B64=${{ env.PRIVATE_KEY_B64 }}" \
-              "RSA_PUBLIC_KEY_B64=${{ env.PUBLIC_KEY_B64 }}" \
-              "ConnectionStrings__DefaultConnection=${{ secrets.CONNECTIONSTRINGS__DefaultConnection }}" \
-              "Stripe__SecretKey=${{ secrets.STRIPE__SECRETKEY }}"
-        env:
-          AZURE_CLI_DISABLE_CONNECTION_VERIFICATION: true
+      # 移除所有变量更新逻辑（无需兜底，ACA已手动配置）

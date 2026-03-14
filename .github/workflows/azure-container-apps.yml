@@ -31,12 +31,20 @@ jobs:
       - name: Publish project
         run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --output ./publish --no-restore
 
+      # 关键修复：先把RSA密钥转成Base64（用Ubuntu原生命令，避免语法错误）
+      - name: Encode RSA keys to Base64
+        id: encode_keys
+        run: |
+          # 将GitHub Secrets里的RSA私钥/公钥转成Base64（-w 0 确保单行，无换行）
+          echo "PRIVATE_KEY_B64=$(echo -n '${{ secrets.RSA_PRIVATE_KEY_CONTENT }}' | base64 -w 0)" >> $GITHUB_ENV
+          echo "PUBLIC_KEY_B64=$(echo -n '${{ secrets.RSA_PUBLIC_KEY_CONTENT }}' | base64 -w 0)" >> $GITHUB_ENV
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 关键修复1：部署时直接注入所有环境变量（包括Base64的RSA密钥）
+      # 部署时注入环境变量（用上面生成的Base64变量）
       - name: Deploy source code (Oryx build)
         uses: azure/container-apps-deploy-action@v1
         with:
@@ -45,27 +53,24 @@ jobs:
           source: ./publish          
           targetPort: 8080
           ingress: external
-          # 部署时直接设置环境变量，容器启动时就能读到
           environmentVariables: |
             ASPNETCORE_ENVIRONMENT=Production
-            # Base64版密钥（解决多行PEM传输问题）
-            RSA_PRIVATE_KEY_B64=${{ secrets.RSA_PRIVATE_KEY_CONTENT | base64encode }}
-            RSA_PUBLIC_KEY_B64=${{ secrets.RSA_PUBLIC_KEY_CONTENT | base64encode }}
-            # 其他环境变量（双下划线适配.NET配置）
+            # 使用上面步骤生成的Base64变量（无语法错误）
+            RSA_PRIVATE_KEY_B64=${{ env.PRIVATE_KEY_B64 }}
+            RSA_PUBLIC_KEY_B64=${{ env.PUBLIC_KEY_B64 }}
             ConnectionStrings__DefaultConnection=${{ secrets.CONNECTIONSTRINGS__DefaultConnection }}
             Stripe__SecretKey=${{ secrets.STRIPE__SECRETKEY }}
 
-      # 兜底：确保变量生效（可选，部署后再更新一次）
+      # 兜底更新变量（确保生效）
       - name: Ensure environment variables are set
         run: |
           az containerapp update \
             --name saas-web-app3 \
             --resource-group saas-infra-group \
             --set-env-vars \
-              "RSA_PRIVATE_KEY_B64=${{ secrets.RSA_PRIVATE_KEY_CONTENT | base64encode }}" \
-              "RSA_PUBLIC_KEY_B64=${{ secrets.RSA_PUBLIC_KEY_CONTENT | base64encode }}" \
+              "RSA_PRIVATE_KEY_B64=${{ env.PRIVATE_KEY_B64 }}" \
+              "RSA_PUBLIC_KEY_B64=${{ env.PUBLIC_KEY_B64 }}" \
               "ConnectionStrings__DefaultConnection=${{ secrets.CONNECTIONSTRINGS__DefaultConnection }}" \
               "Stripe__SecretKey=${{ secrets.STRIPE__SECRETKEY }}"
         env:
-          # 避免特殊字符被截断
           AZURE_CLI_DISABLE_CONNECTION_VERIFICATION: true

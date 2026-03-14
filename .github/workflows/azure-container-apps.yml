@@ -9,11 +9,12 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# ===================== 核心修复：添加权限控制 =====================
-permissions:
-  id-token: write
-  contents: read
-# ===================== =========================================
+# ===================== 关键点 1：删除或注释掉 permissions =====================
+# 如果保留 id-token: write，Action 会强制尝试 OIDC，导致你看到的错误。
+# permissions:
+#   id-token: write
+#   contents: read
+# ===========================================================================
 
 jobs:
   build-and-deploy:
@@ -37,6 +38,7 @@ jobs:
       - name: Publish project
         run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --output ./publish
 
+      # ===================== 关键点 2：纯净的密钥登录 =====================
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -44,9 +46,8 @@ jobs:
           tenant-id: ${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}
           client-secret: ${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}
-          # 核心：将此项设为 false 强制使用密钥，不触发 OIDC 流程
-          enable-AzPSSession: false 
-          auth-type: SERVICE_PRINCIPAL # 明确指定使用服务主体密钥
+          # 移除 enable-AzPSSession 等干扰参数，保持最基础的 4 项凭据
+      # =================================================================
 
       - name: Deploy to ACA
         uses: azure/container-apps-deploy-action@v1

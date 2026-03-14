@@ -12,58 +12,37 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    # 暂时注释掉 environment，排查 Secret 作用域问题，确认无误后可开启
-    # environment: Development 
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8 SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore dependencies
-        run: dotnet restore src/Saas.Infra.Net.sln
-
-      - name: Build project
-        run: dotnet build src/Saas.Infra.Net.sln --configuration Release --no-restore
-
-      - name: Publish project
-        run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --no-build --output ./publish
-
+      # 1. 登录 Azure (使用 Service Principal)
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: '{"clientId":"${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}"}'
 
-      # --- 关键步骤：部署到 ACA (原生 Oryx 模式) ---
-      # 注意：ACA 原生支持从源码或发布包部署，通常使用 azure/container-apps-deploy@v2
-      # 如果必须完全不用 Docker 镜像构建过程，而是直接让 ACA 的 Oryx 构建运行时：
-      # 方案 A: 推送源码给 ACA，让 ACA 内部用 Oryx 构建 (推荐用于完全托管构建)
-      # 方案 B: 推送已发布的二进制文件 (需要配合特定的容器运行时或脚本，ACA 原生部署通常指方案 A)
-      
+      # 2. 安装 Azure CLI (GitHub Runner 自带，但显式调用更稳妥)
+      - name: Install Azure CLI
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      # 3. 部署到 ACA (核心步骤：使用 --source 触发 Oryx 原生构建)
       - name: Deploy to Azure Container Apps
-        uses: azure/container-apps-deploy@v2
-        with:
-          appSourcePath: ${{ github.workspace }}/src # 或者指向你的项目文件夹，让 ACA 去构建
-          # 如果你希望使用上面 dotnet publish 的结果，ACA 原生部署通常期望源码以便它自己管理运行时
-          # 但如果你的策略是 "GitHub 构建好，ACA 只运行"，则通常需要打包成容器。
-          # 
-          # 【修正策略】：既然你要求 "原生 .NET 部署 (Oryx)，不使用 DOCKER"，
-          # 这意味着你要利用 ACA 的 "Code-to-Cloud" 功能。
-          # 此时应该推送源码路径，而不是 publish 文件夹。ACA 会在云端再次运行 Oryx 构建。
-          
-          acrName: ${{ secrets.ACR_NAME }} # 即使不用本地 docker build，ACA 代码部署通常仍需一个 ACR 来存储构建后的镜像
-          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
-          containerAppName: ${{ secrets.ACA_APP_NAME }}
-          
-          # 如果你是想让 GitHub Actions 把 publish 的内容直接塞进去而不经过 ACR/Oryx 二次构建，
-          # 这在 ACA 上比较特殊，通常 ACA 的 "Native" 模式是指：GitHub 推送源码 -> ACA 接收 -> ACA 内部 Oryx 构建 -> 运行。
-          # 下面的配置是让 ACA 接管构建过程：
-          targetPort: 8080 # 根据你的 .NET 应用配置修改
-          ingress: external
-          
-          # 环境变量配置 (手动在 ACA 配置，不在 GitHub Secrets 传递具体值，但可能需要传递 Key 名称)
-          # 如果变量已在 ACA 控制台配好，这里不需要额外操作，除非需要更新。
+        run: |
+          az containerapp up \
+            --name ${{ secrets.ACA_APP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --source . \
+            --target-port 8080 \
+            --ingress external \
+            --environment ${{ secrets.ACA_ENV_NAME }} \
+            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --query properties.configuration.ingress.fqdn \
+            --output table
+            
+        env:
+          # 如果需要在 ACA 中设置环境变量，可以在这里追加 --env-vars 参数
+          # 例如: --env-vars "KEY=value"
+          # 既然你说变量手动配置在 ACA 中，这里就不需要传 env-vars，ACA 会保留原有配置或应用默认值

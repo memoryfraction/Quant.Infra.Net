@@ -1,4 +1,4 @@
-name: Deploy .NET 10 to ACA
+name: Deploy .NET 8 to Azure Container Apps
 
 on:
   push:
@@ -12,10 +12,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
+      - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '8.0.x'  # 自動用最新 patch，穩定
+
+      - name: Restore dependencies
+        run: dotnet restore
 
       - name: Build project
         run: dotnet build --configuration Release --no-restore
@@ -28,54 +31,14 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Log in to Azure Container Registry (ACR)
-        uses: azure/acr-login@v2
-        with:
-          login-server: ${{ secrets.ACR_NAME }}.azurecr.io
-
-      - name: Build and push Docker image to ACR
-        run: |
-          IMAGE_NAME="${{ secrets.ACR_NAME }}.azurecr.io/saas-web-app-02"
-          IMAGE_TAG="${{ github.sha }}"
-
-          docker build -t $IMAGE_NAME:$IMAGE_TAG -f - . <<EOF
-          # Stage 1: Base runtime
-          FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-          WORKDIR /app
-          EXPOSE 80
-          EXPOSE 443
-
-          # Stage 2: Build
-          FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-          WORKDIR /src
-          COPY ["*.csproj", "./"]
-          RUN dotnet restore
-          COPY . .
-          RUN dotnet build --configuration Release --no-restore
-
-          # Stage 3: Publish
-          FROM build AS publish
-          RUN dotnet publish --configuration Release --no-restore --no-build -o /app/publish
-
-          # Stage 4: Final image
-          FROM base AS final
-          WORKDIR /app
-          COPY --from=publish /app/publish .
-          ENTRYPOINT ["dotnet", "YourAppName.dll"]   # ← 請改成你實際的 DLL 名稱，例如 SaasWebApp.dll
-          EOF
-
-          docker push $IMAGE_NAME:$IMAGE_TAG
-
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy@v1
         with:
           appName: saas-web-app-02
           resourceGroup: saas-infra-group
-          image: ${{ secrets.ACR_NAME }}.azurecr.io/saas-web-app-02:${{ github.sha }}
-          registryServer: ${{ secrets.ACR_NAME }}.azurecr.io
-          registryUsername: ${{ secrets.ACR_USERNAME }}
-          registryPassword: ${{ secrets.ACR_PASSWORD }}
-          targetPort: 80
-          ingress: external          # 公開訪問；若只需內網，可改成 'internal' 或移除此行
-          # traffic: latest           # 可選：自動路由到最新修訂版（預設行為）
-          # revisionSuffix: v${{ github.run_number }}   # 可選：自訂 revision 名稱
+          source: ./publish                 # Oryx 會從這裡建置成容器映像
+          targetPort: 8080                  # .NET 8 容器預設 8080（正確！）
+          ingress: external                 # 公開訪問；內部測試可改 internal
+          # env:                            # 如果需要加環境變數，可加這裡
+          #   - name: ASPNETCORE_ENVIRONMENT
+          #     value: Production

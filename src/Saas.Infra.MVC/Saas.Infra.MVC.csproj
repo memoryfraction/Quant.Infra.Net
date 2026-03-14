@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UserSecretsId>8a44ede1-a899-4cbf-8e5a-66ae432759e2</UserSecretsId>
@@ -16,7 +16,7 @@
 
 	<ItemGroup>
 		<!-- JWT 认证核心包 -->
-		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.25" />
 		<!-- Blazor Web App (removed) -->
 		<!-- EF Core 设计时工具 -->
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">

@@ -8,25 +8,24 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Setup .NET 10
+      - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
       - name: Build and Publish
-        working-directory: ./src
         run: |
-          dotnet restore Saas.Infra.Net.slnx
+          dotnet restore
           dotnet build --configuration Release --no-restore
-          dotnet publish --configuration Release --no-build --output ../publish
+          dotnet publish --configuration Release --no-build --output ./publish
       - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Deploy to ACA
-        uses: azure/aca-deploy@v1
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy@v1
         with:
-          app-name: saas-web-app-02
-          resource-group: saas-infra-group
-          image: mcr.microsoft.com/dotnet/sdk:10.0
-          ingress: true
-          target-port: 80
+          appName: saas-web-app-02
+          resourceGroup: saas-infra-group
+          image: mcr.microsoft.com/dotnet/aspnet:10.0
+          targetPort: 80
+          ingress: 'external'

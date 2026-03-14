@@ -44,8 +44,9 @@ jobs:
           tenant-id: ${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}
           client-secret: ${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}
-          # 核心修复：显式禁用 OIDC 尝试，强制使用 client-secret 登录
-          enable-AzPSSession: false
+          # 核心：将此项设为 false 强制使用密钥，不触发 OIDC 流程
+          enable-AzPSSession: false 
+          auth-type: SERVICE_PRINCIPAL # 明确指定使用服务主体密钥
 
       - name: Deploy to ACA
         uses: azure/container-apps-deploy-action@v1

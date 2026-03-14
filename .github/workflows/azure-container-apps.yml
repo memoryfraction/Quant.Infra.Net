@@ -3,10 +3,17 @@
 # 变量全部手动配置在ACA中，不再通过GitHub Secrets传递
 
 name: Deploy .NET 8 to Azure Container Apps
+
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
+# ===================== 核心修复：添加权限控制 =====================
+permissions:
+  id-token: write
+  contents: read
+# ===================== =========================================
 
 jobs:
   build-and-deploy:
@@ -37,6 +44,8 @@ jobs:
           tenant-id: ${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}
           client-secret: ${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}
+          # 核心修复：显式禁用 OIDC 尝试，强制使用 client-secret 登录
+          enable-AzPSSession: false
 
       - name: Deploy to ACA
         uses: azure/container-apps-deploy-action@v1

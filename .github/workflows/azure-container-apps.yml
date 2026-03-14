@@ -3,7 +3,6 @@
 # 多行 PEM 密钥在推送至 ACA 时会损坏，因此使用 Base64 传输，程序启动时还原。
 
 name: Deploy .NET 8 to Azure Container Apps
-
 on:
   push:
     branches: [ main ]
@@ -24,14 +23,12 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies (修复测试项目还原问题)
-        # 关键修改：还原整个src目录下所有项目，包括测试项目
         run: dotnet restore ./src
 
       - name: Build project
         run: dotnet build src/Saas.Infra.Net.sln --configuration Release --no-restore
 
       - name: Publish project
-        # 将编译产物输出到根目录下的 publish 文件夹，方便后续部署步骤读取
         run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --output ./publish --no-restore
 
       - name: Login to Azure
@@ -39,28 +36,36 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # 关键修复1：部署时直接注入所有环境变量（包括Base64的RSA密钥）
       - name: Deploy source code (Oryx build)
         uses: azure/container-apps-deploy-action@v1
         with:
           appName: saas-web-app3
           resourceGroup: saas-infra-group
-          source: ./publish          # 对应上面 publish 的输出路径
+          source: ./publish          
           targetPort: 8080
           ingress: external
+          # 部署时直接设置环境变量，容器启动时就能读到
+          environmentVariables: |
+            ASPNETCORE_ENVIRONMENT=Production
+            # Base64版密钥（解决多行PEM传输问题）
+            RSA_PRIVATE_KEY_B64=${{ secrets.RSA_PRIVATE_KEY_CONTENT | base64encode }}
+            RSA_PUBLIC_KEY_B64=${{ secrets.RSA_PUBLIC_KEY_CONTENT | base64encode }}
+            # 其他环境变量（双下划线适配.NET配置）
+            ConnectionStrings__DefaultConnection=${{ secrets.CONNECTIONSTRINGS__DefaultConnection }}
+            Stripe__SecretKey=${{ secrets.STRIPE__SECRETKEY }}
 
-      - name: Update environment variables
+      # 兜底：确保变量生效（可选，部署后再更新一次）
+      - name: Ensure environment variables are set
         run: |
-          # 1. 转换为单行 Base64 字符串（显式指定 -w 0 跨系统兼容）
-          B64_PRIVATE=$(echo -n "${{ secrets.RSA_PRIVATE_KEY_CONTENT }}" | base64 -w 0)
-          B64_PUBLIC=$(echo -n "${{ secrets.RSA_PUBLIC_KEY_CONTENT }}" | base64 -w 0)
-
-          # 2. 更新 ACA 环境变量
-          # 使用双下划线 __ 是 .NET 映射环境变量的 standard 做法
           az containerapp update \
             --name saas-web-app3 \
             --resource-group saas-infra-group \
             --set-env-vars \
-              "RSA_PRIVATE_KEY_B64=$B64_PRIVATE" \
-              "RSA_PUBLIC_KEY_B64=$B64_PUBLIC" \
+              "RSA_PRIVATE_KEY_B64=${{ secrets.RSA_PRIVATE_KEY_CONTENT | base64encode }}" \
+              "RSA_PUBLIC_KEY_B64=${{ secrets.RSA_PUBLIC_KEY_CONTENT | base64encode }}" \
               "ConnectionStrings__DefaultConnection=${{ secrets.CONNECTIONSTRINGS__DefaultConnection }}" \
               "Stripe__SecretKey=${{ secrets.STRIPE__SECRETKEY }}"
+        env:
+          # 避免特殊字符被截断
+          AZURE_CLI_DISABLE_CONNECTION_VERIFICATION: true

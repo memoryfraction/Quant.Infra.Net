@@ -9,17 +9,13 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# ===================== 关键点 1：删除或注释掉 permissions =====================
-# 如果保留 id-token: write，Action 会强制尝试 OIDC，导致你看到的错误。
-# permissions:
-#   id-token: write
-#   contents: read
-# ===========================================================================
+# --- 关键：确保这里没有任何 permissions: id-token: write 的声明 ---
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: Development
+    # 如果你的 Secret 是在仓库全局配置的，建议先临时去掉 environment 这一行来排查
+    # environment: Development 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,24 +34,7 @@ jobs:
       - name: Publish project
         run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --output ./publish
 
-      # ===================== 关键点 2：纯净的密钥登录 =====================
       - name: Login to Azure
-        uses: azure/login@v2
+        uses: azure/login@v1 # 建议降级到 v1 版本，v1 对秘钥登录更友好，不会强制推行 OIDC
         with:
-          client-id: ${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}
-          client-secret: ${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}
-          # 移除 enable-AzPSSession 等干扰参数，保持最基础的 4 项凭据
-      # =================================================================
-
-      - name: Deploy to ACA
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          appName: saas-web-app3
-          resourceGroup: saas-infra-group
-          source: ./publish
-          targetPort: 8080
-          ingress: external
-          environmentVariables: |
-            ASPNETCORE_ENVIRONMENT=Production
+          creds: '{"clientId":"${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}"}'ction

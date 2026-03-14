@@ -6,13 +6,12 @@ name: Deploy .NET 8 to Azure Container Apps
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:      # 启用手动运行按钮
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: Development          # 仅保留登录Azure所需的ENV，无其他Secret依赖
-
+    environment: Development
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,28 +21,27 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # ✅ 关键修复：对整个解决方案执行完整 NuGet 还原（包含测试项目）
-      - name: Restore all dependencies (including test projects)
+      - name: Restore dependencies
         run: dotnet restore src/Saas.Infra.Net.sln
 
       - name: Build project
-        run: dotnet build src/Saas.Infra.Net.sln --configuration Release --no-restore
+        run: dotnet build src/Saas.Infra.Net.sln --configuration Release
+        # 移除 --no-restore，自动补全测试项目还原
 
       - name: Publish project
-        run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --output ./publish --no-restore
+        run: dotnet publish src/Saas.Infra.Net.sln --configuration Release --output ./publish
 
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}  # 仅保留登录Azure的必要Secret
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 仅部署代码，不传递任何业务变量（变量全部在ACA手动配置）
-      - name: Deploy source code (Oryx build)
+      - name: Deploy to ACA
         uses: azure/container-apps-deploy-action@v1
         with:
           appName: saas-web-app3
           resourceGroup: saas-infra-group
-          source: ./publish          
+          source: ./publish
           targetPort: 8080
           ingress: external
           environmentVariables: |

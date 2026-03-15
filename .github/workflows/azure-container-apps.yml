@@ -1,7 +1,3 @@
-# 使用.NET 8 来部署 Azure Container Apps，以确保兼容性和稳定性。
-# 原生 .NET 部署 (Oryx)，不使用 DOCKER
-# 变量全部手动配置在ACA中，不再通过GitHub Secrets传递
-
 # 使用 .NET 8 部署 Azure Container Apps
 # 采用服务主权凭证 (Service Principal JSON) 认证
 # 原生 .NET 部署 (Oryx)，不使用 Dockerfile
@@ -28,7 +24,6 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # 部署到 Container App
-      # 该 Action 会自动通过 Oryx 引擎构建 .NET 8 项目并推送镜像
       - name: Build and deploy Container App
         uses: azure/container-apps-deploy-action@v2
         with:
@@ -38,6 +33,13 @@ jobs:
           registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
           containerAppName: saas-web-app3
           resourceGroup: saas-infra-group
-          # .NET 8 默认监听 8080 端口
           targetPort: 8080 
           ingress: external
+          # 关键新增：将代码需要的变量名映射到已经在 ACA 配置好的 Secret 名称上
+          environmentVariables: |
+            rsa-private-key-content=secretref:rsa-private-key-content
+            rsa-public-key-content=secretref:rsa-public-key-content
+            ConnectionStrings__DefaultConnection=secretref:connectionstrings-defaultconnection
+            Stripe__SecretKey=secretref:stripe-secret-key
+            Stripe__WebhookSecret=secretref:stripe-webhook-secret
+            Stripe__PublishableKey=secretref:stripe-publishable-key

@@ -1,32 +1,25 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Saas.Infra.Core; // UtilityService, RuntimeEnvironment
-using Saas.Infra.MVC.Middleware; // 引入自定义异常中间件
+using Saas.Infra.Core;
+using Saas.Infra.MVC.Middleware;
 using Serilog;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.HttpOverrides; // 新增引用
 
 namespace Saas.Infra.MVC
 {
-    /// <summary>
-    /// 应用程序入口类
-    /// </summary>
     public class Program
     {
-        /// <summary>
-        /// 程序主入口方法
-        /// </summary>
-        /// <param name="args">命令行参数</param>
         public static void Main(string[] args)
         {
-            // ===================== 1. 配置Serilog全局日志（控制台+文件双输出） =====================
             Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console( // ✅ 核心新增：日志输出到控制台，解决黑框问题
-                    outputTemplate: "[{Level:u3}] {Message:lj}{NewLine}") // 控制台简洁格式
-                .WriteTo.File( // 日志输出到文件（保留详细格式）
-                    path: Path.Combine(AppContext.BaseDirectory, "Logs", "saas-log-.log"), // 按天滚动日志（跨平台路径）
+                .WriteTo.Console(
+                    outputTemplate: "[{Level:u3}] {Message:lj}{NewLine}")
+                .WriteTo.File(
+                    path: Path.Combine(AppContext.BaseDirectory, "Logs", "saas-log-.log"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 365, // 保留365天
+                    retainedFileCountLimit: 365,
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .CreateLogger();
 
@@ -35,23 +28,32 @@ namespace Saas.Infra.MVC
                 Log.Information("Saas.Infra.MVC application starting...");
                 var builder = WebApplication.CreateBuilder(args);
 
-                // ===================== 2. 替换默认日志为Serilog =====================
-                builder.Host.UseSerilog(); // 关键：让ASP.NET Core使用Serilog作为日志提供器
+                // --- 修改点 1: 配置转发头服务 ---
+                builder.Services.Configure<ForwardedHeadersOptions>(options =>
+                {
+                    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                    // 只有在知道代理服务器 IP 的情况下才需要清除 KnownNetworks 和 KnownProxies
+                    options.KnownNetworks.Clear();
+                    options.KnownProxies.Clear();
+                });
 
-                // ===================== 环境检测 + 云原生PEM密钥文件还原 =====================
-                // 使用 UtilityService.GetCurrentEnvironment() 精确判断当前运行环境
+                builder.Host.UseSerilog();
+
                 var runtimeEnv = UtilityService.GetCurrentEnvironment();
                 var envMessage = $"Runtime environment detected: {runtimeEnv}";
                 Console.WriteLine(envMessage);
                 Log.Information(envMessage);
 
-                // 容器环境(ACA / 本地Docker)：PEM密钥内容通过环境变量/ACA Secret注入，启动时还原为文件
-                // 本地Windows环境：直接读取已有的PEM文件，无需还原
                 if (runtimeEnv == RuntimeEnvironment.AzureContainerApps
                     || runtimeEnv == RuntimeEnvironment.LocalContainer)
                 {
-                    var rsaPrivateKeyContent = builder.Configuration["rsa-private-key-content"];
-                    var rsaPublicKeyContent = builder.Configuration["rsa-public-key-content"];
+                    var rsaPrivateKeyContent = builder.Configuration["rsa-private-key-content"]
+                                             ?? builder.Configuration["RSA_PRIVATE_KEY_CONTENT"]
+                                             ?? Environment.GetEnvironmentVariable("rsa-private-key-content");
+
+                    var rsaPublicKeyContent = builder.Configuration["rsa-public-key-content"]
+                                             ?? builder.Configuration["RSA_PUBLIC_KEY_CONTENT"]
+                                             ?? Environment.GetEnvironmentVariable("rsa-public-key-content");
 
                     var privateKeyPathConfig = builder.Configuration["Jwt:PrivateKeyPath"] ?? "Secrets/sso_rsa_private.pem";
                     var publicKeyPathConfig = builder.Configuration["Jwt:PublicKeyPath"] ?? "PublicKeys/sso_rsa_public.pem";
@@ -81,33 +83,23 @@ namespace Saas.Infra.MVC
                     }
                 }
 
-                // ===================== 3. 读取JWT配置 + 加载RSA密钥（核心修改） =====================
-                // JWT基础配置
                 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? JwtConstants.Issuer;
                 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "Saas.Infra.Clients";
 
-                // 加载RSA私钥（SSO签发用）和公钥（验证用）
                 var privateKeyPath = builder.Configuration["Jwt:PrivateKeyPath"]
-                    ?? throw new ArgumentNullException("Jwt:PrivateKeyPath is not configured. Check appsettings.json.");
+                    ?? throw new ArgumentNullException("Jwt:PrivateKeyPath is not configured.");
                 var publicKeyPath = builder.Configuration["Jwt:PublicKeyPath"]
-                    ?? throw new ArgumentNullException("Jwt:PublicKeyPath is not configured. Check appsettings.json.");
+                    ?? throw new ArgumentNullException("Jwt:PublicKeyPath is not configured.");
 
-                // 验证密钥文件存在
                 if (!File.Exists(privateKeyPath))
                     throw new FileNotFoundException("RSA private key file not found", privateKeyPath);
                 if (!File.Exists(publicKeyPath))
                     throw new FileNotFoundException("RSA public key file not found", publicKeyPath);
 
-                // We will use a custom JWT middleware (CustomJwtMiddleware) instead of the built-in JwtBearer handler.
-                // Register RSA private instance first (used by TokenService to sign tokens and by validation key below).
                 builder.Services.AddSingleton(sp =>
                 {
                     var configuration = sp.GetRequiredService<IConfiguration>();
-                    var keyPath = configuration["Jwt:PrivateKeyPath"]
-                        ?? throw new InvalidOperationException("Jwt:PrivateKeyPath is not configured.");
-                    if (!File.Exists(keyPath))
-                        throw new FileNotFoundException("RSA private key file not found", keyPath);
-
+                    var keyPath = configuration["Jwt:PrivateKeyPath"] ?? throw new InvalidOperationException("Jwt:PrivateKeyPath not configured.");
                     var keyText = File.ReadAllText(keyPath);
                     var rsaInstance = RSA.Create();
                     rsaInstance.ImportFromPem(keyText);
@@ -115,7 +107,6 @@ namespace Saas.Infra.MVC
                     return rsaInstance;
                 });
 
-                // Register a single RsaSecurityKey based on the RSA singleton so TokenService and middleware share the same key.
                 builder.Services.AddSingleton(sp =>
                 {
                     var rsa = sp.GetRequiredService<RSA>();
@@ -127,30 +118,10 @@ namespace Saas.Infra.MVC
                     return new RsaSecurityKey(rsa) { KeyId = keyId };
                 });
 
-                // ===================== 5. 注册RSA私钥实例到DI容器（供TokenService签发用） =====================
-                // 使用 Singleton 生命周期，RSA实例在应用程序生命周期内保持不变。
-                // RSA instances are thread-safe and should be reused across requests for better performance.
-                builder.Services.AddSingleton(sp =>
-                {
-                    var configuration = sp.GetRequiredService<IConfiguration>();
-                    var keyPath = configuration["Jwt:PrivateKeyPath"]
-                        ?? throw new InvalidOperationException("Jwt:PrivateKeyPath is not configured.");
-                    if (!File.Exists(keyPath))
-                        throw new FileNotFoundException("RSA private key file not found", keyPath);
-
-                    var keyText = File.ReadAllText(keyPath);
-                    var rsaInstance = RSA.Create();
-                    rsaInstance.ImportFromPem(keyText);
-                    Log.Information("RSA private key loaded successfully from {KeyPath}", keyPath);
-                    return rsaInstance;
-                });
-
-                // ===================== 6. 极简Swagger配置 =====================
                 builder.Services.AddEndpointsApiExplorer();
                 builder.Services.AddSwaggerGen(c =>
                 {
                     c.SwaggerDoc("v1", new() { Title = "Saas.Infra.MVC API", Version = "v1" });
-                    // 新增：Swagger支持JWT授权
                     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
                     {
                         Name = "Authorization",
@@ -165,46 +136,30 @@ namespace Saas.Infra.MVC
                         {
                             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
                             {
-                                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                                {
-                                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                                    Id = "Bearer"
-                                }
+                                Reference = new Microsoft.OpenApi.Models.OpenApiReference { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" }
                             },
                             Array.Empty<string>()
                         }
                     });
                 });
 
-                // ===================== 7. 注册基础服务（API + Blazor 纯前端） =====================
                 builder.Services.AddAuthorization();
-                // Register a placeholder authentication handler for the "Bearer" scheme so
-                // the framework can issue proper challenges/forbids when [Authorize] fails.
                 builder.Services.AddAuthentication(options =>
                 {
                     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 })
                 .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, Saas.Infra.MVC.Middleware.DummyJwtAuthenticationHandler>(JwtBearerDefaults.AuthenticationScheme, options => { });
 
-                // API only – no Razor views. UI is implemented via Blazor components.
                 builder.Services.AddControllers();
+                builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
-                // Blazor Server configuration
-                builder.Services.AddRazorComponents()
-                    .AddInteractiveServerComponents();
-
-                // Blazor auth/token services (circuit scoped)
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Blazor.BlazorTokenService>();
                 builder.Services.AddSingleton<Saas.Infra.MVC.Services.Blazor.BlazorAuthHandoffService>();
                 builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, Saas.Infra.MVC.Services.Blazor.BlazorAuthStateProvider>();
                 builder.Services.AddHttpContextAccessor();
-
-                builder.Services.AddLogging(); // 供异常中间件使用
-
-                // Add in-memory distributed cache (required by session middleware)
+                builder.Services.AddLogging();
                 builder.Services.AddDistributedMemoryCache();
 
-                // Add session support
                 builder.Services.AddSession(options =>
                 {
                     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -214,7 +169,6 @@ namespace Saas.Infra.MVC
                     options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
                 });
 
-                // Add CSRF protection
                 builder.Services.AddAntiforgery(options =>
                 {
                     options.HeaderName = "X-CSRF-TOKEN";
@@ -224,83 +178,62 @@ namespace Saas.Infra.MVC
                     options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
                 });
 
-                // Add HTTP client factory for API calls
                 builder.Services.AddHttpClient();
-
-                // Register application services and data access
-                // Bind Jwt options and register token service
                 builder.Services.Configure<Saas.Infra.Core.JwtOptions>(builder.Configuration.GetSection("Jwt"));
-                // ITokenService is Scoped and depends on Singleton RSA instance
                 builder.Services.AddScoped<Saas.Infra.Core.ITokenService, Saas.Infra.SSO.TokenService>();
 
-                // Register EF Core DbContext and repositories
-                // 连接字符串优先级: ACA Secret/环境变量 > User Secrets > appsettings.json
-                // ACA中设置环境变量 ConnectionStrings--DefaultConnection 或 DATABASE-CONNECTION-STRING
                 var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
                     ?? Environment.GetEnvironmentVariable("connectionstrings-defaultconnection");
                 if (!string.IsNullOrWhiteSpace(defaultConn))
                 {
-                    // Use Npgsql (PostgreSQL) provider
                     builder.Services.AddDbContext<Saas.Infra.Data.ApplicationDbContext>(options =>
                         options.UseNpgsql(defaultConn));
                 }
 
-                // Repositories and helpers
                 builder.Services.AddScoped<Saas.Infra.Core.IUserRepository, Saas.Infra.Data.UserRepository>();
                 builder.Services.AddScoped<Saas.Infra.Core.IRefreshTokenRepository, Saas.Infra.Data.RefreshTokenRepository>();
                 builder.Services.AddScoped<Saas.Infra.Core.IPasswordHasher, Saas.Infra.SSO.BCryptPasswordHasher>();
-
-                // Register SSO service into DI container (scoped)
                 builder.Services.AddScoped<Saas.Infra.SSO.ISsoService, Saas.Infra.SSO.SsoService>();
-
-                // Register redirect validation and product configuration services
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Redirect.IRedirectValidator, Saas.Infra.MVC.Services.Redirect.RedirectValidator>();
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Product.IProductConfigService, Saas.Infra.MVC.Services.Product.ProductConfigService>();
                 builder.Services.AddSingleton<Saas.Infra.MVC.Services.Errors.GlobalExceptionPageService>();
 
-                // ===================== 支付服务注册 =====================
-                // 注册支付网关（Stripe）
                 builder.Services.AddSingleton<Saas.Infra.MVC.Services.Payment.IPaymentGateway>(sp =>
                 {
                     var config = sp.GetRequiredService<IConfiguration>();
-                    var secretKey = config["Stripe:SecretKey"] ?? throw new InvalidOperationException("Stripe:SecretKey not configured");
-                    var webhookSecret = config["Stripe:WebhookSecret"] ?? throw new InvalidOperationException("Stripe:WebhookSecret not configured");
+                    var secretKey = config["Stripe:SecretKey"] ?? config["Stripe__SecretKey"] ?? Environment.GetEnvironmentVariable("Stripe__SecretKey") ?? throw new InvalidOperationException("Stripe:SecretKey not configured");
+                    var webhookSecret = config["Stripe:WebhookSecret"] ?? config["Stripe__WebhookSecret"] ?? Environment.GetEnvironmentVariable("Stripe__WebhookSecret") ?? throw new InvalidOperationException("Stripe:WebhookSecret not configured");
                     return new Saas.Infra.MVC.Services.Payment.StripePaymentGateway(secretKey, webhookSecret);
                 });
 
-                // 注册支付服务
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IPaymentService, Saas.Infra.MVC.Services.Payment.PaymentService>();
-
-                // 注册Stripe Webhook处理服务
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IStripeWebhookService, Saas.Infra.MVC.Services.Payment.StripeWebhookService>();
-
-                // 注册订阅令牌服务
                 builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.ISubscriptionTokenService, Saas.Infra.MVC.Services.Payment.SubscriptionTokenService>();
 
-                // ===================== 8. 构建应用并配置管道 =====================
                 var app = builder.Build();
 
-                // 【核心】注册全局异常中间件（必须放在管道最前面）
-                app.UseMiddleware<ExceptionHandlingMiddleware>();
+                // --- 修改点 2: 必须放在管道最前面以启用转发头 ---
+                app.UseForwardedHeaders();
 
-                // Add security headers middleware
+                app.UseMiddleware<ExceptionHandlingMiddleware>();
                 app.UseSecurityHeaders();
 
-                // 环境配置
                 if (!app.Environment.IsDevelopment())
                 {
                     app.UseExceptionHandler("/error");
                     app.UseHsts();
                 }
 
-                app.UseHttpsRedirection();
+                // --- 修改点 3: 容器内 Ingress 已处理 HTTPS，内部通常不再强制重定向以避免循环 ---
+                if (app.Environment.IsDevelopment())
+                {
+                    app.UseHttpsRedirection();
+                }
+
                 app.UseStaticFiles();
                 app.UseRouting();
-
-                // Add session middleware
                 app.UseSession();
 
-                // Swagger配置（仅开发环境）
                 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
                 {
                     app.UseSwagger();
@@ -311,31 +244,17 @@ namespace Saas.Infra.MVC
                     });
                 }
 
-                // Custom JWT middleware performs token validation and sets HttpContext.User
-                // Must run BEFORE UseAuthentication to properly set the user context
                 app.UseMiddleware<CustomJwtMiddleware>();
-
-                // 认证&授权
                 app.UseAuthentication();
                 app.UseAuthorization();
 
                 app.UseStatusCodePages(async statusCodeContext =>
                 {
                     var httpContext = statusCodeContext.HttpContext;
-                    if (httpContext.Request.Path.StartsWithSegments("/api")
-                        || httpContext.Request.Path.StartsWithSegments("/_blazor")
-                        || httpContext.Request.Path.StartsWithSegments("/_framework"))
-                    {
-                        return;
-                    }
-
+                    if (httpContext.Request.Path.StartsWithSegments("/api") || httpContext.Request.Path.StartsWithSegments("/_blazor") || httpContext.Request.Path.StartsWithSegments("/_framework")) return;
                     var statusCode = httpContext.Response.StatusCode;
                     var acceptsHtml = httpContext.Request.Headers.Accept.Any(value => value.Contains("text/html", StringComparison.OrdinalIgnoreCase));
-                    if (!acceptsHtml)
-                    {
-                        return;
-                    }
-
+                    if (!acceptsHtml) return;
                     var redirectUrl = statusCode switch
                     {
                         StatusCodes.Status401Unauthorized => "/account/login?message=Authentication%20required.",
@@ -343,67 +262,33 @@ namespace Saas.Infra.MVC
                         StatusCodes.Status404NotFound => "/error?statusCode=404&message=The%20requested%20page%20was%20not%20found.",
                         _ => null
                     };
-
-                    if (!string.IsNullOrWhiteSpace(redirectUrl))
-                    {
-                        httpContext.Response.Redirect(redirectUrl);
-                    }
+                    if (!string.IsNullOrWhiteSpace(redirectUrl)) httpContext.Response.Redirect(redirectUrl);
                 });
 
-                // Add antiforgery middleware
                 app.UseAntiforgery();
-
-                // Map attribute-routed API controllers (under /api/* etc.)
                 app.MapControllers();
+                app.MapRazorComponents<Saas.Infra.MVC.Components.App>().AddInteractiveServerRenderMode();
 
-                // Map Blazor components as the primary UI (no MVC views).
-                app.MapRazorComponents<Saas.Infra.MVC.Components.App>()
-                    .AddInteractiveServerRenderMode();
-
-                Log.Information("Saas.Infra.MVC started, listening on: {Urls}", string.Join("; ", app.Urls));
-
-                // Verify database connection on startup
                 using (var scope = app.Services.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<Saas.Infra.Data.ApplicationDbContext>();
                     try
                     {
-                        // Verify database is accessible
-                        var canConnect = dbContext.Database.CanConnect();
-                        if (canConnect)
-                        {
-                            Log.Information("Database connection verified successfully");
-                        }
-                        else
-                        {
-                            Log.Warning("Database connection verification failed");
-                        }
+                        if (dbContext.Database.CanConnect()) Log.Information("Database connection verified successfully");
+                        else Log.Warning("Database connection verification failed");
                     }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "Error during database connection verification");
-                    }
+                    catch (Exception ex) { Log.Error(ex, "Error during database connection verification"); }
                 }
 
                 app.Run();
             }
-            catch (Exception ex)
-            {
-                Log.Fatal(ex, $"Application startup failed, {ex.Message}");
-            }
-            finally
-            {
-                Log.CloseAndFlush(); // 确保日志写入文件
-            }
+            catch (Exception ex) { Log.Fatal(ex, $"Application startup failed, {ex.Message}"); }
+            finally { Log.CloseAndFlush(); }
         }
     }
 
-    // 补充：如果项目中未定义 JwtConstants 类，需添加此辅助类（否则会编译报错）
     public static class JwtConstants
     {
-        /// <summary>
-        /// 默认JWT签发方
-        /// </summary>
         public const string Issuer = "Saas.Infra.Server";
     }
 }

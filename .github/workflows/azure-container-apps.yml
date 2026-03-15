@@ -17,16 +17,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to Azure
-        uses: azure/login@v1
+      - name: Login to Azure (Managed Identity)
+        uses: azure/login@v2  # 升级到v2版本支持托管标识
         with:
-          creds: '{"clientId":"${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}"}'
+          client-id: ${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}
+          auth-type: managed-identity  # 核心：使用托管标识认证，无需clientSecret
 
       - name: Check Required Secrets
         run: |
           if [ -z "${{ secrets.ACA_APP_NAME }}" ]; then echo "Error: ACA_APP_NAME secret is missing"; exit 1; fi
           if [ -z "${{ secrets.AZURE_RESOURCE_GROUP }}" ]; then echo "Error: AZURE_RESOURCE_GROUP secret is missing"; exit 1; fi
           if [ -z "${{ secrets.ACA_ENV_NAME }}" ]; then echo "Error: ACA_ENV_NAME secret is missing"; exit 1; fi
+          if [ -z "${{ secrets.ACR_LOGIN_SERVER }}" ]; then echo "Error: ACR_LOGIN_SERVER secret is missing"; exit 1; fi
           echo "All required secrets are present."
 
       - name: Deploy to Azure Container Apps (Native Oryx)
@@ -41,5 +45,3 @@ jobs:
           --query "properties.configuration.ingress.fqdn" \
           --output table
         shell: bash
-        # 注意：这里去掉了 run: | 和复杂的缩进，直接使用单行或多行续写
-        # 如果上面这种写法在你的编辑器里依然报错，请使用下面的【备选方案 B】

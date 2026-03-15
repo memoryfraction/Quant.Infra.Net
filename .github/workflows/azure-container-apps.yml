@@ -17,13 +17,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to Azure (Managed Identity)
-        uses: azure/login@v2
+      # 核心修改：切回服务主体认证（适配GitHub托管Runner）
+      - name: Login to Azure (Service Principal)
+        uses: azure/login@v1
         with:
-          client-id: ${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}
-          auth-type: IDENTITY  # 修复认证类型拼写
+          creds: '{"clientId":"${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}"}'
 
       - name: Check Required Secrets
         run: |

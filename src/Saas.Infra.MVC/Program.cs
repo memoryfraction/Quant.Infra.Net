@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.Core;
@@ -33,8 +33,8 @@ namespace Saas.Infra.MVC
                 Log.Information("[STARTUP DIAG] CONTAINER_APP_NAME={Val}", Environment.GetEnvironmentVariable("CONTAINER_APP_NAME") ?? "(not set)");
                 Log.Information("[STARTUP DIAG] DOTNET_RUNNING_IN_CONTAINER={Val}", Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") ?? "(not set)");
                 Log.Information("[STARTUP DIAG] ASPNETCORE_ENVIRONMENT={Val}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "(not set)");
-                Log.Information("[STARTUP DIAG] RSA_PRIVATE_KEY_CONTENT env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RSA_PRIVATE_KEY_CONTENT")));
-                Log.Information("[STARTUP DIAG] RSA_PUBLIC_KEY_CONTENT env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RSA_PUBLIC_KEY_CONTENT")));
+                Log.Information("[STARTUP DIAG] rsa-private-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-private-key-content")));
+                Log.Information("[STARTUP DIAG] rsa-public-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-public-key-content")));
                 Log.Information("[STARTUP DIAG] ConnectionStrings__DefaultConnection env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")));
                 var builder = WebApplication.CreateBuilder(args);
 

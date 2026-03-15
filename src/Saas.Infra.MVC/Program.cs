@@ -50,11 +50,11 @@ namespace Saas.Infra.MVC
                 if (runtimeEnv == RuntimeEnvironment.AzureContainerApps
                     || runtimeEnv == RuntimeEnvironment.LocalContainer)
                 {
-                    var rsaPrivateKeyContent = builder.Configuration["RSA-PRIVATE-KEY-CONTENT"];
-                    var rsaPublicKeyContent = builder.Configuration["RSA-PUBLIC-KEY-CONTENT"];
+                    var rsaPrivateKeyContent = builder.Configuration["rsa-private-key-content"];
+                    var rsaPublicKeyContent = builder.Configuration["rsa-public-key-content"];
 
-                    var privateKeyPathConfig = builder.Configuration["Jwt:PrivateKeyPath"] ?? "Secrets/sso-rsa-private.pem";
-                    var publicKeyPathConfig = builder.Configuration["Jwt:PublicKeyPath"] ?? "PublicKeys/sso-rsa-public.pem";
+                    var privateKeyPathConfig = builder.Configuration["Jwt:PrivateKeyPath"] ?? "Secrets/sso_rsa_private.pem";
+                    var publicKeyPathConfig = builder.Configuration["Jwt:PublicKeyPath"] ?? "PublicKeys/sso_rsa_public.pem";
 
                     if (!string.IsNullOrEmpty(rsaPrivateKeyContent))
                     {
@@ -237,7 +237,7 @@ namespace Saas.Infra.MVC
                 // 连接字符串优先级: ACA Secret/环境变量 > User Secrets > appsettings.json
                 // ACA中设置环境变量 ConnectionStrings--DefaultConnection 或 DATABASE-CONNECTION-STRING
                 var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection")
-                    ?? Environment.GetEnvironmentVariable("DATABASE-CONNECTION-STRING");
+                    ?? Environment.GetEnvironmentVariable("connectionstrings-defaultconnection");
                 if (!string.IsNullOrWhiteSpace(defaultConn))
                 {
                     // Use Npgsql (PostgreSQL) provider

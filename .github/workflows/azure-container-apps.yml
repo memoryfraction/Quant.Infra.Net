@@ -2,31 +2,36 @@
 # 原生 .NET 部署 (Oryx)，不使用 DOCKER
 # 变量全部手动配置在ACA中，不再通过GitHub Secrets传递
 
-name: Deploy to Azure Container Apps
+name: Deploy .NET 8 to Azure Container Apps
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+  # 关键：添加id-token权限，解决token获取失败问题
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 核心修复：用v2版本 + 完整的服务主体参数（包含clientSecret）
+      # 核心修复：用OIDC认证（GitHub官方推荐，无需手动Secret）
       - name: Login to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}
-          client-secret: ${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}  # 必须加这个！
           tenant-id: ${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}
+          auth-type: OIDC  # 用OIDC替代托管标识/CLI，避开所有坑
 
-      # 部署命令（保留你原来的逻辑）
-      - name: Deploy to Container Apps
+      # 部署命令（保留你的核心逻辑）
+      - name: Deploy to Azure Container Apps
         run: |
           az containerapp up \
             --name "${{ secrets.ACA_APP_NAME }}" \

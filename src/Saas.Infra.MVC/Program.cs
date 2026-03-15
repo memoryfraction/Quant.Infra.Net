@@ -41,7 +41,10 @@ namespace Saas.Infra.MVC
                 // --- 1. 转发头配置（解决 Ingress HTTPS 识别） ---
                 builder.Services.Configure<ForwardedHeadersOptions>(options =>
                 {
-                    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                    options.ForwardedHeaders =
+                        ForwardedHeaders.XForwardedFor |
+                        ForwardedHeaders.XForwardedProto |
+                        ForwardedHeaders.XForwardedHost;
                     options.KnownNetworks.Clear();
                     options.KnownProxies.Clear();
                 });
@@ -167,10 +170,32 @@ namespace Saas.Infra.MVC
                 builder.Services.AddSingleton<Saas.Infra.MVC.Services.Payment.IPaymentGateway>(sp =>
                 {
                     var config = sp.GetRequiredService<IConfiguration>();
-                    var secretKey = config["Stripe__SecretKey"] ?? config["Stripe:SecretKey"];
-                    var webhookSecret = config["Stripe__WebhookSecret"] ?? config["Stripe:WebhookSecret"];
-                    return new Saas.Infra.MVC.Services.Payment.StripePaymentGateway(secretKey!, webhookSecret!);
+                    var secretKey =
+                        config["Stripe:SecretKey"] ??
+                        config["Stripe__SecretKey"] ??
+                        Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
+                    var webhookSecret =
+                        config["Stripe:WebhookSecret"] ??
+                        config["Stripe__WebhookSecret"] ??
+                        Environment.GetEnvironmentVariable("STRIPE_WEBHOOK_SECRET");
+
+                    if (string.IsNullOrWhiteSpace(secretKey))
+                    {
+                        throw new InvalidOperationException(
+                            "Stripe SecretKey is not configured. Set Stripe__SecretKey (or STRIPE_SECRET_KEY) in deployment environment.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(webhookSecret))
+                    {
+                        Log.Warning("Stripe WebhookSecret is empty. Webhook verification will fail until Stripe__WebhookSecret is configured.");
+                    }
+
+                    return new Saas.Infra.MVC.Services.Payment.StripePaymentGateway(secretKey, webhookSecret ?? string.Empty);
                 });
+
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IPaymentService, Saas.Infra.MVC.Services.Payment.PaymentService>();
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IStripeWebhookService, Saas.Infra.MVC.Services.Payment.StripeWebhookService>();
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.ISubscriptionTokenService, Saas.Infra.MVC.Services.Payment.SubscriptionTokenService>();
 
                 var app = builder.Build();
 

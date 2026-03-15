@@ -1,29 +1,40 @@
-﻿# 使用 .NET 8 部署 Azure Container Apps
+﻿# Deploy to Azure Container Apps (.NET 8, Oryx build)
+# Environment variables and secrets are managed manually in Azure Portal:
+#   Azure Portal > Container Apps > saas-web-app3 > Containers > Environment variables
+#   Required env vars (source = "Reference to secret"):
+#     RSA_PRIVATE_KEY_CONTENT      -> rsa-private-key-content
+#     RSA_PUBLIC_KEY_CONTENT       -> rsa-public-key-content
+#     ConnectionStrings__DefaultConnection -> connectionstrings-defaultconnection
+#     Stripe__SecretKey            -> stripe-secret-key
+#     Stripe__WebhookSecret        -> stripe-webhook-secret
+#     Stripe__PublishableKey       -> stripe-publishable-key
+#   Required env vars (source = "Manual entry"):
+#     ASPNETCORE_ENVIRONMENT       = Production
+# 使用 .NET 8 部署 Azure Container Apps
 # 采用服务主权凭证 (Service Principal JSON) 认证
 # 原生 .NET 部署 (Oryx)，不使用 Dockerfile
+
 
 name: Deploy to Azure Container Apps
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 使用在 GitHub Secrets 中配置的 AZURE_CREDENTIALS 登录
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 部署到 Container App
       - name: Build and deploy Container App
         uses: azure/container-apps-deploy-action@v2
         with:
@@ -33,15 +44,5 @@ jobs:
           registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
           containerAppName: saas-web-app3
           resourceGroup: saas-infra-group
-          targetPort: 8080 
+          targetPort: 8080
           ingress: external
-          # 环境变量映射：左边是程序读取的名字，右边是 Azure Portal 里的 Secret 名字
-          environmentVariables: |
-            ASPNETCORE_ENVIRONMENT=Production
-            RSA_PRIVATE_KEY_CONTENT=secretref:rsa-private-key-content
-            RSA_PUBLIC_KEY_CONTENT=secretref:rsa-public-key-content
-            ConnectionStrings__DefaultConnection=secretref:connectionstrings-defaultconnection
-            Stripe__SecretKey=secretref:stripe-secret-key
-            Stripe__WebhookSecret=secretref:stripe-webhook-secret
-            Stripe__PublishableKey=secretref:stripe-publishable-key
-

@@ -98,7 +98,7 @@ namespace Saas.Infra.MVC.Middleware
                         return new[] { _validationKey };
                     },
                     ValidateIssuer = true,
-                    ValidIssuer = _configuration["Jwt:Issuer"] ?? JwtConstants.Issuer,
+                    ValidIssuer = _configuration["Jwt:Issuer"] ?? Saas.Infra.MVC.Util.JwtConstants.Issuer,
                     ValidateAudience = true,
                     ValidAudience = _configuration["Jwt:Audience"] ?? "Saas.Infra.Clients",
                     ValidateLifetime = true,

@@ -76,7 +76,7 @@ namespace Saas.Infra.MVC.Services.Payment
 
             var signingCredentials = new SigningCredentials(_jwtSigningKey, SecurityAlgorithms.RsaSha256);
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"] ?? JwtConstants.Issuer,
+                issuer: _configuration["Jwt:Issuer"] ?? Saas.Infra.MVC.Util.JwtConstants.Issuer,
                 audience: _configuration["Jwt:SubscriptionAudience"] ?? "Saas.Infra.Subscription",
                 claims: claims,
                 notBefore: now.UtcDateTime,

@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 使用你刚配置的 JSON Secret 进行登录
+      # 使用在 GitHub Secrets 中配置的 AZURE_CREDENTIALS 登录
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -35,7 +35,7 @@ jobs:
           resourceGroup: saas-infra-group
           targetPort: 8080 
           ingress: external
-          # 关键新增：将代码需要的变量名映射到已经在 ACA 配置好的 Secret 名称上
+          # 环境变量映射：左边是程序读取的名字，右边是 Azure Portal 里的 Secret 名字
           environmentVariables: |
             ASPNETCORE_ENVIRONMENT=Production
             RSA_PRIVATE_KEY_CONTENT=secretref:rsa-private-key-content

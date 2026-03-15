@@ -2,13 +2,14 @@
 # 原生 .NET 部署 (Oryx)，不使用 DOCKER
 # 变量全部手动配置在ACA中，不再通过GitHub Secrets传递
 
-name: Deploy .NET 8 to Azure Container Apps
+name: Deploy to Azure Container Apps
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
-  # 关键：添加id-token权限，解决token获取失败问题
+  workflow_dispatch:  # 保留手动触发部署的能力，方便测试
+
+# OIDC认证必须的权限配置（之前漏掉了，会导致CLI登录失败）
 permissions:
   id-token: write
   contents: read
@@ -21,24 +22,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 核心修复：用OIDC认证（GitHub官方推荐，无需手动Secret）
-      - name: Login to Azure
+      # CLI登录（极简版，适配ACA部署）
+      - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}
-          auth-type: OIDC  # 用OIDC替代托管标识/CLI，避开所有坑
+          auth-type: cli
 
-      # 部署命令（保留你的核心逻辑）
-      - name: Deploy to Azure Container Apps
-        run: |
-          az containerapp up \
-            --name "${{ secrets.ACA_APP_NAME }}" \
-            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-            --source "." \
-            --target-port 8080 \
-            --ingress external \
-            --environment "${{ secrets.ACA_ENV_NAME }}" \
-            --registry-server "${{ secrets.ACR_LOGIN_SERVER }}"
-        shell: bash
+      # 部署Container App（补全端口/网络配置，适配.NET 8默认端口）
+      - name: Build and push container image
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          registryUrl: saaswebreg001-cjd0cucyfdh7bcbk.azurecr.io
+          registryUsername: ${{ secrets.REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
+          containerAppName: saas-web-app3
+          resourceGroup: saas-infra-group
+          targetPort: 8080  # .NET 8默认监听8080端口，必须指定
+          ingress: external  # 允许外部访问，否则部署后打不开应用

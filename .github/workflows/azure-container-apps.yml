@@ -2,7 +2,7 @@
 # 原生 .NET 部署 (Oryx)，不使用 DOCKER
 # 变量全部手动配置在ACA中，不再通过GitHub Secrets传递
 
-name: Deploy .NET 8 to Azure Container Apps
+name: Deploy to Azure Container Apps
 
 on:
   push:
@@ -10,36 +10,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 核心修改：切回服务主体认证（适配GitHub托管Runner）
-      - name: Login to Azure (Service Principal)
-        uses: azure/login@v1
+      # 核心修复：用v2版本 + 完整的服务主体参数（包含clientSecret）
+      - name: Login to Azure
+        uses: azure/login@v2
         with:
-          creds: '{"clientId":"${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}"}'
+          client-id: ${{ secrets.SAASWEBAPP3_AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.SAASWEBAPP_AZURE_CLIENT_SECRET }}  # 必须加这个！
+          tenant-id: ${{ secrets.SAASWEBAPP3_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.SAASWEBAPP3_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Check Required Secrets
+      # 部署命令（保留你原来的逻辑）
+      - name: Deploy to Container Apps
         run: |
-          if [ -z "${{ secrets.ACA_APP_NAME }}" ]; then echo "Error: ACA_APP_NAME secret is missing"; exit 1; fi
-          if [ -z "${{ secrets.AZURE_RESOURCE_GROUP }}" ]; then echo "Error: AZURE_RESOURCE_GROUP secret is missing"; exit 1; fi
-          if [ -z "${{ secrets.ACA_ENV_NAME }}" ]; then echo "Error: ACA_ENV_NAME secret is missing"; exit 1; fi
-          if [ -z "${{ secrets.ACR_LOGIN_SERVER }}" ]; then echo "Error: ACR_LOGIN_SERVER secret is missing"; exit 1; fi
-          echo "All required secrets are present."
-
-      - name: Deploy to Azure Container Apps (Native Oryx)
-        run: az containerapp up \
-          --name "${{ secrets.ACA_APP_NAME }}" \
-          --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-          --source "." \
-          --target-port 8080 \
-          --ingress external \
-          --environment "${{ secrets.ACA_ENV_NAME }}" \
-          --registry-server "${{ secrets.ACR_LOGIN_SERVER }}" \
-          --query "properties.configuration.ingress.fqdn" \
-          --output table
+          az containerapp up \
+            --name "${{ secrets.ACA_APP_NAME }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --source "." \
+            --target-port 8080 \
+            --ingress external \
+            --environment "${{ secrets.ACA_ENV_NAME }}" \
+            --registry-server "${{ secrets.ACR_LOGIN_SERVER }}"
         shell: bash

@@ -37,8 +37,9 @@ jobs:
           ingress: external
           # 关键新增：将代码需要的变量名映射到已经在 ACA 配置好的 Secret 名称上
           environmentVariables: |
-            rsa-private-key-content=secretref:rsa-private-key-content
-            rsa-public-key-content=secretref:rsa-public-key-content
+            ASPNETCORE_ENVIRONMENT=Production
+            RSA_PRIVATE_KEY_CONTENT=secretref:rsa-private-key-content
+            RSA_PUBLIC_KEY_CONTENT=secretref:rsa-public-key-content
             ConnectionStrings__DefaultConnection=secretref:connectionstrings-defaultconnection
             Stripe__SecretKey=secretref:stripe-secret-key
             Stripe__WebhookSecret=secretref:stripe-webhook-secret

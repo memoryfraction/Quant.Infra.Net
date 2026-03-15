@@ -27,6 +27,15 @@ namespace Saas.Infra.MVC
             try
             {
                 Log.Information("Saas.Infra.MVC application starting...");
+
+                // --- Startup diagnostics ---
+                Log.Information("[STARTUP DIAG] AppContext.BaseDirectory={BaseDir}", AppContext.BaseDirectory);
+                Log.Information("[STARTUP DIAG] CONTAINER_APP_NAME={Val}", Environment.GetEnvironmentVariable("CONTAINER_APP_NAME") ?? "(not set)");
+                Log.Information("[STARTUP DIAG] DOTNET_RUNNING_IN_CONTAINER={Val}", Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") ?? "(not set)");
+                Log.Information("[STARTUP DIAG] ASPNETCORE_ENVIRONMENT={Val}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "(not set)");
+                Log.Information("[STARTUP DIAG] RSA_PRIVATE_KEY_CONTENT env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RSA_PRIVATE_KEY_CONTENT")));
+                Log.Information("[STARTUP DIAG] RSA_PUBLIC_KEY_CONTENT env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RSA_PUBLIC_KEY_CONTENT")));
+                Log.Information("[STARTUP DIAG] ConnectionStrings__DefaultConnection env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")));
                 var builder = WebApplication.CreateBuilder(args);
 
                 // --- 1. 转发头配置（解决 Ingress HTTPS 识别） ---
@@ -40,6 +49,7 @@ namespace Saas.Infra.MVC
                 builder.Host.UseSerilog();
 
                 var runtimeEnv = UtilityService.GetCurrentEnvironment();
+                Log.Information("Detected runtime environment: {Env}", runtimeEnv);
 
                 // --- 2. 绝对路径还原 RSA 文件 ---
                 var baseDir = AppContext.BaseDirectory;
@@ -53,6 +63,9 @@ namespace Saas.Infra.MVC
                     var rsaPublicKeyContent = builder.Configuration["RSA_PUBLIC_KEY_CONTENT"]
                                             ?? builder.Configuration["rsa-public-key-content"];
 
+                    Log.Information("RSA_PRIVATE_KEY_CONTENT present: {HasPrivate}, RSA_PUBLIC_KEY_CONTENT present: {HasPublic}",
+                        !string.IsNullOrEmpty(rsaPrivateKeyContent), !string.IsNullOrEmpty(rsaPublicKeyContent));
+
                     if (!string.IsNullOrEmpty(rsaPrivateKeyContent))
                     {
                         var dir = Path.GetDirectoryName(privateKeyPath);
@@ -60,16 +73,28 @@ namespace Saas.Infra.MVC
                         File.WriteAllText(privateKeyPath, rsaPrivateKeyContent);
                         Log.Information("RSA private key restored to {Path}", privateKeyPath);
                     }
+                    else
+                    {
+                        Log.Error("RSA_PRIVATE_KEY_CONTENT is empty or not configured in ACA secrets. Ensure the secret 'rsa-private-key-content' is set in Azure Container Apps.");
+                    }
                     if (!string.IsNullOrEmpty(rsaPublicKeyContent))
                     {
                         var dir = Path.GetDirectoryName(publicKeyPath);
                         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                         File.WriteAllText(publicKeyPath, rsaPublicKeyContent);
+                        Log.Information("RSA public key restored to {Path}", publicKeyPath);
                     }
+                }
+                else
+                {
+                    Log.Information("Non-container environment detected, expecting RSA key files on disk.");
                 }
 
                 if (!File.Exists(privateKeyPath))
-                    throw new FileNotFoundException($"RSA private key NOT FOUND at {privateKeyPath}");
+                    throw new FileNotFoundException(
+                        $"RSA private key NOT FOUND at {privateKeyPath}. "  +
+                        $"Environment: {runtimeEnv}. "  +
+                        "If running in ACA, ensure the secret 'rsa-private-key-content' is configured in Azure Portal > Container Apps > Secrets.");
 
                 // --- 3. 基础组件注册 (RSA & JwtOptions) ---
                 builder.Services.AddSingleton(sp =>

@@ -196,6 +196,11 @@ namespace Saas.Infra.MVC.Controllers.Api
                     order.Id, checkoutSession.SessionId, userId, price.Id);
                 return Ok(response);
             }
+            catch (InvalidOperationException ex)
+            {
+                Log.Warning(ex, "Business error creating order: {Message}", ex.Message);
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Unexpected error creating order");
@@ -527,8 +532,9 @@ namespace Saas.Infra.MVC.Controllers.Api
             if (stripeGateway == null)
                 throw new InvalidOperationException("Stripe gateway is not configured");
 
-            var successUrl = $"{Request.Scheme}://{Request.Host}/checkout?payment=success&orderId={order.Id}&session_id={{CHECKOUT_SESSION_ID}}";
-            var cancelUrl = $"{Request.Scheme}://{Request.Host}/checkout?payment=cancel&orderId={order.Id}";
+            var publicBaseUrl = ResolvePublicBaseUrl();
+            var successUrl = $"{publicBaseUrl}/checkout?payment=success&orderId={order.Id}&session_id={{CHECKOUT_SESSION_ID}}";
+            var cancelUrl = $"{publicBaseUrl}/checkout?payment=cancel&orderId={order.Id}";
             var metadata = new Dictionary<string, string>
             {
                 ["orderId"] = order.Id.ToString(),
@@ -536,6 +542,10 @@ namespace Saas.Infra.MVC.Controllers.Api
                 ["priceId"] = price.Id.ToString(),
                 ["productId"] = price.ProductId.ToString()
             };
+
+            Log.Information(
+                "Creating Stripe checkout for order {OrderId}, successUrl={SuccessUrl}, cancelUrl={CancelUrl}",
+                order.Id, successUrl, cancelUrl);
 
             var checkoutSession = await stripeGateway.CreateCheckoutSessionAsync(
                 price.Id,
@@ -551,6 +561,21 @@ namespace Saas.Infra.MVC.Controllers.Api
                 throw new InvalidOperationException("Failed to create Stripe checkout session");
 
             return checkoutSession;
+        }
+
+        /// <summary>
+        /// 解析公网基础地址（优先取配置 Payment:PublicBaseUrl，其次取当前请求Host）。
+        /// Resolves public base URL for payment redirects.
+        /// </summary>
+        private string ResolvePublicBaseUrl()
+        {
+            var configured = _configuration["Payment:PublicBaseUrl"];
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured.TrimEnd('/');
+            }
+
+            return $"{Request.Scheme}://{Request.Host}";
         }
 
         /// <summary>

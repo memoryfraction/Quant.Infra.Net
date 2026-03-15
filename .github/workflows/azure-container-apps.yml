@@ -7,9 +7,9 @@ name: Deploy to Azure Container Apps
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # 保留手动触发部署的能力，方便测试
+  workflow_dispatch: 
 
-# OIDC认证必须的权限配置（之前漏掉了，会导致CLI登录失败）
+# 核心：必须配置 id-token 写入权限，否则 OIDC 无法交换 Token
 permissions:
   id-token: write
   contents: read
@@ -22,14 +22,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # CLI登录（极简版，适配ACA部署）
+      # 修正后的 Azure 登录：使用 OIDC
+      # 需要在 GitHub Secrets 中预先配置这三个 ID
       - name: Azure Login
         uses: azure/login@v2
         with:
-          auth-type: cli
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # 部署Container App（补全端口/网络配置，适配.NET 8默认端口）
-      - name: Build and push container image
+      # 部署到 Container App
+      # 自动识别 .NET 8 项目并使用 Oryx 进行原生构建
+      - name: Build and deploy Container App
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
@@ -38,5 +42,6 @@ jobs:
           registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
           containerAppName: saas-web-app3
           resourceGroup: saas-infra-group
-          targetPort: 8080  # .NET 8默认监听8080端口，必须指定
-          ingress: external  # 允许外部访问，否则部署后打不开应用
+          # .NET 8 容器默认监听 8080，务必保持一致
+          targetPort: 8080 
+          ingress: external

@@ -45,17 +45,3 @@ jobs:
             Stripe__WebhookSecret=secretref:stripe-webhook-secret
             Stripe__PublishableKey=secretref:stripe-publishable-key
 
-      # Ensure env vars bound to secrets after Oryx deploy
-      - name: Ensure env vars are bound to secrets
-        run: |
-          az containerapp update \
-            --name saas-web-app3 \
-            --resource-group saas-infra-group \
-            --set-env-vars \
-              ASPNETCORE_ENVIRONMENT=Production \
-              RSA_PRIVATE_KEY_CONTENT=secretref:rsa-private-key-content \
-              RSA_PUBLIC_KEY_CONTENT=secretref:rsa-public-key-content \
-              ConnectionStrings__DefaultConnection=secretref:connectionstrings-defaultconnection \
-              Stripe__SecretKey=secretref:stripe-secret-key \
-              Stripe__WebhookSecret=secretref:stripe-webhook-secret \
-              Stripe__PublishableKey=secretref:stripe-publishable-key

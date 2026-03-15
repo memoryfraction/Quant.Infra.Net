@@ -38,7 +38,8 @@ jobs:
       - name: Build and deploy Container App
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}
+          appSourcePath: ${{ github.workspace }}/src
+          dockerfilePath: Saas.Infra.MVC/Dockerfile
           registryUrl: saaswebreg001-cjd0cucyfdh7bcbk.azurecr.io
           registryUsername: ${{ secrets.REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.REGISTRY_PASSWORD }}

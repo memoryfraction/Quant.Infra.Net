@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.Core;
@@ -126,6 +126,12 @@ namespace Saas.Infra.MVC
                 builder.Services.AddScoped<IUserRepository, Saas.Infra.Data.UserRepository>();
                 builder.Services.AddScoped<IRefreshTokenRepository, Saas.Infra.Data.RefreshTokenRepository>();
                 builder.Services.AddScoped<IPasswordHasher, Saas.Infra.SSO.BCryptPasswordHasher>();
+
+                // 产品配置服务（Dashboard 页面依赖）
+                builder.Services.AddScoped<Saas.Infra.MVC.Services.Product.IProductConfigService, Saas.Infra.MVC.Services.Product.ProductConfigService>();
+
+                // 全局异常页面状态服务（/error 页面依赖，Singleton 因为跨请求共享状态）
+                builder.Services.AddSingleton<Saas.Infra.MVC.Services.Errors.GlobalExceptionPageService>();
 
                 builder.Services.AddDbContext<Saas.Infra.Data.ApplicationDbContext>(options =>
                 {

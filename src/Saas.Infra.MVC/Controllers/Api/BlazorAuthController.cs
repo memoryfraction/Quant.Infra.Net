@@ -79,6 +79,19 @@ namespace Saas.Infra.MVC.Controllers.Api
             return Redirect(target);
         }
 
+        /// <summary>
+        /// Deletes the auth cookie and redirects to the login page.
+        /// Called by the Blazor logout flow after clearing the in-memory token.
+        /// </summary>
+        /// <returns>Redirect to the login page.</returns>
+        [HttpGet("clear-auth")]
+        public IActionResult ClearAuth()
+        {
+            Response.Cookies.Delete("AccessToken");
+            _logger.LogInformation("Blazor auth cookie cleared. Redirecting to login.");
+            return Redirect("/account/login");
+        }
+
         private static string GetDefaultDashboardRoute(string token)
         {
             if (string.IsNullOrWhiteSpace(token))

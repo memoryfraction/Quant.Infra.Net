@@ -1,4 +1,4 @@
-using Saas.Infra.MVC.Services.Product;
+using Saas.Infra.Services.Product;
 
 namespace Saas.Infra.MVC.Models.Responses;
 

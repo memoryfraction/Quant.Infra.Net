@@ -2,8 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Saas.Infra.Data;
+using Saas.Infra.Services.Product;
 using Serilog;
 
 namespace Saas.Infra.MVC.Controllers.Mvc
@@ -16,19 +15,19 @@ namespace Saas.Infra.MVC.Controllers.Mvc
     [Authorize]
     public class CheckoutController : Controller
     {
-        private readonly ApplicationDbContext _db;
+        private readonly IProductApplicationService _productApplicationService;
         private readonly IConfiguration _configuration;
 
         /// <summary>
         /// 初始化<see cref="CheckoutController"/>的新实例。
         /// Initializes a new instance of the <see cref="CheckoutController"/> class.
         /// </summary>
-        /// <param name="db">数据库上下文。 / Database context.</param>
+        /// <param name="productApplicationService">产品应用服务。 / Product application service.</param>
         /// <param name="configuration">配置。 / Configuration.</param>
         /// <exception cref="ArgumentNullException">当参数为null时抛出。 / Thrown when parameters are null.</exception>
-        public CheckoutController(ApplicationDbContext db, IConfiguration configuration)
+        public CheckoutController(IProductApplicationService productApplicationService, IConfiguration configuration)
         {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
+            _productApplicationService = productApplicationService ?? throw new ArgumentNullException(nameof(productApplicationService));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
@@ -50,11 +49,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
             try
             {
-                var price = await _db.Prices
-                    .AsNoTracking()
-                    .Include(p => p.Product)
-                    .FirstOrDefaultAsync(p => p.Id == priceId && p.IsActive);
-
+                var price = await _productApplicationService.GetActivePriceWithProductAsync(priceId);
                 if (price == null || price.Product == null || !price.Product.IsActive)
                 {
                     Log.Warning("Price {PriceId} not found or not active", priceId);

@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Saas.Infra.Core;
+using Saas.Infra.Services.Sso;
 using Saas.Infra.MVC.Models;
-using Serilog;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
@@ -13,14 +14,14 @@ namespace Saas.Infra.MVC.Controllers.Api
     [Route("sso")]
     public class SsoController : ControllerBase
     {
-        private readonly SSO.ISsoService _ssoService;
+        private readonly ISsoService _ssoService;
 
         /// <summary>
         /// 初始化 <see cref="SsoController"/> 类的新实例。 / Initializes a new instance of the <see cref="SsoController"/> class.
         /// </summary>
         /// <param name="ssoService">SSO 服务实例，用于处理RSA签名的JWT令牌生成与验证。 / The SSO service instance used to handle RSA-signed JWT token generation and validation.</param>
         /// <exception cref="ArgumentNullException">当 <paramref name="ssoService"/> 为null时抛出。 / Thrown when <paramref name="ssoService"/> is null.</exception>
-        public SsoController(SSO.ISsoService ssoService)
+        public SsoController(ISsoService ssoService)
         {
             _ssoService = ssoService ?? throw new ArgumentNullException(nameof(ssoService));
         }
@@ -48,7 +49,7 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             if (!ModelState.IsValid)
             {
-                Log.Warning("Invalid model state for login request: {Email}", request.Email);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Invalid model state for login request: {Email}", request.Email);
                 return BadRequest(ModelState);
             }
 
@@ -60,19 +61,19 @@ namespace Saas.Infra.MVC.Controllers.Api
                     request.Password,
                     request.ClientId ?? "default");
 
-                Log.Information("RSA-signed token generated successfully for email: {Email}", request.Email);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA-signed token generated successfully for email: {Email}", request.Email);
                 return Ok(tokenResponse);
             }
             catch (InvalidOperationException ex)
             {
                 // 3. 处理预期的业务异常（返回具体的错误消息）
-                Log.Warning("Login failed for email: {Email}. Reason: {Reason}", request.Email, ex.Message);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Login failed for email: {Email}. Reason: {Reason}", request.Email, ex.Message);
                 return Unauthorized(new { message = ex.Message });
             }
             catch (Exception ex)
             {
                 // 4. 处理未预期的系统异常
-                Log.Error(ex, "Unexpected error during RSA token generation for email: {Email}. Exception: {ExceptionMessage}", request.Email, ex.Message);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Unexpected error during RSA token generation for email: {Email}. Exception: {ExceptionMessage}", request.Email, ex.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Internal server error, please try again later" });
             }
         }

@@ -4,8 +4,11 @@ using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.Core;
 using Saas.Infra.MVC.Middleware;
 using Saas.Infra.MVC.Services.Blazor;
+using Saas.Infra.Services.Payment;
+using Saas.Infra.Services.Product;
 using Microsoft.AspNetCore.Components.Authorization;
 using Serilog;
+using Serilog.Events;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.HttpOverrides;
 
@@ -26,16 +29,14 @@ namespace Saas.Infra.MVC
 
             try
             {
-                Log.Information("Saas.Infra.MVC application starting...");
-
-                // --- Startup diagnostics ---
-                Log.Information("[STARTUP DIAG] AppContext.BaseDirectory={BaseDir}", AppContext.BaseDirectory);
-                Log.Information("[STARTUP DIAG] CONTAINER_APP_NAME={Val}", Environment.GetEnvironmentVariable("CONTAINER_APP_NAME") ?? "(not set)");
-                Log.Information("[STARTUP DIAG] DOTNET_RUNNING_IN_CONTAINER={Val}", Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") ?? "(not set)");
-                Log.Information("[STARTUP DIAG] ASPNETCORE_ENVIRONMENT={Val}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "(not set)");
-                Log.Information("[STARTUP DIAG] rsa-private-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-private-key-content")));
-                Log.Information("[STARTUP DIAG] rsa-public-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-public-key-content")));
-                Log.Information("[STARTUP DIAG] ConnectionStrings__DefaultConnection env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")));
+                UtilityService.LogAndWriteLine("Saas.Infra.MVC application starting...", LogEventLevel.Information);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] AppContext.BaseDirectory={BaseDir}", AppContext.BaseDirectory);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] CONTAINER_APP_NAME={Val}", Environment.GetEnvironmentVariable("CONTAINER_APP_NAME") ?? "(not set)");
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] DOTNET_RUNNING_IN_CONTAINER={Val}", Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") ?? "(not set)");
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] ASPNETCORE_ENVIRONMENT={Val}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "(not set)");
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] rsa-private-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-private-key-content")));
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] rsa-public-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-public-key-content")));
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] ConnectionStrings__DefaultConnection env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")));
                 var builder = WebApplication.CreateBuilder(args);
 
                 // --- 1. 转发头配置（解决 Ingress HTTPS 识别） ---
@@ -52,7 +53,7 @@ namespace Saas.Infra.MVC
                 builder.Host.UseSerilog();
 
                 var runtimeEnv = UtilityService.GetCurrentEnvironment();
-                Log.Information("Detected runtime environment: {Env}", runtimeEnv);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Detected runtime environment: {Env}", runtimeEnv);
 
                 // --- 2. 绝对路径还原 RSA 文件 ---
                 var baseDir = AppContext.BaseDirectory;
@@ -66,7 +67,7 @@ namespace Saas.Infra.MVC
                     var rsaPublicKeyContent = builder.Configuration["RSA_PUBLIC_KEY_CONTENT"]
                                             ?? builder.Configuration["rsa-public-key-content"];
 
-                    Log.Information("RSA_PRIVATE_KEY_CONTENT present: {HasPrivate}, RSA_PUBLIC_KEY_CONTENT present: {HasPublic}",
+                    UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA_PRIVATE_KEY_CONTENT present: {HasPrivate}, RSA_PUBLIC_KEY_CONTENT present: {HasPublic}",
                         !string.IsNullOrEmpty(rsaPrivateKeyContent), !string.IsNullOrEmpty(rsaPublicKeyContent));
 
                     if (!string.IsNullOrEmpty(rsaPrivateKeyContent))
@@ -74,23 +75,23 @@ namespace Saas.Infra.MVC
                         var dir = Path.GetDirectoryName(privateKeyPath);
                         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                         File.WriteAllText(privateKeyPath, rsaPrivateKeyContent);
-                        Log.Information("RSA private key restored to {Path}", privateKeyPath);
+                        UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA private key restored to {Path}", privateKeyPath);
                     }
                     else
                     {
-                        Log.Error("RSA_PRIVATE_KEY_CONTENT is empty or not configured in ACA secrets. Ensure the secret 'rsa-private-key-content' is set in Azure Container Apps.");
+                        UtilityService.LogAndWriteLine("RSA_PRIVATE_KEY_CONTENT is empty or not configured in ACA secrets. Ensure the secret 'rsa-private-key-content' is set in Azure Container Apps.", LogEventLevel.Error);
                     }
                     if (!string.IsNullOrEmpty(rsaPublicKeyContent))
                     {
                         var dir = Path.GetDirectoryName(publicKeyPath);
                         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                         File.WriteAllText(publicKeyPath, rsaPublicKeyContent);
-                        Log.Information("RSA public key restored to {Path}", publicKeyPath);
+                        UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA public key restored to {Path}", publicKeyPath);
                     }
                 }
                 else
                 {
-                    Log.Information("Non-container environment detected, expecting RSA key files on disk.");
+                    UtilityService.LogAndWriteLine("Non-container environment detected, expecting RSA key files on disk.", LogEventLevel.Information);
                 }
 
                 if (!File.Exists(privateKeyPath))
@@ -122,16 +123,24 @@ namespace Saas.Infra.MVC
 
                 // --- 4. 核心业务服务注册 (解决注入报错的关键) ---
                 // 注意：必须先注册 ITokenService，ISsoService 才能成功解析
-                builder.Services.AddScoped<ITokenService, Saas.Infra.SSO.TokenService>();
-                builder.Services.AddScoped<Saas.Infra.SSO.ISsoService, Saas.Infra.SSO.SsoService>();
+                builder.Services.AddScoped<Saas.Infra.Services.Sso.ITokenService, Saas.Infra.Services.Sso.TokenService>();
+                builder.Services.AddScoped<Saas.Infra.Services.Sso.ISsoService, Saas.Infra.Services.Sso.SsoService>();
 
                 // 其他 Repository 和基础设施
                 builder.Services.AddScoped<IUserRepository, Saas.Infra.Data.UserRepository>();
                 builder.Services.AddScoped<IRefreshTokenRepository, Saas.Infra.Data.RefreshTokenRepository>();
-                builder.Services.AddScoped<IPasswordHasher, Saas.Infra.SSO.BCryptPasswordHasher>();
+                builder.Services.AddScoped<IPasswordHasher, Saas.Infra.Services.Sso.BCryptPasswordHasher>();
 
-                // 产品配置服务（Dashboard 页面依赖）
-                builder.Services.AddScoped<Saas.Infra.MVC.Services.Product.IProductConfigService, Saas.Infra.MVC.Services.Product.ProductConfigService>();
+                builder.Services.AddScoped<IProductConfigService, ProductConfigService>();
+                builder.Services.AddScoped<IProductApplicationService, ProductApplicationService>();
+                builder.Services.AddScoped<IPaymentUrlResolver, PaymentUrlResolver>();
+                builder.Services.AddScoped<IUserContextService, UserContextService>();
+                builder.Services.AddScoped<IPaymentService, PaymentService>();
+                builder.Services.AddScoped<IStripeWebhookService, StripeWebhookService>();
+                builder.Services.AddScoped<ISubscriptionTokenService, SubscriptionTokenService>();
+                builder.Services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();
+                builder.Services.AddScoped<ISubscriptionApplicationService, SubscriptionApplicationService>();
+                builder.Services.AddScoped<IAdminTransactionExportService, AdminTransactionExportService>();
 
                 // 全局异常页面状态服务（/error 页面依赖，Singleton 因为跨请求共享状态）
                 builder.Services.AddSingleton<Saas.Infra.MVC.Services.Errors.GlobalExceptionPageService>();
@@ -167,7 +176,7 @@ namespace Saas.Infra.MVC
                 });
 
                 // Stripe
-                builder.Services.AddSingleton<Saas.Infra.MVC.Services.Payment.IPaymentGateway>(sp =>
+                builder.Services.AddSingleton<IPaymentGateway>(sp =>
                 {
                     var config = sp.GetRequiredService<IConfiguration>();
                     var secretKey =
@@ -187,19 +196,15 @@ namespace Saas.Infra.MVC
 
                     if (string.IsNullOrWhiteSpace(webhookSecret))
                     {
-                        Log.Warning("Stripe WebhookSecret is empty. Webhook verification will fail until Stripe__WebhookSecret is configured.");
+                        UtilityService.LogAndWriteLine("Stripe WebhookSecret is empty. Webhook verification will fail until Stripe__WebhookSecret is configured.", LogEventLevel.Warning);
                     }
 
-                    return new Saas.Infra.MVC.Services.Payment.StripePaymentGateway(secretKey, webhookSecret ?? string.Empty);
+                    return new StripePaymentGateway(secretKey, webhookSecret ?? string.Empty);
                 });
 
-                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IPaymentService, Saas.Infra.MVC.Services.Payment.PaymentService>();
-                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IStripeWebhookService, Saas.Infra.MVC.Services.Payment.StripeWebhookService>();
-                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.ISubscriptionTokenService, Saas.Infra.MVC.Services.Payment.SubscriptionTokenService>();
-
+                // --- 6. 管道顺序 ---
                 var app = builder.Build();
 
-                // --- 6. 管道顺序 ---
                 app.UseForwardedHeaders(); // 必须第一
 
                 if (!app.Environment.IsDevelopment())
@@ -224,8 +229,15 @@ namespace Saas.Infra.MVC
 
                 app.Run();
             }
-            catch (Exception ex) { Log.Fatal(ex, "Start failed"); throw; }
-            finally { Log.CloseAndFlush(); }
+            catch (Exception ex)
+            {
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Fatal, "Start failed");
+                throw;
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
     }
 }

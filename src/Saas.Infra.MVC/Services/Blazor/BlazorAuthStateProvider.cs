@@ -3,7 +3,9 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Components.Authorization;
-using Saas.Infra.SSO;
+using Saas.Infra.Core;
+using Saas.Infra.Services.Sso;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Services.Blazor
 {
@@ -37,7 +39,7 @@ namespace Saas.Infra.MVC.Services.Blazor
             var isAuthenticated = _tokenService.IsAuthenticated;
             var rawClaims = _tokenService.GetClaims();
 
-            Serilog.Log.Information(
+            UtilityService.LogAndWriteLine(LogEventLevel.Information,
                 "[BLAZOR AUTH] GetAuthenticationStateAsync called. IsAuthenticated={IsAuth}, ClaimsCount={ClaimsCount}",
                 isAuthenticated,
                 rawClaims?.Count ?? 0);
@@ -45,7 +47,7 @@ namespace Saas.Infra.MVC.Services.Blazor
             if (!isAuthenticated)
             {
                 var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
-                Serilog.Log.Information("[BLAZOR AUTH] Returning anonymous AuthenticationState.");
+                UtilityService.LogAndWriteLine("[BLAZOR AUTH] Returning anonymous AuthenticationState.", LogEventLevel.Information);
                 return Task.FromResult(new AuthenticationState(anonymous));
             }
 
@@ -58,7 +60,7 @@ namespace Saas.Infra.MVC.Services.Blazor
             var identity = new ClaimsIdentity(otherClaims.Concat(roleClaims), "jwt");
             var user = new ClaimsPrincipal(identity);
 
-            Serilog.Log.Information(
+            UtilityService.LogAndWriteLine(LogEventLevel.Information,
                 "[BLAZOR AUTH] Returning authenticated AuthenticationState. Name={Name}, Roles={Roles}",
                 user.Identity?.Name ?? "(none)",
                 string.Join(',', user.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value)));
@@ -79,21 +81,21 @@ namespace Saas.Infra.MVC.Services.Blazor
                 var cookieToken = context?.Request.Cookies["AccessToken"];
                 if (!string.IsNullOrWhiteSpace(cookieToken))
                 {
-                    Serilog.Log.Information("[BLAZOR AUTH] Hydrating token service from HttpContext cookie.");
+                    UtilityService.LogAndWriteLine("[BLAZOR AUTH] Hydrating token service from HttpContext cookie.", LogEventLevel.Information);
                     _tokenService.SetToken(cookieToken);
                     return;
                 }
 
                 if (context?.User?.Identity?.IsAuthenticated == true)
                 {
-                    Serilog.Log.Information(
+                    UtilityService.LogAndWriteLine(LogEventLevel.Information,
                         "[BLAZOR AUTH] HttpContext user is authenticated but no access token cookie was found. Name={Name}",
                         context.User.Identity?.Name ?? "(none)");
                 }
             }
             catch (Exception ex)
             {
-                Serilog.Log.Warning(ex, "[BLAZOR AUTH] Failed to hydrate token service from HttpContext.");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "[BLAZOR AUTH] Failed to hydrate token service from HttpContext.");
             }
         }
 

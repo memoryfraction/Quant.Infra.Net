@@ -1,9 +1,8 @@
 using Serilog;
 using Serilog.Events;
-using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Saas.Infra.Core
 {
@@ -55,7 +54,6 @@ namespace Saas.Infra.Core
 		/// <exception cref="ArgumentOutOfRangeException">当 <paramref name="level"/> 不是定义的 <see cref="LogEventLevel"/> 值时抛出。 / Thrown when <paramref name="level"/> is not a defined <see cref="LogEventLevel"/> value.</exception>
 		public static void LogAndWriteLine(string message, LogEventLevel level = LogEventLevel.Information)
 		{
-			// Parameter validation
 			if (message is null)
 				throw new ArgumentNullException(nameof(message), "Message cannot be null.");
 
@@ -67,55 +65,98 @@ namespace Saas.Infra.Core
 
 			var formattedMessage = FormatMessage(message, level);
 
-			// Output to console with color
 			Console.ForegroundColor = GetConsoleColor(level);
 			Console.WriteLine(formattedMessage);
 			Console.ResetColor();
 
-			// Output to Serilog (remove formatting for log files)
 			LogToSerilog(message, level);
 		}
 
-        /// <summary>
-        /// 获取当前运行时的精确环境类型。
-        /// Detects the current runtime environment accurately.
-        /// </summary>
-        /// <returns>RuntimeEnvironment 枚举值。</returns>
-        public static RuntimeEnvironment GetCurrentEnvironment()
-        {
-            // 1. 检查 Azure Container Apps 特有环境变量 (优先级最高)
-            // CONTAINER_APP_NAME 是 ACA 平台强制注入的
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CONTAINER_APP_NAME")))
-            {
-                return RuntimeEnvironment.AzureContainerApps;
-            }
+		/// <summary>
+		/// 使用结构化模板将消息输出到控制台和 Serilog。
+		/// Writes a structured message to both the console and Serilog.
+		/// </summary>
+		/// <param name="level">日志级别。 / Log level.</param>
+		/// <param name="messageTemplate">消息模板。 / Message template.</param>
+		/// <param name="propertyValues">模板参数。 / Template values.</param>
+		public static void LogAndWriteLine(LogEventLevel level, string messageTemplate, params object?[] propertyValues)
+		{
+			if (messageTemplate is null)
+				throw new ArgumentNullException(nameof(messageTemplate), "Message template cannot be null.");
+			if (string.IsNullOrWhiteSpace(messageTemplate))
+				throw new ArgumentException("Message template must not be empty or whitespace.", nameof(messageTemplate));
+			if (!Enum.IsDefined(typeof(LogEventLevel), level))
+				throw new ArgumentOutOfRangeException(nameof(level), level, "Invalid LogEventLevel value.");
 
-            // 2. 检查是否在容器内运行 (无论本地还是云端)
-            // DOTNET_RUNNING_IN_CONTAINER 是 .NET 官方镜像默认设置的
-            bool isContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true"
-                               || File.Exists("/.dockerenv");
+			var renderedMessage = RenderMessage(messageTemplate, propertyValues);
+			LogAndWriteLine(renderedMessage, level);
+			LogToSerilog(messageTemplate, level, propertyValues);
+		}
 
-            if (isContainer)
-            {
-                return RuntimeEnvironment.LocalContainer;
-            }
+		/// <summary>
+		/// 使用异常和结构化模板将消息输出到控制台和 Serilog。
+		/// Writes an exception with a structured message to both the console and Serilog.
+		/// </summary>
+		/// <param name="exception">异常对象。 / Exception object.</param>
+		/// <param name="level">日志级别。 / Log level.</param>
+		/// <param name="messageTemplate">消息模板。 / Message template.</param>
+		/// <param name="propertyValues">模板参数。 / Template values.</param>
+		public static void LogAndWriteLine(Exception exception, LogEventLevel level, string messageTemplate, params object?[] propertyValues)
+		{
+			if (exception is null)
+				throw new ArgumentNullException(nameof(exception), "Exception cannot be null.");
+			if (messageTemplate is null)
+				throw new ArgumentNullException(nameof(messageTemplate), "Message template cannot be null.");
+			if (string.IsNullOrWhiteSpace(messageTemplate))
+				throw new ArgumentException("Message template must not be empty or whitespace.", nameof(messageTemplate));
+			if (!Enum.IsDefined(typeof(LogEventLevel), level))
+				throw new ArgumentOutOfRangeException(nameof(level), level, "Invalid LogEventLevel value.");
 
-            // 3. 检查操作系统平台
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return RuntimeEnvironment.LocalWindows;
-            }
+			var renderedMessage = RenderMessage(messageTemplate, propertyValues);
+			LogAndWriteLine($"{renderedMessage}{Environment.NewLine}{exception}", level);
+			LogToSerilog(exception, messageTemplate, level, propertyValues);
+		}
 
-            return RuntimeEnvironment.OtherLinux;
-        }
+		/// <summary>
+		/// 获取当前运行时的精确环境类型。
+		/// Detects the current runtime environment accurately.
+		/// </summary>
+		/// <returns>RuntimeEnvironment 枚举值。</returns>
+		public static RuntimeEnvironment GetCurrentEnvironment()
+		{
+			// 1. 检查 Azure Container Apps 特有环境变量 (优先级最高)
+			// CONTAINER_APP_NAME 是 ACA 平台强制注入的
+			if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CONTAINER_APP_NAME")))
+			{
+				return RuntimeEnvironment.AzureContainerApps;
+			}
 
-        /// <summary>
-        /// 根据日志级别获取对应的控制台颜色。
-        /// Gets the console color corresponding to the log level.
-        /// </summary>
-        /// <param name="level">日志级别。 / The log level.</param>
-        /// <returns>对应的控制台颜色。 / The corresponding console color.</returns>
-        private static ConsoleColor GetConsoleColor(LogEventLevel level)
+			// 2. 检查是否在容器内运行 (无论本地还是云端)
+			// DOTNET_RUNNING_IN_CONTAINER 是 .NET 官方镜像默认设置的
+			bool isContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true"
+							   || File.Exists("/.dockerenv");
+
+			if (isContainer)
+			{
+				return RuntimeEnvironment.LocalContainer;
+			}
+
+			// 3. 检查操作系统平台
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
+				return RuntimeEnvironment.LocalWindows;
+			}
+
+			return RuntimeEnvironment.OtherLinux;
+		}
+
+		/// <summary>
+		/// 根据日志级别获取对应的控制台颜色。
+		/// Gets the console color corresponding to the log level.
+		/// </summary>
+		/// <param name="level">日志级别。 / The log level.</param>
+		/// <returns>对应的控制台颜色。 / The corresponding console color.</returns>
+		private static ConsoleColor GetConsoleColor(LogEventLevel level)
 		{
 			return level switch
 			{
@@ -158,6 +199,88 @@ namespace Saas.Infra.Core
 					Log.Fatal(message);
 					break;
 			}
+		}
+
+		/// <summary>
+		/// 将结构化模板写入 Serilog。
+		/// Writes a structured template to Serilog.
+		/// </summary>
+		private static void LogToSerilog(string messageTemplate, LogEventLevel level, params object?[] propertyValues)
+		{
+			switch (level)
+			{
+				case LogEventLevel.Verbose:
+					Log.Verbose(messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Debug:
+					Log.Debug(messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Information:
+					Log.Information(messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Warning:
+					Log.Warning(messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Error:
+					Log.Error(messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Fatal:
+					Log.Fatal(messageTemplate, propertyValues);
+					break;
+			}
+		}
+
+		/// <summary>
+		/// 将异常和结构化模板写入 Serilog。
+		/// Writes an exception and structured template to Serilog.
+		/// </summary>
+		private static void LogToSerilog(Exception exception, string messageTemplate, LogEventLevel level, params object?[] propertyValues)
+		{
+			switch (level)
+			{
+				case LogEventLevel.Verbose:
+					Log.Verbose(exception, messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Debug:
+					Log.Debug(exception, messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Information:
+					Log.Information(exception, messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Warning:
+					Log.Warning(exception, messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Error:
+					Log.Error(exception, messageTemplate, propertyValues);
+					break;
+				case LogEventLevel.Fatal:
+					Log.Fatal(exception, messageTemplate, propertyValues);
+					break;
+			}
+		}
+
+		/// <summary>
+		/// 将 Serilog 模板渲染为可输出文本。
+		/// Renders a Serilog template into printable text.
+		/// </summary>
+		private static string RenderMessage(string messageTemplate, params object?[] propertyValues)
+		{
+			if (propertyValues == null || propertyValues.Length == 0)
+			{
+				return messageTemplate;
+			}
+
+			var index = 0;
+			return Regex.Replace(messageTemplate, "\\{[^{}]+\\}", match =>
+			{
+				if (index >= propertyValues.Length)
+				{
+					return match.Value;
+				}
+
+				var value = propertyValues[index++];
+				return value?.ToString() ?? "null";
+			});
 		}
 
 		/// <summary>

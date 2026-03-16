@@ -1,7 +1,9 @@
+using Saas.Infra.Core;
 using Serilog;
 using System.Net;
 using System.Text.Json;
 using Saas.Infra.MVC.Services.Errors;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Middleware
 {
@@ -54,7 +56,7 @@ namespace Saas.Infra.MVC.Middleware
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Global exception caught: {ErrorMessage}", ex.Message);
-                Log.Error(ex, "Serilog global exception log: {ErrorMessage}", ex.Message);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Serilog global exception log: {ErrorMessage}", ex.Message);
 
                 var statusCode = (int)HttpStatusCode.InternalServerError;
                 var errorId = _globalExceptionPageService.StoreException(ex, context, statusCode);

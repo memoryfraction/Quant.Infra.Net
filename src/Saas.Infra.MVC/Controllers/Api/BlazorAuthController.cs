@@ -80,11 +80,10 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 删除身份验证Cookie并重定向到登录页。
         /// Deletes the auth cookie and redirects to the login page.
         /// Called by the Blazor logout flow after clearing the in-memory token.
         /// </summary>
-        /// <returns>重定向到登录页。 / Redirect to the login page.</returns>
+        /// <returns>Redirect to the login page.</returns>
         [HttpGet("clear-auth")]
         public IActionResult ClearAuth()
         {

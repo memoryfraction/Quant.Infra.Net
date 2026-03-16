@@ -80,18 +80,18 @@ namespace Saas.Infra.Core
         /// 获取当前运行时的精确环境类型。
         /// Detects the current runtime environment accurately.
         /// </summary>
-		/// <returns>当前运行时环境类型。 / The detected runtime environment type.</returns>
-		public static RuntimeEnvironment GetCurrentEnvironment()
+        /// <returns>RuntimeEnvironment 枚举值。</returns>
+        public static RuntimeEnvironment GetCurrentEnvironment()
         {
-			// 1. Check Azure Container Apps specific env var (highest priority)
-			// CONTAINER_APP_NAME is always injected by the ACA platform
-			if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CONTAINER_APP_NAME")))
+            // 1. 检查 Azure Container Apps 特有环境变量 (优先级最高)
+            // CONTAINER_APP_NAME 是 ACA 平台强制注入的
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CONTAINER_APP_NAME")))
             {
                 return RuntimeEnvironment.AzureContainerApps;
             }
 
-			// 2. Check if running inside a container (local or cloud)
-			// DOTNET_RUNNING_IN_CONTAINER is set by the official .NET Docker images
+            // 2. 检查是否在容器内运行 (无论本地还是云端)
+            // DOTNET_RUNNING_IN_CONTAINER 是 .NET 官方镜像默认设置的
             bool isContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true"
                                || File.Exists("/.dockerenv");
 
@@ -100,7 +100,7 @@ namespace Saas.Infra.Core
                 return RuntimeEnvironment.LocalContainer;
             }
 
-			// 3. Check operating system platform
+            // 3. 检查操作系统平台
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return RuntimeEnvironment.LocalWindows;

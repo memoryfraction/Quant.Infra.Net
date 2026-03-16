@@ -564,11 +564,20 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 解析公网基础地址（优先取配置 Payment:PublicBaseUrl，其次取当前请求Host）。
+        /// 解析公网基础地址（优先取 ACA 注入域名，其次取配置，最后取当前请求Host）。
         /// Resolves public base URL for payment redirects.
         /// </summary>
         private string ResolvePublicBaseUrl()
         {
+            // Azure Container Apps automatically injects this environment variable.
+            // Example: saas-web-app3.xxx.eastasia.azurecontainerapps.io
+            var acaHostName = Environment.GetEnvironmentVariable("CONTAINER_APP_HOSTNAME");
+            if (!string.IsNullOrWhiteSpace(acaHostName))
+            {
+                return $"https://{acaHostName.Trim().TrimEnd('/')}";
+            }
+
+            // Optional manual override for non-ACA special deployments.
             var configured = _configuration["Payment:PublicBaseUrl"];
             if (!string.IsNullOrWhiteSpace(configured))
             {

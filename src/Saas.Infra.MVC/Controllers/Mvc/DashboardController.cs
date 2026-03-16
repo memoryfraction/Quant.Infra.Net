@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Saas.Infra.Services.Product;
 using System.Text.Json;
 
 namespace Saas.Infra.MVC.Controllers.Mvc
@@ -29,7 +30,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		/// Application configuration.
 		/// </summary>
         private readonly IConfiguration _configuration;
-        private readonly Saas.Infra.MVC.Services.Product.IProductConfigService _productConfigService;
+        private readonly IProductConfigService _productConfigService;
 
         /// <summary>
         /// 后端API基础URL。
@@ -49,7 +50,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
             IHttpClientFactory httpClientFactory,
             ILogger<DashboardController> logger,
             IConfiguration configuration,
-            Saas.Infra.MVC.Services.Product.IProductConfigService productConfigService)
+            IProductConfigService productConfigService)
 		{
 			// Parameter validation
 			_httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory), "IHttpClientFactory cannot be null");

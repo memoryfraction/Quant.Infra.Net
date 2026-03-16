@@ -25,7 +25,7 @@ public class RoleAuthorizationFilterTests
     {
         var sut = new RoleAuthorizationFilter(UserRole.User);
 
-        Assert.Throws<ArgumentNullException>(() => sut.OnAuthorization(null!));
+        Assert.ThrowsException<ArgumentNullException>(() => sut.OnAuthorization(null!));
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ public class RoleAuthorizationFilterTests
     {
         var invalidRole = (UserRole)999;
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => new AuthorizeRoleAttribute(invalidRole));
+        Assert.ThrowsException<ArgumentOutOfRangeException>(() => new AuthorizeRoleAttribute(invalidRole));
     }
 
     /// <summary>

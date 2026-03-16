@@ -4,6 +4,8 @@ using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.Core;
 using Saas.Infra.MVC.Middleware;
 using Saas.Infra.MVC.Services.Blazor;
+using Saas.Infra.Services.Payment;
+using Saas.Infra.Services.Product;
 using Microsoft.AspNetCore.Components.Authorization;
 using Serilog;
 using System.Security.Cryptography;
@@ -122,16 +124,24 @@ namespace Saas.Infra.MVC
 
                 // --- 4. 核心业务服务注册 (解决注入报错的关键) ---
                 // 注意：必须先注册 ITokenService，ISsoService 才能成功解析
-                builder.Services.AddScoped<ITokenService, Saas.Infra.SSO.TokenService>();
-                builder.Services.AddScoped<Saas.Infra.SSO.ISsoService, Saas.Infra.SSO.SsoService>();
+                builder.Services.AddScoped<Saas.Infra.Services.Sso.ITokenService, Saas.Infra.Services.Sso.TokenService>();
+                builder.Services.AddScoped<Saas.Infra.Services.Sso.ISsoService, Saas.Infra.Services.Sso.SsoService>();
 
                 // 其他 Repository 和基础设施
                 builder.Services.AddScoped<IUserRepository, Saas.Infra.Data.UserRepository>();
                 builder.Services.AddScoped<IRefreshTokenRepository, Saas.Infra.Data.RefreshTokenRepository>();
-                builder.Services.AddScoped<IPasswordHasher, Saas.Infra.SSO.BCryptPasswordHasher>();
+                builder.Services.AddScoped<IPasswordHasher, Saas.Infra.Services.Sso.BCryptPasswordHasher>();
 
-                // 产品配置服务（Dashboard 页面依赖）
-                builder.Services.AddScoped<Saas.Infra.MVC.Services.Product.IProductConfigService, Saas.Infra.MVC.Services.Product.ProductConfigService>();
+                builder.Services.AddScoped<IProductConfigService, ProductConfigService>();
+                builder.Services.AddScoped<IProductApplicationService, ProductApplicationService>();
+                builder.Services.AddScoped<IPaymentUrlResolver, PaymentUrlResolver>();
+                builder.Services.AddScoped<IUserContextService, UserContextService>();
+                builder.Services.AddScoped<IPaymentService, PaymentService>();
+                builder.Services.AddScoped<IStripeWebhookService, StripeWebhookService>();
+                builder.Services.AddScoped<ISubscriptionTokenService, SubscriptionTokenService>();
+                builder.Services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();
+                builder.Services.AddScoped<ISubscriptionApplicationService, SubscriptionApplicationService>();
+                builder.Services.AddScoped<IAdminTransactionExportService, AdminTransactionExportService>();
 
                 // 全局异常页面状态服务（/error 页面依赖，Singleton 因为跨请求共享状态）
                 builder.Services.AddSingleton<Saas.Infra.MVC.Services.Errors.GlobalExceptionPageService>();
@@ -167,7 +177,7 @@ namespace Saas.Infra.MVC
                 });
 
                 // Stripe
-                builder.Services.AddSingleton<Saas.Infra.MVC.Services.Payment.IPaymentGateway>(sp =>
+                builder.Services.AddSingleton<IPaymentGateway>(sp =>
                 {
                     var config = sp.GetRequiredService<IConfiguration>();
                     var secretKey =
@@ -190,16 +200,12 @@ namespace Saas.Infra.MVC
                         Log.Warning("Stripe WebhookSecret is empty. Webhook verification will fail until Stripe__WebhookSecret is configured.");
                     }
 
-                    return new Saas.Infra.MVC.Services.Payment.StripePaymentGateway(secretKey, webhookSecret ?? string.Empty);
+                    return new StripePaymentGateway(secretKey, webhookSecret ?? string.Empty);
                 });
 
-                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IPaymentService, Saas.Infra.MVC.Services.Payment.PaymentService>();
-                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.IStripeWebhookService, Saas.Infra.MVC.Services.Payment.StripeWebhookService>();
-                builder.Services.AddScoped<Saas.Infra.MVC.Services.Payment.ISubscriptionTokenService, Saas.Infra.MVC.Services.Payment.SubscriptionTokenService>();
-
+                // --- 6. 管道顺序 ---
                 var app = builder.Build();
 
-                // --- 6. 管道顺序 ---
                 app.UseForwardedHeaders(); // 必须第一
 
                 if (!app.Environment.IsDevelopment())

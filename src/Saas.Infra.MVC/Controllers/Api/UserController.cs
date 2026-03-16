@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saas.Infra.Core;
@@ -7,13 +7,14 @@ using Saas.Infra.MVC.Models;
 using Saas.Infra.MVC.Models.Requests;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.MVC.Security;
+using Saas.Infra.Services.Sso;
 using Serilog;
 using System.Security.Claims;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
     /// <summary>
-    /// 提供用户相关的受保护 API（个人资料、修改密码等），需验证RSA签名的JWT令牌。
+    /// æä¾›ç”¨æˆ·ç›¸å…³çš„å—ä¿æŠ¤ APIï¼ˆä¸ªäººèµ„æ–™ã€ä¿®æ”¹å¯†ç ç­‰ï¼‰ï¼Œéœ€éªŒè¯RSAç­¾åçš„JWTä»¤ç‰Œã€‚
     /// Protected user management endpoints (profile, change password, and admin management) requiring RSA-signed JWT token validation.
     /// </summary>
     [ApiController]
@@ -23,18 +24,18 @@ namespace Saas.Infra.MVC.Controllers.Api
     {
         private readonly IUserRepository _userRepository;
         private readonly IPasswordHasher _passwordHasher;
-        private readonly SSO.ISsoService _ssoService;
+        private readonly ISsoService _ssoService;
         private readonly ApplicationDbContext _db;
 
         /// <summary>
-        /// 初始化 <see cref="UserController"/> 的新实例。
+        /// åˆå§‹åŒ– <see cref="UserController"/> çš„æ–°å®žä¾‹ã€‚
         /// Initializes a new instance of the <see cref="UserController"/> class.
         /// </summary>
-        /// <param name="userRepository">用户仓储实现。/ The user repository implementation.</param>
-        /// <param name="passwordHasher">密码哈希实现。/ The password hasher implementation.</param>
-        /// <param name="ssoService">单点登录服务，用于生成RSA签名的Token等。/ The SSO service used to generate RSA-signed tokens.</param>
-        /// <param name="db">数据库上下文。 / Database context.</param>
-        public UserController(IUserRepository userRepository, IPasswordHasher passwordHasher, SSO.ISsoService ssoService, ApplicationDbContext db)
+        /// <param name="userRepository">ç”¨æˆ·ä»“å‚¨å®žçŽ°ã€‚/ The user repository implementation.</param>
+        /// <param name="passwordHasher">å¯†ç å“ˆå¸Œå®žçŽ°ã€‚/ The password hasher implementation.</param>
+        /// <param name="ssoService">å•ç‚¹ç™»å½•æœåŠ¡ï¼Œç”¨äºŽç”ŸæˆRSAç­¾åçš„Tokenç­‰ã€‚/ The SSO service used to generate RSA-signed tokens.</param>
+        /// <param name="db">æ•°æ®åº“ä¸Šä¸‹æ–‡ã€‚ / Database context.</param>
+        public UserController(IUserRepository userRepository, IPasswordHasher passwordHasher, ISsoService ssoService, ApplicationDbContext db)
         {
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
@@ -43,7 +44,7 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 获取当前登录用户的基本信息（从RSA JWT令牌中解析Claim）。
+        /// èŽ·å–å½“å‰ç™»å½•ç”¨æˆ·çš„åŸºæœ¬ä¿¡æ¯ï¼ˆä»ŽRSA JWTä»¤ç‰Œä¸­è§£æžClaimï¼‰ã€‚
         /// Get current authenticated user's basic profile (parsed from RSA JWT token claims).
         /// </summary>
         [HttpGet("me")]
@@ -97,11 +98,11 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 获取可管理的用户列表。
+        /// èŽ·å–å¯ç®¡ç†çš„ç”¨æˆ·åˆ—è¡¨ã€‚
         /// Gets the list of users manageable by the current operator.
         /// </summary>
-        /// <param name="includeDeleted">是否包含已删除用户。 / Whether to include deleted users.</param>
-        /// <returns>用户管理列表。 / User management list.</returns>
+        /// <param name="includeDeleted">æ˜¯å¦åŒ…å«å·²åˆ é™¤ç”¨æˆ·ã€‚ / Whether to include deleted users.</param>
+        /// <returns>ç”¨æˆ·ç®¡ç†åˆ—è¡¨ã€‚ / User management list.</returns>
         [HttpGet("management")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> GetManageableUsers([FromQuery] bool includeDeleted = false)
@@ -182,12 +183,12 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 切换用户启用状态。
+        /// åˆ‡æ¢ç”¨æˆ·å¯ç”¨çŠ¶æ€ã€‚
         /// Toggles a user's enabled status.
         /// </summary>
-        /// <param name="userId">用户ID。 / User ID.</param>
-        /// <returns>操作结果。 / Operation result.</returns>
-        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
+        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
+        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
         [HttpPost("{userId:guid}/toggle-status")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> ToggleUserStatus(Guid userId)
@@ -225,13 +226,13 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 更新可管理用户的基本信息。
+        /// æ›´æ–°å¯ç®¡ç†ç”¨æˆ·çš„åŸºæœ¬ä¿¡æ¯ã€‚
         /// Updates the basic information of a manageable user.
         /// </summary>
-        /// <param name="userId">用户ID。 / User ID.</param>
-        /// <param name="request">更新请求。 / Update request.</param>
-        /// <returns>操作结果。 / Operation result.</returns>
-        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
+        /// <param name="request">æ›´æ–°è¯·æ±‚ã€‚ / Update request.</param>
+        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
+        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
         [HttpPut("{userId:guid}")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> UpdateManagedUser(Guid userId, [FromBody] UpdateManagedUserRequest request)
@@ -292,12 +293,12 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 删除可管理用户。
+        /// åˆ é™¤å¯ç®¡ç†ç”¨æˆ·ã€‚
         /// Deletes a manageable user.
         /// </summary>
-        /// <param name="userId">用户ID。 / User ID.</param>
-        /// <returns>操作结果。 / Operation result.</returns>
-        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
+        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
+        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
         [HttpDelete("{userId:guid}")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> DeleteManagedUser(Guid userId)
@@ -341,12 +342,12 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 恢复已删除的可管理用户。
+        /// æ¢å¤å·²åˆ é™¤çš„å¯ç®¡ç†ç”¨æˆ·ã€‚
         /// Restores a deleted manageable user.
         /// </summary>
-        /// <param name="userId">用户ID。 / User ID.</param>
-        /// <returns>操作结果。 / Operation result.</returns>
-        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
+        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
+        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
         [HttpPost("{userId:guid}/restore")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> RestoreManagedUser(Guid userId)
@@ -379,7 +380,7 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 修改当前用户密码（验证RSA JWT令牌后操作）。
+        /// ä¿®æ”¹å½“å‰ç”¨æˆ·å¯†ç ï¼ˆéªŒè¯RSA JWTä»¤ç‰ŒåŽæ“ä½œï¼‰ã€‚
         /// Change password for current authenticated user (after RSA JWT token validation).
         /// </summary>
         [HttpPost("change-password")]
@@ -429,7 +430,7 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 为新用户注册并返回RSA签名的自动登录令牌对。
+        /// ä¸ºæ–°ç”¨æˆ·æ³¨å†Œå¹¶è¿”å›žRSAç­¾åçš„è‡ªåŠ¨ç™»å½•ä»¤ç‰Œå¯¹ã€‚
         /// Registers a new user and returns RSA-signed tokens for immediate login.
         /// </summary>
         [AllowAnonymous]
@@ -469,12 +470,12 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 授予用户管理员角色（仅超级管理员）。
+        /// æŽˆäºˆç”¨æˆ·ç®¡ç†å‘˜è§’è‰²ï¼ˆä»…è¶…çº§ç®¡ç†å‘˜ï¼‰ã€‚
         /// Grants admin role to a user (SuperAdmin only).
         /// </summary>
-        /// <param name="userId">用户ID。 / User ID.</param>
-        /// <returns>操作结果。 / Operation result.</returns>
-        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
+        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
+        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
         [HttpPost("{userId:guid}/grant-admin")]
         [AuthorizeRole(UserRole.Super_Admin)]
         public async Task<IActionResult> GrantAdminRole(Guid userId)
@@ -526,12 +527,12 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// 移除用户管理员角色（仅超级管理员）。
+        /// ç§»é™¤ç”¨æˆ·ç®¡ç†å‘˜è§’è‰²ï¼ˆä»…è¶…çº§ç®¡ç†å‘˜ï¼‰ã€‚
         /// Revokes admin role from a user (SuperAdmin only).
         /// </summary>
-        /// <param name="userId">用户ID。 / User ID.</param>
-        /// <returns>操作结果。 / Operation result.</returns>
-        /// <exception cref="ArgumentException">当 userId 无效时抛出。 / Thrown when userId is invalid.</exception>
+        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
+        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
+        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
         [HttpPost("{userId:guid}/revoke-admin")]
         [AuthorizeRole(UserRole.Super_Admin)]
         public async Task<IActionResult> RevokeAdminRole(Guid userId)

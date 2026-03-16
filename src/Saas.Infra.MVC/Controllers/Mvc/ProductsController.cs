@@ -2,8 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Saas.Infra.Data;
+using Saas.Infra.Services.Product;
 using Serilog;
 
 namespace Saas.Infra.MVC.Controllers.Mvc
@@ -16,17 +15,17 @@ namespace Saas.Infra.MVC.Controllers.Mvc
     [Authorize]
     public class ProductsController : Controller
     {
-        private readonly ApplicationDbContext _db;
+        private readonly IProductApplicationService _productApplicationService;
 
         /// <summary>
         /// 初始化<see cref="ProductsController"/>的新实例。
         /// Initializes a new instance of the <see cref="ProductsController"/> class.
         /// </summary>
-        /// <param name="db">数据库上下文。 / Database context.</param>
-        /// <exception cref="ArgumentNullException">当db为null时抛出。 / Thrown when db is null.</exception>
-        public ProductsController(ApplicationDbContext db)
+        /// <param name="productApplicationService">产品应用服务。 / Product application service.</param>
+        /// <exception cref="ArgumentNullException">当productApplicationService为null时抛出。 / Thrown when productApplicationService is null.</exception>
+        public ProductsController(IProductApplicationService productApplicationService)
         {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
+            _productApplicationService = productApplicationService ?? throw new ArgumentNullException(nameof(productApplicationService));
         }
 
         /// <summary>
@@ -40,12 +39,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
         {
             try
             {
-                var products = await _db.Products
-                    .AsNoTracking()
-                    .Where(p => p.IsActive)
-                    .OrderByDescending(p => p.CreatedTime)
-                    .ToListAsync();
-
+                var products = await _productApplicationService.GetActiveProductsAsync();
                 Log.Information("Products page accessed, {Count} products displayed", products.Count);
                 return View(products);
             }
@@ -74,19 +68,12 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 
             try
             {
-                var product = await _db.Products
-                    .AsNoTracking()
-                    .Include(p => p.Prices)
-                    .FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
-
+                var product = await _productApplicationService.GetActiveProductDetailsAsync(id);
                 if (product == null)
                 {
                     Log.Warning("Product {Id} not found or not active", id);
                     return NotFound();
                 }
-
-                // 过滤价格：只保留激活的价格
-                product.Prices = product.Prices.Where(pr => pr.IsActive).ToList();
 
                 Log.Information("Product details page accessed for {ProductCode}", product.Code);
                 return View(product);

@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.Core;
-using Saas.Infra.SSO;
+using Saas.Infra.Services.Sso;
 
 namespace Saas.Infra.Net.Tests;
 
@@ -24,7 +24,7 @@ public class TokenServiceTests
     {
         var sut = CreateSut();
 
-        Assert.Throws<ArgumentException>(() => sut.GenerateToken(" "));
+        Assert.ThrowsException<ArgumentException>(() => sut.GenerateToken(" "));
     }
 
     /// <summary>

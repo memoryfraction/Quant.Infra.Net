@@ -1,11 +1,10 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Saas.Infra.Core;
 using Saas.Infra.Data;
 using Saas.Infra.MVC.Models.Requests;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.MVC.Security;
+using Saas.Infra.Services.Product;
 using Serilog;
 
 namespace Saas.Infra.MVC.Controllers.Api
@@ -18,17 +17,17 @@ namespace Saas.Infra.MVC.Controllers.Api
     [Route("api/[controller]")]
     public class PricesController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
+        private readonly IProductApplicationService _productApplicationService;
 
         /// <summary>
         /// 初始化<see cref="PricesController"/>的新实例。
         /// Initializes a new instance of the <see cref="PricesController"/> class.
         /// </summary>
-        /// <param name="db">数据库上下文。 / Database context.</param>
-        /// <exception cref="ArgumentNullException">当db为null时抛出。 / Thrown when db is null.</exception>
-        public PricesController(ApplicationDbContext db)
+        /// <param name="productApplicationService">产品应用服务。 / Product application service.</param>
+        /// <exception cref="ArgumentNullException">当productApplicationService为null时抛出。 / Thrown when productApplicationService is null.</exception>
+        public PricesController(IProductApplicationService productApplicationService)
         {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
+            _productApplicationService = productApplicationService ?? throw new ArgumentNullException(nameof(productApplicationService));
         }
 
         /// <summary>
@@ -46,28 +45,10 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             try
             {
-                var prices = await _db.Prices
-                    .AsNoTracking()
-                    .Include(p => p.Product)
-                    .Where(p => p.ProductId == productId)
-                    .OrderBy(p => p.Amount)
-                    .Select(p => new PriceDto
-                    {
-                        Id = p.Id,
-                        ProductId = p.ProductId,
-                        ProductCode = p.Product != null ? p.Product.Code : null,
-                        ProductName = p.Product != null ? p.Product.Name : null,
-                        Name = p.Name,
-                        BillingPeriod = p.BillingPeriod,
-                        Amount = p.Amount,
-                        Currency = p.Currency,
-                        IsActive = p.IsActive,
-                        CreatedTime = p.CreatedTime
-                    })
-                    .ToListAsync();
-
-                Log.Information("Retrieved {Count} prices for product {ProductId}", prices.Count, productId);
-                return Ok(prices);
+                var prices = await _productApplicationService.GetPricesByProductAsync(productId);
+                var result = prices.Select(MapPrice).ToList();
+                Log.Information("Retrieved {Count} prices for product {ProductId}", result.Count, productId);
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -91,32 +72,14 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             try
             {
-                var price = await _db.Prices
-                    .AsNoTracking()
-                    .Include(p => p.Product)
-                    .Where(p => p.Id == id)
-                    .Select(p => new PriceDto
-                    {
-                        Id = p.Id,
-                        ProductId = p.ProductId,
-                        ProductCode = p.Product != null ? p.Product.Code : null,
-                        ProductName = p.Product != null ? p.Product.Name : null,
-                        Name = p.Name,
-                        BillingPeriod = p.BillingPeriod,
-                        Amount = p.Amount,
-                        Currency = p.Currency,
-                        IsActive = p.IsActive,
-                        CreatedTime = p.CreatedTime
-                    })
-                    .FirstOrDefaultAsync();
-
+                var price = await _productApplicationService.GetPriceByIdAsync(id);
                 if (price == null)
                 {
                     Log.Warning("Price {Id} not found", id);
                     return NotFound(new { message = "Price not found" });
                 }
 
-                return Ok(price);
+                return Ok(MapPrice(price));
             }
             catch (Exception ex)
             {
@@ -137,49 +100,27 @@ namespace Saas.Infra.MVC.Controllers.Api
         {
             if (request == null)
                 return BadRequest(new { message = "Request cannot be null" });
-
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             try
             {
-                // 验证产品是否存在
-                var productExists = await _db.Products.AnyAsync(p => p.Id == request.ProductId);
-                if (!productExists)
-                {
-                    Log.Warning("Product {ProductId} not found when creating price", request.ProductId);
-                    return NotFound(new { message = "Product not found" });
-                }
+                var price = await _productApplicationService.CreatePriceAsync(
+                    request.ProductId,
+                    request.Name,
+                    request.BillingPeriod,
+                    request.Amount,
+                    request.Currency,
+                    request.IsActive);
 
-                var price = new PriceEntity
-                {
-                    Id = Guid.NewGuid(),
-                    ProductId = request.ProductId,
-                    Name = request.Name,
-                    BillingPeriod = request.BillingPeriod.ToLower(),
-                    Amount = request.Amount,
-                    Currency = request.Currency,
-                    IsActive = request.IsActive,
-                    CreatedTime = DateTimeOffset.UtcNow
-                };
-
-                _db.Prices.Add(price);
-                await _db.SaveChangesAsync();
-
-                var dto = new PriceDto
-                {
-                    Id = price.Id,
-                    ProductId = price.ProductId,
-                    Name = price.Name,
-                    BillingPeriod = price.BillingPeriod,
-                    Amount = price.Amount,
-                    Currency = price.Currency,
-                    IsActive = price.IsActive,
-                    CreatedTime = price.CreatedTime
-                };
-
+                var dto = MapPrice(price);
                 Log.Information("Price created for product {ProductId} by {User}", request.ProductId, User.Identity?.Name);
                 return CreatedAtAction(nameof(GetPrice), new { id = price.Id }, dto);
+            }
+            catch (InvalidOperationException ex) when (ex.Message == "Product not found")
+            {
+                Log.Warning("Product {ProductId} not found when creating price", request.ProductId);
+                return NotFound(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -201,48 +142,22 @@ namespace Saas.Infra.MVC.Controllers.Api
         {
             if (id == Guid.Empty)
                 return BadRequest(new { message = "Invalid price ID" });
-
             if (request == null)
                 return BadRequest(new { message = "Request cannot be null" });
-
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             try
             {
-                var price = await _db.Prices.FindAsync(id);
+                var price = await _productApplicationService.UpdatePriceAsync(id, request.Name, request.Amount, request.IsActive);
                 if (price == null)
                 {
                     Log.Warning("Price {Id} not found for update", id);
                     return NotFound(new { message = "Price not found" });
                 }
 
-                // 只更新非null的字段
-                if (request.Name != null)
-                    price.Name = request.Name;
-
-                if (request.Amount.HasValue)
-                    price.Amount = request.Amount.Value;
-
-                if (request.IsActive.HasValue)
-                    price.IsActive = request.IsActive.Value;
-
-                await _db.SaveChangesAsync();
-
-                var dto = new PriceDto
-                {
-                    Id = price.Id,
-                    ProductId = price.ProductId,
-                    Name = price.Name,
-                    BillingPeriod = price.BillingPeriod,
-                    Amount = price.Amount,
-                    Currency = price.Currency,
-                    IsActive = price.IsActive,
-                    CreatedTime = price.CreatedTime
-                };
-
                 Log.Information("Price {Id} updated by {User}", id, User.Identity?.Name);
-                return Ok(dto);
+                return Ok(MapPrice(price));
             }
             catch (Exception ex)
             {
@@ -266,16 +181,12 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             try
             {
-                var price = await _db.Prices.FindAsync(id);
+                var price = await _productApplicationService.SoftDeletePriceAsync(id);
                 if (price == null)
                 {
                     Log.Warning("Price {Id} not found for deletion", id);
                     return NotFound(new { message = "Price not found" });
                 }
-
-                // 软删除：设置为不激活
-                price.IsActive = false;
-                await _db.SaveChangesAsync();
 
                 Log.Information("Price {Id} soft-deleted by {User}", id, User.Identity?.Name);
                 return Ok(new { message = "Price deleted successfully" });
@@ -286,5 +197,19 @@ namespace Saas.Infra.MVC.Controllers.Api
                 return StatusCode(500, new { message = "Failed to delete price" });
             }
         }
+
+        private static PriceDto MapPrice(PriceEntity price) => new()
+        {
+            Id = price.Id,
+            ProductId = price.ProductId,
+            ProductCode = price.Product?.Code,
+            ProductName = price.Product?.Name,
+            Name = price.Name,
+            BillingPeriod = price.BillingPeriod,
+            Amount = price.Amount,
+            Currency = price.Currency,
+            IsActive = price.IsActive,
+            CreatedTime = price.CreatedTime
+        };
     }
 }

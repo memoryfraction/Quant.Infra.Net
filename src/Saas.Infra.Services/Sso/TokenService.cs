@@ -4,116 +4,94 @@ using Saas.Infra.Core;
 using Serilog;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 
-namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
+namespace Saas.Infra.Services.Sso
 {
     /// <summary>
-    /// RSA签名的JWT令牌生成服务实现。
-    /// RSA-signed implementation for JWT token generation service.
+    /// RSA 签名的 JWT 令牌生成与验证服务实现。
+    /// RSA-signed JWT token generation and validation service implementation.
     /// </summary>
     public class TokenService : ITokenService
     {
         private readonly JwtOptions _options;
-        private readonly Microsoft.IdentityModel.Tokens.RsaSecurityKey _signingKey; // 注入带 KeyId 的签名密钥
+        private readonly RsaSecurityKey _signingKey;
 
         /// <summary>
-        /// 初始化 <see cref="TokenService"/> 的新实例（适配RSA签名）。
-        /// Initializes a new instance of <see cref="TokenService"/> (RSA-signed version).
+        /// 初始化 <see cref="TokenService"/> 的新实例。
+        /// Initializes a new instance of <see cref="TokenService"/>.
         /// </summary>
-        /// <param name="options">JWT配置选项 / JWT configuration options</param>
-        /// <param name="rsa">RSA加密实例 / RSA encryption instance</param>
-        /// <exception cref="ArgumentNullException">参数为空时抛出 / Thrown when parameters are null</exception>
-        public TokenService(IOptions<JwtOptions> options, Microsoft.IdentityModel.Tokens.RsaSecurityKey signingKey)
+        /// <param name="options">JWT 配置选项。 / JWT configuration options.</param>
+        /// <param name="signingKey">RSA 签名密钥。 / RSA signing key.</param>
+        /// <exception cref="ArgumentNullException">当参数为 null 时抛出。 / Thrown when arguments are null.</exception>
+        public TokenService(IOptions<JwtOptions> options, RsaSecurityKey signingKey)
         {
-            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-            _signingKey = signingKey ?? throw new ArgumentNullException(nameof(signingKey), "RsaSecurityKey is required for JWT signing");
+            if (options is null)
+                throw new ArgumentNullException(nameof(options));
+
+            _options = options.Value ?? throw new ArgumentNullException(nameof(options));
+            _signingKey = signingKey ?? throw new ArgumentNullException(nameof(signingKey));
         }
 
         /// <summary>
-        /// 生成RSA签名的JWT访问令牌及刷新令牌。
-        /// Generates RSA-signed JWT access token and refresh token.
+        /// 生成访问令牌与刷新令牌。
+        /// Generates an access token and a refresh token.
         /// </summary>
-        /// <param name="email">用户邮箱（必填，稳定标识）/ Email (required, stable identifier)</param>
-        /// <param name="clientId">客户端ID（可选）/ Client ID (optional)</param>
-        /// <param name="additionalClaims">额外Claim（可选）/ Additional claims (optional)</param>
-        /// <returns>RSA签名的令牌响应 / RSA-signed token response</returns>
-        /// <exception cref="ArgumentException">邮箱为空时抛出 / Thrown when email is empty</exception>
+        /// <param name="email">用户邮箱（稳定标识）。 / User email (stable identifier).</param>
+        /// <param name="clientId">客户端标识。 / Client identifier.</param>
+        /// <param name="additionalClaims">额外声明。 / Additional claims.</param>
+        /// <returns>JWT 令牌响应。 / JWT token response.</returns>
+        /// <exception cref="ArgumentException">当 email 为空或空白时抛出。 / Thrown when email is null or whitespace.</exception>
         public JwtTokenResponse GenerateToken(string email, string? clientId = null, IEnumerable<Claim>? additionalClaims = null)
         {
             if (string.IsNullOrWhiteSpace(email))
-                throw new ArgumentException("email must not be null or whitespace", nameof(email));
+                throw new ArgumentException("Email cannot be null or whitespace", nameof(email));
 
-            // 构建Claim集合（保留原有逻辑，补充用户ID/角色）
             var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, email), // JWT标准用户标识
-                new Claim(ClaimTypes.Name, email), // ensure Name claim so ClaimsIdentity.Name is populated
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // 令牌唯一ID
-                new Claim("client_id", clientId ?? "default") // 客户端ID
+                new(JwtRegisteredClaimNames.Sub, email),
+                new(ClaimTypes.Name, email),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new("client_id", clientId ?? "default")
             };
 
-            // 添加额外Claim
             if (additionalClaims != null)
             {
                 claims.AddRange(additionalClaims.Where(c => c != null));
             }
 
-            // 1. 先查找所有合法的 Role Claim
             var existingRoleClaims = claims
                 .Where(c => c.Type == ClaimTypes.Role && !string.IsNullOrWhiteSpace(c.Value))
                 .ToList();
 
             if (existingRoleClaims.Any())
             {
-                // 2. 如果有多个角色，只取第一个（或按需处理）
                 var roleClaim = existingRoleClaims.First();
-
                 claims.Remove(roleClaim);
                 claims.Add(new Claim(ClaimTypes.Role, NormalizeRoleCode(roleClaim.Value)));
             }
             else
             {
-                // 5. 没有任何合法 Role Claim，添加默认 User 角色代码
                 claims.Add(new Claim(ClaimTypes.Role, RoleCodes.User));
             }
 
-            // 核心修改：使用RSA非对称加密签名（替换原有的对称加密）
-            var signingCreds = new SigningCredentials(
-                key: _signingKey,
-                algorithm: SecurityAlgorithms.RsaSha256 // RSA-SHA256签名算法
-            );
+            var signingCreds = new SigningCredentials(_signingKey, SecurityAlgorithms.RsaSha256);
+            var expiresUtc = DateTime.UtcNow.AddMinutes(_options.AccessTokenExpirationMinutes);
 
-            // 令牌过期时间（从配置读取）
-            var expires = DateTime.UtcNow.AddMinutes(_options.AccessTokenExpirationMinutes);
-
-            // 生成RSA签名的JWT令牌
             var token = new JwtSecurityToken(
                 issuer: _options.Issuer,
                 audience: _options.Audience,
                 claims: claims,
-                expires: expires,
-                signingCredentials: signingCreds
-            );
+                expires: expiresUtc,
+                signingCredentials: signingCreds);
 
-            // Ensure kid present in header when signing key has KeyId
-            try
+            if (!token.Header.ContainsKey("kid") && !string.IsNullOrEmpty(_signingKey.KeyId))
             {
-                if (!token.Header.ContainsKey("kid") && !string.IsNullOrEmpty(_signingKey?.KeyId))
-                {
-                    token.Header["kid"] = _signingKey.KeyId;
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "Failed to ensure kid in JWT header");
+                token.Header["kid"] = _signingKey.KeyId;
             }
 
-            // 序列化令牌为字符串
             var tokenHandler = new JwtSecurityTokenHandler();
             var accessToken = tokenHandler.WriteToken(token);
 
-            // Diagnostic logging: show full token and header/payload to help debug mismatches
             try
             {
                 var produced = tokenHandler.ReadJwtToken(accessToken);
@@ -121,31 +99,30 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
                 Log.Information("[TOKEN DEBUG] produced token header alg={Alg}, kid={Kid}", produced.Header.Alg, produced.Header.Kid ?? "(none)");
                 Log.Information("[TOKEN DEBUG] produced token rawHeader={RawHeader}", produced.RawHeader);
                 Log.Information("[TOKEN DEBUG] produced token rawPayload={RawPayload}", produced.RawPayload);
-                Log.Information("[TOKEN DEBUG] signingKey KeyId={KeyId}, has RSA={HasRsa}", _signingKey?.KeyId ?? "(none)", _signingKey?.Rsa != null);
+                Log.Information("[TOKEN DEBUG] signingKey KeyId={KeyId}, has RSA={HasRsa}", _signingKey.KeyId ?? "(none)", _signingKey.Rsa != null);
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[TOKEN DEBUG] failed to read produced token header");
+                Log.Warning(ex, "[TOKEN DEBUG] Failed to read produced token header");
             }
 
             Log.Information("RSA-signed token generated for email {Email}", email);
 
-            // 返回令牌响应（刷新令牌逻辑不变）
             return new JwtTokenResponse
             {
                 AccessToken = accessToken,
-                RefreshToken = Guid.NewGuid().ToString("N"), // 简化GUID格式
-                ExpiresIn = (int)(expires - DateTime.UtcNow).TotalSeconds
+                RefreshToken = Guid.NewGuid().ToString("N"),
+                ExpiresIn = (int)(expiresUtc - DateTime.UtcNow).TotalSeconds
             };
         }
 
         /// <summary>
-        /// 验证RSA签名的JWT令牌有效性。
-        /// Validates RSA-signed JWT token.
+        /// 验证 RSA 签名的 JWT 令牌有效性。
+        /// Validates an RSA-signed JWT token.
         /// </summary>
-        /// <param name="token">待验证的令牌 / Token to validate</param>
-        /// <returns>验证通过返回ClaimsPrincipal，否则返回null / ClaimsPrincipal if valid, null otherwise</returns>
-        /// <exception cref="ArgumentNullException">令牌为空时抛出 / Thrown when token is null</exception>
+        /// <param name="token">待验证的令牌。 / Token to validate.</param>
+        /// <returns>验证通过返回 ClaimsPrincipal，否则返回 null。 / ClaimsPrincipal if valid; otherwise null.</returns>
+        /// <exception cref="ArgumentNullException">当 token 为空或空白时抛出。 / Thrown when token is null or whitespace.</exception>
         public ClaimsPrincipal? ValidateToken(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
@@ -156,25 +133,20 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var validationParameters = new TokenValidationParameters
                 {
-                    // 基础验证配置
                     ValidateIssuer = true,
                     ValidIssuer = _options.Issuer,
                     ValidateAudience = true,
                     ValidAudience = _options.Audience,
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero, // 严格验证过期时间（无偏移）
+                    ClockSkew = TimeSpan.Zero,
                     RequireSignedTokens = true,
                     RequireExpirationTime = true,
-
-                // 核心修改：使用注入的 signing key 验证签名
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = _signingKey
                 };
 
-                // 验证令牌并解析Claims
                 var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
 
-                // 额外校验：确保使用RSA-SHA256算法
                 if (validatedToken is JwtSecurityToken jwtToken &&
                     !string.Equals(jwtToken.Header.Alg, SecurityAlgorithms.RsaSha256, StringComparison.Ordinal))
                 {
@@ -182,39 +154,41 @@ namespace Saas.Infra.SSO // 迁移到SSO层（核心！）
                     return null;
                 }
 
-                Log.Information("RSA-signed token validated successfully for user {Username}",
+                Log.Information(
+                    "RSA-signed token validated successfully for user {Username}",
                     principal.Identity?.Name ?? "unknown");
+
                 return principal;
             }
             catch (SecurityTokenExpiredException ex)
             {
-                Log.Warning(ex, "Token validation failed: expired for user");
+                Log.Warning(ex, "Token validation failed: expired");
                 return null;
             }
             catch (SecurityTokenInvalidSignatureException ex)
             {
-                Log.Warning(ex, "Token validation failed: invalid RSA signature");
+                Log.Warning(ex, "Token validation failed: invalid signature");
                 return null;
             }
-            catch (SecurityTokenException stEx)
+            catch (SecurityTokenException ex)
             {
-                Log.Warning(stEx, "Token validation failed: {Message}", stEx.Message);
+                Log.Warning(ex, "Token validation failed: {Message}", ex.Message);
                 return null;
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Unexpected error during RSA token validation");
+                Log.Error(ex, "Unexpected error during token validation");
                 return null;
             }
         }
 
         /// <summary>
         /// 规范化角色代码为系统统一格式。
-        /// Normalizes a role code to the system-wide canonical format.
+        /// Normalizes a role code to the canonical system format.
         /// </summary>
         /// <param name="roleValue">角色值。 / Role value.</param>
-        /// <returns>规范化角色代码。 / Normalized role code.</returns>
-        /// <exception cref="ArgumentNullException">当 roleValue 为空时抛出。 / Thrown when roleValue is null or whitespace.</exception>
+        /// <returns>规范化后的角色代码。 / Normalized role code.</returns>
+        /// <exception cref="ArgumentNullException">当 roleValue 为空或空白时抛出。 / Thrown when roleValue is null or whitespace.</exception>
         public static string NormalizeRoleCode(string roleValue)
         {
             if (string.IsNullOrWhiteSpace(roleValue))

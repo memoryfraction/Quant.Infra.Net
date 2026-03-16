@@ -1,15 +1,10 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Saas.Infra.Core;
-using Saas.Infra.SSO;
+using Saas.Infra.Services.Sso;
 
 namespace Saas.Infra.Net.Tests;
 
-/// <summary>
-/// SsoService 单元测试。
-/// Unit tests for SsoService.
-/// </summary>
-[TestClass]
 public class SsoServiceTests
 {
     /// <summary>
@@ -22,7 +17,7 @@ public class SsoServiceTests
         var userRepository = new FakeUserRepository();
         var sut = CreateSut(userRepository: userRepository);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
             sut.GenerateTokensAsync("missing@126.com", "123456", "client"));
     }
 
@@ -46,7 +41,7 @@ public class SsoServiceTests
 
         var sut = CreateSut(userRepository: userRepository, passwordHasher: hasher);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
             sut.GenerateTokensAsync("test@126.com", "wrong", "client"));
     }
 
@@ -89,7 +84,7 @@ public class SsoServiceTests
         var refreshRepo = new FakeRefreshTokenRepository();
         var sut = CreateSut(refreshTokenRepository: refreshRepo);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
             sut.RefreshTokenAsync("invalid-token", "client"));
     }
 
@@ -127,8 +122,7 @@ public class SsoServiceTests
             userRepository ?? new FakeUserRepository(),
             tokenService ?? new FakeTokenService(),
             passwordHasher ?? new FakePasswordHasher(),
-            refreshTokenRepository ?? new FakeRefreshTokenRepository(),
-            RSA.Create());
+            refreshTokenRepository ?? new FakeRefreshTokenRepository());
     }
 
     private sealed class FakeUserRepository : IUserRepository
@@ -194,7 +188,7 @@ public class SsoServiceTests
         }
     }
 
-    private sealed class FakeTokenService : ITokenService
+    private sealed class FakeTokenService : Saas.Infra.Services.Sso.ITokenService
     {
         public bool ThrowOnValidate { get; set; }
         public string? LastEmail { get; private set; }

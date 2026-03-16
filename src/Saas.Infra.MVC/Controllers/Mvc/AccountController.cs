@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Saas.Infra.MVC.Models;
 using Saas.Infra.MVC.Models.Responses;
+using Saas.Infra.Services.Product;
 using Serilog;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
@@ -42,7 +43,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 		/// <summary>
 		/// Product configuration service
 		/// </summary>
-		private readonly Saas.Infra.MVC.Services.Product.IProductConfigService _productConfigService;
+		private readonly IProductConfigService _productConfigService;
 
 		/// <summary>
 		/// 构造函数 - 依赖注入。
@@ -57,7 +58,7 @@ namespace Saas.Infra.MVC.Controllers.Mvc
 			IHttpClientFactory httpClientFactory,
 			IConfiguration configuration,
 			Saas.Infra.MVC.Services.Redirect.IRedirectValidator redirectValidator,
-			Saas.Infra.MVC.Services.Product.IProductConfigService productConfigService)
+			IProductConfigService productConfigService)
 		{
 			// Parameter validation
 			_httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory), "IHttpClientFactory cannot be null");

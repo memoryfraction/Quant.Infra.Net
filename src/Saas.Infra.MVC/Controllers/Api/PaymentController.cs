@@ -574,17 +574,23 @@ namespace Saas.Infra.MVC.Controllers.Api
             var acaHostName = Environment.GetEnvironmentVariable("CONTAINER_APP_HOSTNAME");
             if (!string.IsNullOrWhiteSpace(acaHostName))
             {
-                return $"https://{acaHostName.Trim().TrimEnd('/')}";
+                var resolvedFromAca = $"https://{acaHostName.Trim().TrimEnd('/')}";
+                Log.Debug("Payment redirect base URL resolved from CONTAINER_APP_HOSTNAME: {BaseUrl}", resolvedFromAca);
+                return resolvedFromAca;
             }
 
             // Optional manual override for non-ACA special deployments.
             var configured = _configuration["Payment:PublicBaseUrl"];
             if (!string.IsNullOrWhiteSpace(configured))
             {
-                return configured.TrimEnd('/');
+                var resolvedFromConfig = configured.TrimEnd('/');
+                Log.Debug("Payment redirect base URL resolved from Payment:PublicBaseUrl: {BaseUrl}", resolvedFromConfig);
+                return resolvedFromConfig;
             }
 
-            return $"{Request.Scheme}://{Request.Host}";
+            var resolvedFromRequest = $"{Request.Scheme}://{Request.Host}";
+            Log.Debug("Payment redirect base URL resolved from Request host: {BaseUrl}", resolvedFromRequest);
+            return resolvedFromRequest;
         }
 
         /// <summary>

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saas.Infra.Data;
+using Saas.Infra.Core;
 using Saas.Infra.MVC.Models.Requests;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.MVC.Services.Payment;
@@ -164,7 +165,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                     OriginalAmount = price.Amount,
                     ActualAmount = price.Amount,
                     DiscountAmount = 0,
-                    Status = 0,
+                    Status = (short)OrderStatus.Pending,
                     ExpiredTime = DateTimeOffset.UtcNow.AddHours(24),
                     CreatedTime = DateTimeOffset.UtcNow,
                     IsDeleted = false
@@ -359,7 +360,7 @@ namespace Saas.Infra.MVC.Controllers.Api
 
                 string? subscriptionAccessToken = null;
                 int? tokenExpiresIn = null;
-                if (order.Status == 1 && subscription != null && user != null)
+                if (order.Status == (short)OrderStatus.Paid && subscription != null && user != null)
                 {
                     var tokenResult = _subscriptionTokenService.GenerateToken(new SubscriptionTokenRequest
                     {
@@ -383,7 +384,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                     OrderId = order.Id,
                     OrderStatus = order.Status,
                     OrderStatusText = GetOrderStatusText(order.Status),
-                    Paid = order.Status == 1,
+                    Paid = order.Status == (short)OrderStatus.Paid,
                     SubscriptionId = order.SubscriptionId,
                     TransactionId = latestTransaction?.Id,
                     TransactionStatus = latestTransaction?.Status,
@@ -496,7 +497,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                 return null;
             }
 
-            if (order.Status != 0)
+            if (order.Status != (short)OrderStatus.Pending)
             {
                 Log.Warning("Order {OrderId} is not pending, status {Status}", orderId, order.Status);
                 throw new InvalidOperationException("Order is not pending");
@@ -601,12 +602,12 @@ namespace Saas.Infra.MVC.Controllers.Api
         /// </summary>
         private static string GetOrderStatusText(short status)
         {
-            return status switch
+            return ((OrderStatus)status) switch
             {
-                0 => "Pending",
-                1 => "Paid",
-                2 => "Cancelled",
-                3 => "Refunded",
+                OrderStatus.Pending => "Pending",
+                OrderStatus.Paid => "Paid",
+                OrderStatus.Cancelled => "Cancelled",
+                OrderStatus.Refunded => "Refunded",
                 _ => $"Unknown({status})"
             };
         }

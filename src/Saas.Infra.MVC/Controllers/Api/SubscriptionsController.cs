@@ -3,10 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Saas.Infra.Core;
 using Saas.Infra.Data;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.Services.Payment;
-using Serilog;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
@@ -52,12 +53,12 @@ namespace Saas.Infra.MVC.Controllers.Api
 
                 var subscriptions = await _subscriptionApplicationService.GetMySubscriptionsAsync(userId, activeOnly);
                 var result = subscriptions.Select(MapSubscription).ToList();
-                Log.Information("Retrieved {Count} subscriptions for user {UserId}", result.Count, userId);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Retrieved {Count} subscriptions for user {UserId}", result.Count, userId);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error retrieving user subscriptions");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error retrieving user subscriptions");
                 return StatusCode(500, new { message = "Failed to retrieve subscriptions" });
             }
         }
@@ -88,7 +89,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error retrieving subscription {Id}", id);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error retrieving subscription {Id}", id);
                 return StatusCode(500, new { message = "Failed to retrieve subscription" });
             }
         }
@@ -116,7 +117,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                     return Forbid();
 
                 await _subscriptionApplicationService.CancelSubscriptionAsync(id);
-                Log.Information("Subscription {Id} cancelled by user {UserId}", id, userId);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Subscription {Id} cancelled by user {UserId}", id, userId);
                 return Ok(new { message = "Subscription cancelled successfully" });
             }
             catch (InvalidOperationException ex)
@@ -125,7 +126,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error cancelling subscription {Id}", id);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error cancelling subscription {Id}", id);
                 return StatusCode(500, new { message = "Failed to cancel subscription" });
             }
         }
@@ -157,7 +158,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error retrieving transactions for subscription {Id}", id);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error retrieving transactions for subscription {Id}", id);
                 return StatusCode(500, new { message = "Failed to retrieve transactions" });
             }
         }

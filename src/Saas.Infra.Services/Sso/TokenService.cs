@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Saas.Infra.Core;
-using Serilog;
+using Serilog.Events;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -95,18 +95,18 @@ namespace Saas.Infra.Services.Sso
             try
             {
                 var produced = tokenHandler.ReadJwtToken(accessToken);
-                Log.Information("[TOKEN DEBUG] full token: {Token}", accessToken);
-                Log.Information("[TOKEN DEBUG] produced token header alg={Alg}, kid={Kid}", produced.Header.Alg, produced.Header.Kid ?? "(none)");
-                Log.Information("[TOKEN DEBUG] produced token rawHeader={RawHeader}", produced.RawHeader);
-                Log.Information("[TOKEN DEBUG] produced token rawPayload={RawPayload}", produced.RawPayload);
-                Log.Information("[TOKEN DEBUG] signingKey KeyId={KeyId}, has RSA={HasRsa}", _signingKey.KeyId ?? "(none)", _signingKey.Rsa != null);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[TOKEN DEBUG] full token: {Token}", accessToken);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[TOKEN DEBUG] produced token header alg={Alg}, kid={Kid}", produced.Header.Alg, produced.Header.Kid ?? "(none)");
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[TOKEN DEBUG] produced token rawHeader={RawHeader}", produced.RawHeader);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[TOKEN DEBUG] produced token rawPayload={RawPayload}", produced.RawPayload);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[TOKEN DEBUG] signingKey KeyId={KeyId}, has RSA={HasRsa}", _signingKey.KeyId ?? "(none)", _signingKey.Rsa != null);
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[TOKEN DEBUG] Failed to read produced token header");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "[TOKEN DEBUG] Failed to read produced token header");
             }
 
-            Log.Information("RSA-signed token generated for email {Email}", email);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA-signed token generated for email {Email}", email);
 
             return new JwtTokenResponse
             {
@@ -150,34 +150,31 @@ namespace Saas.Infra.Services.Sso
                 if (validatedToken is JwtSecurityToken jwtToken &&
                     !string.Equals(jwtToken.Header.Alg, SecurityAlgorithms.RsaSha256, StringComparison.Ordinal))
                 {
-                    Log.Warning("Unexpected JWT algorithm: {Alg} (expected RS256)", jwtToken.Header.Alg);
+                    UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Unexpected JWT algorithm: {Alg} (expected RS256)", jwtToken.Header.Alg);
                     return null;
                 }
 
-                Log.Information(
-                    "RSA-signed token validated successfully for user {Username}",
-                    principal.Identity?.Name ?? "unknown");
-
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA-signed token validated successfully for user {Username}", principal.Identity?.Name ?? "unknown");
                 return principal;
             }
             catch (SecurityTokenExpiredException ex)
             {
-                Log.Warning(ex, "Token validation failed: expired");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Token validation failed: expired");
                 return null;
             }
             catch (SecurityTokenInvalidSignatureException ex)
             {
-                Log.Warning(ex, "Token validation failed: invalid signature");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Token validation failed: invalid signature");
                 return null;
             }
             catch (SecurityTokenException ex)
             {
-                Log.Warning(ex, "Token validation failed: {Message}", ex.Message);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Token validation failed: {Message}", ex.Message);
                 return null;
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Unexpected error during token validation");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Unexpected error during token validation");
                 return null;
             }
         }

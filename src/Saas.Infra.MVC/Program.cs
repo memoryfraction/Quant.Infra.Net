@@ -8,6 +8,7 @@ using Saas.Infra.Services.Payment;
 using Saas.Infra.Services.Product;
 using Microsoft.AspNetCore.Components.Authorization;
 using Serilog;
+using Serilog.Events;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.HttpOverrides;
 
@@ -28,16 +29,14 @@ namespace Saas.Infra.MVC
 
             try
             {
-                Log.Information("Saas.Infra.MVC application starting...");
-
-                // --- Startup diagnostics ---
-                Log.Information("[STARTUP DIAG] AppContext.BaseDirectory={BaseDir}", AppContext.BaseDirectory);
-                Log.Information("[STARTUP DIAG] CONTAINER_APP_NAME={Val}", Environment.GetEnvironmentVariable("CONTAINER_APP_NAME") ?? "(not set)");
-                Log.Information("[STARTUP DIAG] DOTNET_RUNNING_IN_CONTAINER={Val}", Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") ?? "(not set)");
-                Log.Information("[STARTUP DIAG] ASPNETCORE_ENVIRONMENT={Val}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "(not set)");
-                Log.Information("[STARTUP DIAG] rsa-private-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-private-key-content")));
-                Log.Information("[STARTUP DIAG] rsa-public-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-public-key-content")));
-                Log.Information("[STARTUP DIAG] ConnectionStrings__DefaultConnection env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")));
+                UtilityService.LogAndWriteLine("Saas.Infra.MVC application starting...", LogEventLevel.Information);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] AppContext.BaseDirectory={BaseDir}", AppContext.BaseDirectory);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] CONTAINER_APP_NAME={Val}", Environment.GetEnvironmentVariable("CONTAINER_APP_NAME") ?? "(not set)");
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] DOTNET_RUNNING_IN_CONTAINER={Val}", Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") ?? "(not set)");
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] ASPNETCORE_ENVIRONMENT={Val}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "(not set)");
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] rsa-private-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-private-key-content")));
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] rsa-public-key-content env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("rsa-public-key-content")));
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "[STARTUP DIAG] ConnectionStrings__DefaultConnection env present={Val}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")));
                 var builder = WebApplication.CreateBuilder(args);
 
                 // --- 1. 转发头配置（解决 Ingress HTTPS 识别） ---
@@ -54,7 +53,7 @@ namespace Saas.Infra.MVC
                 builder.Host.UseSerilog();
 
                 var runtimeEnv = UtilityService.GetCurrentEnvironment();
-                Log.Information("Detected runtime environment: {Env}", runtimeEnv);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Detected runtime environment: {Env}", runtimeEnv);
 
                 // --- 2. 绝对路径还原 RSA 文件 ---
                 var baseDir = AppContext.BaseDirectory;
@@ -68,7 +67,7 @@ namespace Saas.Infra.MVC
                     var rsaPublicKeyContent = builder.Configuration["RSA_PUBLIC_KEY_CONTENT"]
                                             ?? builder.Configuration["rsa-public-key-content"];
 
-                    Log.Information("RSA_PRIVATE_KEY_CONTENT present: {HasPrivate}, RSA_PUBLIC_KEY_CONTENT present: {HasPublic}",
+                    UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA_PRIVATE_KEY_CONTENT present: {HasPrivate}, RSA_PUBLIC_KEY_CONTENT present: {HasPublic}",
                         !string.IsNullOrEmpty(rsaPrivateKeyContent), !string.IsNullOrEmpty(rsaPublicKeyContent));
 
                     if (!string.IsNullOrEmpty(rsaPrivateKeyContent))
@@ -76,23 +75,23 @@ namespace Saas.Infra.MVC
                         var dir = Path.GetDirectoryName(privateKeyPath);
                         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                         File.WriteAllText(privateKeyPath, rsaPrivateKeyContent);
-                        Log.Information("RSA private key restored to {Path}", privateKeyPath);
+                        UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA private key restored to {Path}", privateKeyPath);
                     }
                     else
                     {
-                        Log.Error("RSA_PRIVATE_KEY_CONTENT is empty or not configured in ACA secrets. Ensure the secret 'rsa-private-key-content' is set in Azure Container Apps.");
+                        UtilityService.LogAndWriteLine("RSA_PRIVATE_KEY_CONTENT is empty or not configured in ACA secrets. Ensure the secret 'rsa-private-key-content' is set in Azure Container Apps.", LogEventLevel.Error);
                     }
                     if (!string.IsNullOrEmpty(rsaPublicKeyContent))
                     {
                         var dir = Path.GetDirectoryName(publicKeyPath);
                         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                         File.WriteAllText(publicKeyPath, rsaPublicKeyContent);
-                        Log.Information("RSA public key restored to {Path}", publicKeyPath);
+                        UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA public key restored to {Path}", publicKeyPath);
                     }
                 }
                 else
                 {
-                    Log.Information("Non-container environment detected, expecting RSA key files on disk.");
+                    UtilityService.LogAndWriteLine("Non-container environment detected, expecting RSA key files on disk.", LogEventLevel.Information);
                 }
 
                 if (!File.Exists(privateKeyPath))
@@ -197,7 +196,7 @@ namespace Saas.Infra.MVC
 
                     if (string.IsNullOrWhiteSpace(webhookSecret))
                     {
-                        Log.Warning("Stripe WebhookSecret is empty. Webhook verification will fail until Stripe__WebhookSecret is configured.");
+                        UtilityService.LogAndWriteLine("Stripe WebhookSecret is empty. Webhook verification will fail until Stripe__WebhookSecret is configured.", LogEventLevel.Warning);
                     }
 
                     return new StripePaymentGateway(secretKey, webhookSecret ?? string.Empty);
@@ -230,8 +229,15 @@ namespace Saas.Infra.MVC
 
                 app.Run();
             }
-            catch (Exception ex) { Log.Fatal(ex, "Start failed"); throw; }
-            finally { Log.CloseAndFlush(); }
+            catch (Exception ex)
+            {
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Fatal, "Start failed");
+                throw;
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
     }
 }

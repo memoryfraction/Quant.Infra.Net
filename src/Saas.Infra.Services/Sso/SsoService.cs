@@ -1,5 +1,5 @@
 using Saas.Infra.Core;
-using Serilog;
+using Serilog.Events;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -104,7 +104,7 @@ namespace Saas.Infra.Services.Sso
 
             await _refreshTokenRepository.AddAsync(record);
 
-            Log.Information("User registered with email {Email}", email);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "User registered with email {Email}", email);
             return tokenResponse;
         }
 
@@ -130,13 +130,13 @@ namespace Saas.Infra.Services.Sso
             var user = await _userRepository.GetByEmailAsync(email);
             if (user == null)
             {
-                Log.Warning("Login failed for email {Email}: user not found", email);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Login failed for email {Email}: user not found", email);
                 throw new InvalidOperationException("User does not exist.");
             }
 
             if (!_passwordHasher.VerifyPassword(user.PasswordHash, password))
             {
-                Log.Warning("Login failed for email {Email}: incorrect password", email);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Login failed for email {Email}: incorrect password", email);
                 throw new InvalidOperationException("Incorrect password.");
             }
 
@@ -144,7 +144,7 @@ namespace Saas.Infra.Services.Sso
             var claims = BuildTokenClaims(user.Id, roleCodes);
 
             var tokenResponse = _tokenService.GenerateToken(user.Email, clientId, claims);
-            Log.Information("RSA-signed token generated for email {Email}", user.Email);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA-signed token generated for email {Email}", user.Email);
 
             return tokenResponse;
         }
@@ -170,19 +170,19 @@ namespace Saas.Infra.Services.Sso
 
             if (record == null || record.Revoked || record.ExpiresAt <= DateTimeOffset.UtcNow)
             {
-                Log.Warning("Invalid refresh token (hash: {Hash})", hash);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Invalid refresh token (hash: {Hash})", hash);
                 throw new InvalidOperationException("Invalid refresh token.");
             }
 
             var user = await _userRepository.GetByIdAsync(record.UserId);
             if (user == null)
             {
-                Log.Error("User not found for refresh token (UserId: {UserId})", record.UserId);
+                UtilityService.LogAndWriteLine(LogEventLevel.Error, "User not found for refresh token (UserId: {UserId})", record.UserId);
                 throw new InvalidOperationException("User not found for refresh token.");
             }
 
             await _refreshTokenRepository.RevokeAsync(hash);
-            Log.Information("Old refresh token revoked for user {UserId}", user.Id);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "Old refresh token revoked for user {UserId}", user.Id);
 
             var roleCodes = await _userRepository.GetRoleCodesByUserIdAsync(user.Id);
             var claims = BuildTokenClaims(user.Id, roleCodes);
@@ -201,7 +201,7 @@ namespace Saas.Infra.Services.Sso
             };
 
             await _refreshTokenRepository.AddAsync(newRecord);
-            Log.Information("New refresh token issued for user {UserId}", user.Id);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "New refresh token issued for user {UserId}", user.Id);
 
             return newTokenResponse;
         }
@@ -220,7 +220,7 @@ namespace Saas.Infra.Services.Sso
 
             var hash = ComputeSha256(refreshToken);
             await _refreshTokenRepository.RevokeAsync(hash);
-            Log.Information("Refresh token revoked (hash: {Hash})", hash);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "Refresh token revoked (hash: {Hash})", hash);
         }
 
         /// <summary>
@@ -238,12 +238,12 @@ namespace Saas.Infra.Services.Sso
             try
             {
                 var principal = _tokenService.ValidateToken(token);
-                Log.Information("Token validated successfully (user: {Username})", principal?.Identity?.Name ?? "unknown");
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Token validated successfully (user: {Username})", principal?.Identity?.Name ?? "unknown");
                 return await Task.FromResult(principal);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to validate token");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Failed to validate token");
                 return await Task.FromResult<ClaimsPrincipal?>(null);
             }
         }

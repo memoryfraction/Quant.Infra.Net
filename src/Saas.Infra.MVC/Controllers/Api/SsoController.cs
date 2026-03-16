@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Saas.Infra.Core;
 using Saas.Infra.Services.Sso;
 using Saas.Infra.MVC.Models;
-using Serilog;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
@@ -49,7 +49,7 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             if (!ModelState.IsValid)
             {
-                Log.Warning("Invalid model state for login request: {Email}", request.Email);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Invalid model state for login request: {Email}", request.Email);
                 return BadRequest(ModelState);
             }
 
@@ -61,19 +61,19 @@ namespace Saas.Infra.MVC.Controllers.Api
                     request.Password,
                     request.ClientId ?? "default");
 
-                Log.Information("RSA-signed token generated successfully for email: {Email}", request.Email);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "RSA-signed token generated successfully for email: {Email}", request.Email);
                 return Ok(tokenResponse);
             }
             catch (InvalidOperationException ex)
             {
                 // 3. 处理预期的业务异常（返回具体的错误消息）
-                Log.Warning("Login failed for email: {Email}. Reason: {Reason}", request.Email, ex.Message);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Login failed for email: {Email}. Reason: {Reason}", request.Email, ex.Message);
                 return Unauthorized(new { message = ex.Message });
             }
             catch (Exception ex)
             {
                 // 4. 处理未预期的系统异常
-                Log.Error(ex, "Unexpected error during RSA token generation for email: {Email}. Exception: {ExceptionMessage}", request.Email, ex.Message);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Unexpected error during RSA token generation for email: {Email}. Exception: {ExceptionMessage}", request.Email, ex.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Internal server error, please try again later" });
             }
         }

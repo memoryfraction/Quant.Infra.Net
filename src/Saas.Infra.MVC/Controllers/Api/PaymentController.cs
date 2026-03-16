@@ -1,10 +1,11 @@
 using System.IO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Saas.Infra.Core;
 using Saas.Infra.MVC.Models.Requests;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.Services.Payment;
-using Serilog;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
@@ -57,12 +58,12 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (InvalidOperationException ex)
             {
-                Log.Warning(ex, "Error creating payment intent: {Message}", ex.Message);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Error creating payment intent: {Message}", ex.Message);
                 return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Unexpected error creating payment intent");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Unexpected error creating payment intent");
                 return StatusCode(500, new { message = "Failed to create payment intent" });
             }
         }
@@ -86,7 +87,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                 return Ok(new CreateOrderDto
                 {
                     OrderId = result.OrderId,
-                    Status = result.Status,
+                    Status = (short)result.Status,
                     ProductId = result.ProductId,
                     PriceId = result.PriceId,
                     OriginalAmount = result.OriginalAmount,
@@ -101,12 +102,12 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (InvalidOperationException ex)
             {
-                Log.Warning(ex, "Business error creating order: {Message}", ex.Message);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Business error creating order: {Message}", ex.Message);
                 return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Unexpected error creating order");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Unexpected error creating order");
                 return StatusCode(500, new { message = "Failed to create order" });
             }
         }
@@ -134,12 +135,12 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (InvalidOperationException ex)
             {
-                Log.Warning(ex, "Error creating checkout session for order {OrderId}", orderId);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Error creating checkout session for order {OrderId}", orderId);
                 return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Unexpected error creating checkout session for order {OrderId}", orderId);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Unexpected error creating checkout session for order {OrderId}", orderId);
                 return StatusCode(500, new { message = "Failed to create checkout session" });
             }
         }
@@ -175,12 +176,12 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (InvalidOperationException ex)
             {
-                Log.Warning(ex, "Error confirming payment: {Message}", ex.Message);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Error confirming payment: {Message}", ex.Message);
                 return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Unexpected error confirming payment");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Unexpected error confirming payment");
                 return StatusCode(500, new { message = "Failed to confirm payment" });
             }
         }
@@ -205,12 +206,12 @@ namespace Saas.Infra.MVC.Controllers.Api
                 return Ok(new PaymentStatusDto
                 {
                     OrderId = result.OrderId,
-                    OrderStatus = result.OrderStatus,
+                    OrderStatus = (short)result.OrderStatus,
                     OrderStatusText = result.OrderStatusText,
                     Paid = result.Paid,
                     SubscriptionId = result.SubscriptionId,
                     TransactionId = result.TransactionId,
-                    TransactionStatus = result.TransactionStatus,
+                    TransactionStatus = result.TransactionStatus.HasValue ? (short?)result.TransactionStatus.Value : null,
                     ExternalTransactionId = result.ExternalTransactionId,
                     PaidTime = result.PaidTime,
                     ExpiredTime = result.ExpiredTime,
@@ -220,7 +221,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Unexpected error querying payment status for order {OrderId}", orderId);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Unexpected error querying payment status for order {OrderId}", orderId);
                 return StatusCode(500, new { message = "Failed to query payment status" });
             }
         }
@@ -244,7 +245,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error processing Stripe webhook");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error processing Stripe webhook");
                 return StatusCode(500, new { message = "Webhook processing failed" });
             }
         }

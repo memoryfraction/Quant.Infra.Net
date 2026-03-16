@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Saas.Infra.Core;
 using Saas.Infra.Data;
-using Serilog;
+using Serilog.Events;
 
 namespace Saas.Infra.Services.Product;
 
@@ -47,7 +48,7 @@ public class ProductConfigService : IProductConfigService
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Failed to load available products for user {UserId}", userId);
+            UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Failed to load available products for user {UserId}", userId);
             return new List<ProductInfo>();
         }
     }
@@ -72,7 +73,7 @@ public class ProductConfigService : IProductConfigService
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Failed to load product {ProductId}", productId);
+            UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Failed to load product {ProductId}", productId);
             return null;
         }
     }

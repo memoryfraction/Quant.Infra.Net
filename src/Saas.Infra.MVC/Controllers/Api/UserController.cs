@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Saas.Infra.Core;
@@ -8,14 +8,14 @@ using Saas.Infra.MVC.Models.Requests;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.MVC.Security;
 using Saas.Infra.Services.Sso;
-using Serilog;
+using Serilog.Events;
 using System.Security.Claims;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
     /// <summary>
-    /// æä¾›ç”¨æˆ·ç›¸å…³çš„å—ä¿æŠ¤ APIï¼ˆä¸ªäººèµ„æ–™ã€ä¿®æ”¹å¯†ç ç­‰ï¼‰ï¼Œéœ€éªŒè¯RSAç­¾åçš„JWTä»¤ç‰Œã€‚
-    /// Protected user management endpoints (profile, change password, and admin management) requiring RSA-signed JWT token validation.
+    /// 提供受保护的用户管理 API，包括个人资料、修改密码和后台用户管理功能。
+    /// Provides protected user management APIs, including profile access, password changes, and administrative user management.
     /// </summary>
     [ApiController]
     [Route("api/users")]
@@ -28,13 +28,13 @@ namespace Saas.Infra.MVC.Controllers.Api
         private readonly ApplicationDbContext _db;
 
         /// <summary>
-        /// åˆå§‹åŒ– <see cref="UserController"/> çš„æ–°å®žä¾‹ã€‚
+        /// 初始化 <see cref="UserController"/> 的新实例。
         /// Initializes a new instance of the <see cref="UserController"/> class.
         /// </summary>
-        /// <param name="userRepository">ç”¨æˆ·ä»“å‚¨å®žçŽ°ã€‚/ The user repository implementation.</param>
-        /// <param name="passwordHasher">å¯†ç å“ˆå¸Œå®žçŽ°ã€‚/ The password hasher implementation.</param>
-        /// <param name="ssoService">å•ç‚¹ç™»å½•æœåŠ¡ï¼Œç”¨äºŽç”ŸæˆRSAç­¾åçš„Tokenç­‰ã€‚/ The SSO service used to generate RSA-signed tokens.</param>
-        /// <param name="db">æ•°æ®åº“ä¸Šä¸‹æ–‡ã€‚ / Database context.</param>
+        /// <param name="userRepository">用户仓储实现。 / User repository implementation.</param>
+        /// <param name="passwordHasher">密码哈希实现。 / Password hasher implementation.</param>
+        /// <param name="ssoService">单点登录服务。 / Single sign-on service.</param>
+        /// <param name="db">数据库上下文。 / Database context.</param>
         public UserController(IUserRepository userRepository, IPasswordHasher passwordHasher, ISsoService ssoService, ApplicationDbContext db)
         {
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
@@ -44,9 +44,10 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// èŽ·å–å½“å‰ç™»å½•ç”¨æˆ·çš„åŸºæœ¬ä¿¡æ¯ï¼ˆä»ŽRSA JWTä»¤ç‰Œä¸­è§£æžClaimï¼‰ã€‚
-        /// Get current authenticated user's basic profile (parsed from RSA JWT token claims).
+        /// 获取当前登录用户的基本信息。
+        /// Gets the basic information of the currently authenticated user.
         /// </summary>
+        /// <returns>当前用户信息结果。 / Current user profile result.</returns>
         [HttpGet("me")]
         public async Task<IActionResult> Me()
         {
@@ -57,7 +58,7 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(username))
             {
-                Log.Warning("Me endpoint called but no user identifier claim present (userId/username)");
+                UtilityService.LogAndWriteLine("Me endpoint called but no user identifier claim present (userId/username)", LogEventLevel.Warning);
                 return Unauthorized(new { message = "Invalid token: missing user identifier" });
             }
 
@@ -83,7 +84,7 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             if (user == null)
             {
-                Log.Warning("Authenticated user not found in database: UserId={UserId}, Username={Username}", userId, username);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Authenticated user not found in database: UserId={UserId}, Username={Username}", userId ?? "(none)", username ?? "(none)");
                 return NotFound(new { message = "User not found" });
             }
 
@@ -98,11 +99,11 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// èŽ·å–å¯ç®¡ç†çš„ç”¨æˆ·åˆ—è¡¨ã€‚
+        /// 获取当前操作员可管理的用户列表。
         /// Gets the list of users manageable by the current operator.
         /// </summary>
-        /// <param name="includeDeleted">æ˜¯å¦åŒ…å«å·²åˆ é™¤ç”¨æˆ·ã€‚ / Whether to include deleted users.</param>
-        /// <returns>ç”¨æˆ·ç®¡ç†åˆ—è¡¨ã€‚ / User management list.</returns>
+        /// <param name="includeDeleted">是否包含已删除用户。 / Whether to include deleted users.</param>
+        /// <returns>用户管理列表。 / User management list.</returns>
         [HttpGet("management")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> GetManageableUsers([FromQuery] bool includeDeleted = false)
@@ -178,17 +179,17 @@ namespace Saas.Infra.MVC.Controllers.Api
                 .OrderByDescending(user => user.CreatedTime)
                 .ToList();
 
-            Log.Information("User management list loaded by {Operator}, role {RoleCode}, count {Count}", User.Identity?.Name, currentRoleCode, result.Count);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "User management list loaded by {Operator}, role {RoleCode}, count {Count}", User.Identity?.Name ?? "unknown", currentRoleCode, result.Count);
             return Ok(result);
         }
 
         /// <summary>
-        /// åˆ‡æ¢ç”¨æˆ·å¯ç”¨çŠ¶æ€ã€‚
-        /// Toggles a user's enabled status.
+        /// 切换指定用户的启用状态。
+        /// Toggles the enabled status of the specified user.
         /// </summary>
-        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
-        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
-        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
+        /// <param name="userId">用户标识。 / User identifier.</param>
+        /// <returns>操作结果。 / Operation result.</returns>
+        /// <exception cref="ArgumentException">当 <paramref name="userId"/> 无效时抛出。 / Thrown when <paramref name="userId"/> is invalid.</exception>
         [HttpPost("{userId:guid}/toggle-status")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> ToggleUserStatus(Guid userId)
@@ -206,7 +207,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             var targetRoleCode = await GetUserRoleCodeAsync(userId);
             if (!CanManageTarget(currentRoleCode, targetRoleCode))
             {
-                Log.Warning("Operator {Operator} with role {CurrentRole} attempted to manage user {UserId} with role {TargetRole}", User.Identity?.Name, currentRoleCode, userId, targetRoleCode);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Operator {Operator} with role {CurrentRole} attempted to manage user {UserId} with role {TargetRole}", User.Identity?.Name ?? "unknown", currentRoleCode, userId, targetRoleCode);
                 return Forbid();
             }
 
@@ -217,7 +218,7 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             await _db.SaveChangesAsync();
 
-            Log.Information("User {UserId} status changed to {Status} by {Operator}", userId, targetUser.Status, User.Identity?.Name);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "User {UserId} status changed to {Status} by {Operator}", userId, targetUser.Status, User.Identity?.Name ?? "unknown");
             return Ok(new
             {
                 message = "User status updated successfully",
@@ -226,13 +227,13 @@ namespace Saas.Infra.MVC.Controllers.Api
         }
 
         /// <summary>
-        /// æ›´æ–°å¯ç®¡ç†ç”¨æˆ·çš„åŸºæœ¬ä¿¡æ¯ã€‚
+        /// 更新可管理用户的基本信息。
         /// Updates the basic information of a manageable user.
         /// </summary>
-        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
-        /// <param name="request">æ›´æ–°è¯·æ±‚ã€‚ / Update request.</param>
-        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
-        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
+        /// <param name="userId">用户标识。 / User identifier.</param>
+        /// <param name="request">更新请求。 / Update request.</param>
+        /// <returns>操作结果。 / Operation result.</returns>
+        /// <exception cref="ArgumentException">当 <paramref name="userId"/> 无效时抛出。 / Thrown when <paramref name="userId"/> is invalid.</exception>
         [HttpPut("{userId:guid}")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> UpdateManagedUser(Guid userId, [FromBody] UpdateManagedUserRequest request)
@@ -258,7 +259,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             var targetRoleCode = await GetUserRoleCodeAsync(userId);
             if (!CanManageTarget(currentRoleCode, targetRoleCode))
             {
-                Log.Warning("Operator {Operator} with role {CurrentRole} attempted to edit user {UserId} with role {TargetRole}", User.Identity?.Name, currentRoleCode, userId, targetRoleCode);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Operator {Operator} with role {CurrentRole} attempted to edit user {UserId} with role {TargetRole}", User.Identity?.Name ?? "unknown", currentRoleCode, userId, targetRoleCode);
                 return Forbid();
             }
 
@@ -288,17 +289,17 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             await _db.SaveChangesAsync();
 
-            Log.Information("User {UserId} updated by {Operator}", userId, User.Identity?.Name);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "User {UserId} updated by {Operator}", userId, User.Identity?.Name ?? "unknown");
             return Ok(new { message = "User updated successfully" });
         }
 
         /// <summary>
-        /// åˆ é™¤å¯ç®¡ç†ç”¨æˆ·ã€‚
+        /// 删除可管理的用户。
         /// Deletes a manageable user.
         /// </summary>
-        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
-        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
-        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
+        /// <param name="userId">用户标识。 / User identifier.</param>
+        /// <returns>操作结果。 / Operation result.</returns>
+        /// <exception cref="ArgumentException">当 <paramref name="userId"/> 无效时抛出。 / Thrown when <paramref name="userId"/> is invalid.</exception>
         [HttpDelete("{userId:guid}")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> DeleteManagedUser(Guid userId)
@@ -322,7 +323,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             var targetRoleCode = await GetUserRoleCodeAsync(userId);
             if (!CanManageTarget(currentRoleCode, targetRoleCode))
             {
-                Log.Warning("Operator {Operator} with role {CurrentRole} attempted to delete user {UserId} with role {TargetRole}", User.Identity?.Name, currentRoleCode, userId, targetRoleCode);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Operator {Operator} with role {CurrentRole} attempted to delete user {UserId} with role {TargetRole}", User.Identity?.Name ?? "unknown", currentRoleCode, userId, targetRoleCode);
                 return Forbid();
             }
 
@@ -337,17 +338,17 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             await _db.SaveChangesAsync();
 
-            Log.Information("User {UserId} deleted by {Operator}", userId, User.Identity?.Name);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "User {UserId} deleted by {Operator}", userId, User.Identity?.Name ?? "unknown");
             return Ok(new { message = "User deleted successfully" });
         }
 
         /// <summary>
-        /// æ¢å¤å·²åˆ é™¤çš„å¯ç®¡ç†ç”¨æˆ·ã€‚
+        /// 恢复已删除的可管理用户。
         /// Restores a deleted manageable user.
         /// </summary>
-        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
-        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
-        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
+        /// <param name="userId">用户标识。 / User identifier.</param>
+        /// <returns>操作结果。 / Operation result.</returns>
+        /// <exception cref="ArgumentException">当 <paramref name="userId"/> 无效时抛出。 / Thrown when <paramref name="userId"/> is invalid.</exception>
         [HttpPost("{userId:guid}/restore")]
         [AuthorizeRole(UserRole.Admin)]
         public async Task<IActionResult> RestoreManagedUser(Guid userId)
@@ -365,7 +366,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             var targetRoleCode = await GetUserRoleCodeAsync(userId);
             if (!CanManageTarget(currentRoleCode, targetRoleCode))
             {
-                Log.Warning("Operator {Operator} with role {CurrentRole} attempted to restore user {UserId} with role {TargetRole}", User.Identity?.Name, currentRoleCode, userId, targetRoleCode);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Operator {Operator} with role {CurrentRole} attempted to restore user {UserId} with role {TargetRole}", User.Identity?.Name ?? "unknown", currentRoleCode, userId, targetRoleCode);
                 return Forbid();
             }
 
@@ -375,14 +376,16 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             await _db.SaveChangesAsync();
 
-            Log.Information("User {UserId} restored by {Operator}", userId, User.Identity?.Name);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "User {UserId} restored by {Operator}", userId, User.Identity?.Name ?? "unknown");
             return Ok(new { message = "User restored successfully" });
         }
 
         /// <summary>
-        /// ä¿®æ”¹å½“å‰ç”¨æˆ·å¯†ç ï¼ˆéªŒè¯RSA JWTä»¤ç‰ŒåŽæ“ä½œï¼‰ã€‚
-        /// Change password for current authenticated user (after RSA JWT token validation).
+        /// 修改当前登录用户的密码。
+        /// Changes the password of the currently authenticated user.
         /// </summary>
+        /// <param name="request">修改密码请求。 / Change password request.</param>
+        /// <returns>操作结果。 / Operation result.</returns>
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
         {
@@ -395,7 +398,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                 ?? User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
             if (string.IsNullOrWhiteSpace(userId))
             {
-                Log.Warning("ChangePassword called but no user ID claim present");
+                UtilityService.LogAndWriteLine("ChangePassword called but no user ID claim present", LogEventLevel.Warning);
                 return Unauthorized(new { message = "Invalid token: missing user ID" });
             }
 
@@ -412,27 +415,29 @@ namespace Saas.Infra.MVC.Controllers.Api
 
             if (user == null)
             {
-                Log.Warning("ChangePassword: user not found (UserId={UserId})", userId);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "ChangePassword: user not found (UserId={UserId})", userId);
                 return NotFound(new { message = "User not found" });
             }
 
             if (!_passwordHasher.VerifyPassword(user.PasswordHash, request.OldPassword))
             {
-                Log.Warning("ChangePassword: invalid old password for UserId={UserId}", userId);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "ChangePassword: invalid old password for UserId={UserId}", userId);
                 return BadRequest(new { message = "Old password is incorrect" });
             }
 
             var newHash = _passwordHasher.HashPassword(request.NewPassword);
             await _userRepository.UpdatePasswordAsync(user.Id, newHash);
 
-            Log.Information("Password changed successfully for UserId={UserId}", userId);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "Password changed successfully for UserId={UserId}", userId);
             return NoContent();
         }
 
         /// <summary>
-        /// ä¸ºæ–°ç”¨æˆ·æ³¨å†Œå¹¶è¿”å›žRSAç­¾åçš„è‡ªåŠ¨ç™»å½•ä»¤ç‰Œå¯¹ã€‚
-        /// Registers a new user and returns RSA-signed tokens for immediate login.
+        /// 注册新用户并返回自动登录令牌。
+        /// Registers a new user and returns auto sign-in tokens.
         /// </summary>
+        /// <param name="request">注册请求。 / Registration request.</param>
+        /// <returns>注册结果。 / Registration result。</returns>
         [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
@@ -442,7 +447,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             if (string.IsNullOrWhiteSpace(request.Password)) return BadRequest("Password is required.");
             if (!ModelState.IsValid)
             {
-                Log.Warning("Invalid model state for register request (Email={Email})", request.Email);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Invalid model state for register request (Email={Email})", request.Email);
                 return BadRequest(ModelState);
             }
 
@@ -454,28 +459,28 @@ namespace Saas.Infra.MVC.Controllers.Api
                     request.Username ?? request.Email.Split('@')[0],
                     request.ClientId ?? "default");
 
-                Log.Information("User registered successfully (Email={Email}), RSA token generated", request.Email);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "User registered successfully (Email={Email}), RSA token generated", request.Email);
                 return Ok(tokenResponse);
             }
             catch (InvalidOperationException ex)
             {
-                Log.Warning(ex, "Register failed for email: {Email}", request.Email);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Warning, "Register failed for email: {Email}", request.Email);
                 return Conflict(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error during user registration (Email={Email})", request.Email);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error during user registration (Email={Email})", request.Email);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred during registration, please try again later" });
             }
         }
 
         /// <summary>
-        /// æŽˆäºˆç”¨æˆ·ç®¡ç†å‘˜è§’è‰²ï¼ˆä»…è¶…çº§ç®¡ç†å‘˜ï¼‰ã€‚
-        /// Grants admin role to a user (SuperAdmin only).
+        /// 为指定用户授予管理员角色。
+        /// Grants the administrator role to the specified user。
         /// </summary>
-        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
-        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
-        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
+        /// <param name="userId">用户标识。 / User identifier。</param>
+        /// <returns>操作结果。 / Operation result。</returns>
+        /// <exception cref="ArgumentException">当 <paramref name="userId"/> 无效时抛出。 / Thrown when <paramref name="userId"/> is invalid。</exception>
         [HttpPost("{userId:guid}/grant-admin")]
         [AuthorizeRole(UserRole.Super_Admin)]
         public async Task<IActionResult> GrantAdminRole(Guid userId)
@@ -522,17 +527,17 @@ namespace Saas.Infra.MVC.Controllers.Api
             });
             await _db.SaveChangesAsync();
 
-            Log.Information("ADMIN role granted to user {UserId} by {Operator}", userId, User.Identity?.Name);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "ADMIN role granted to user {UserId} by {Operator}", userId, User.Identity?.Name ?? "unknown");
             return Ok(new { message = "ADMIN role granted successfully" });
         }
 
         /// <summary>
-        /// ç§»é™¤ç”¨æˆ·ç®¡ç†å‘˜è§’è‰²ï¼ˆä»…è¶…çº§ç®¡ç†å‘˜ï¼‰ã€‚
-        /// Revokes admin role from a user (SuperAdmin only).
+        /// 撤销指定用户的管理员角色。
+        /// Revokes the administrator role from the specified user。
         /// </summary>
-        /// <param name="userId">ç”¨æˆ·IDã€‚ / User ID.</param>
-        /// <returns>æ“ä½œç»“æžœã€‚ / Operation result.</returns>
-        /// <exception cref="ArgumentException">å½“ userId æ— æ•ˆæ—¶æŠ›å‡ºã€‚ / Thrown when userId is invalid.</exception>
+        /// <param name="userId">用户标识。 / User identifier。</param>
+        /// <returns>操作结果。 / Operation result。</returns>
+        /// <exception cref="ArgumentException">当 <paramref name="userId"/> 无效时抛出。 / Thrown when <paramref name="userId"/> is invalid。</exception>
         [HttpPost("{userId:guid}/revoke-admin")]
         [AuthorizeRole(UserRole.Super_Admin)]
         public async Task<IActionResult> RevokeAdminRole(Guid userId)
@@ -561,7 +566,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             _db.UserRoles.Remove(userRole);
             await _db.SaveChangesAsync();
 
-            Log.Information("ADMIN role revoked from user {UserId} by {Operator}", userId, User.Identity?.Name);
+            UtilityService.LogAndWriteLine(LogEventLevel.Information, "ADMIN role revoked from user {UserId} by {Operator}", userId, User.Identity?.Name ?? "unknown");
             return Ok(new { message = "ADMIN role revoked successfully" });
         }
 

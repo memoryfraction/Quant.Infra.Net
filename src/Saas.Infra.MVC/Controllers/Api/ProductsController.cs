@@ -6,7 +6,7 @@ using Saas.Infra.MVC.Models.Requests;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.MVC.Security;
 using Saas.Infra.Services.Product;
-using Serilog;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
@@ -48,12 +48,12 @@ namespace Saas.Infra.MVC.Controllers.Api
                     User.IsInRole("ADMIN") || User.IsInRole("SUPER_ADMIN"));
 
                 var result = products.Select(MapProduct).ToList();
-                Log.Information("Retrieved {Count} products (activeOnly={ActiveOnly})", result.Count, activeOnly);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Retrieved {Count} products (activeOnly={ActiveOnly})", result.Count, activeOnly);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error retrieving products");
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error retrieving products");
                 return StatusCode(500, new { message = "Failed to retrieve products" });
             }
         }
@@ -76,7 +76,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                 var product = await _productApplicationService.GetProductByIdAsync(id);
                 if (product == null)
                 {
-                    Log.Warning("Product {Id} not found", id);
+                    UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Product {Id} not found", id);
                     return NotFound(new { message = "Product not found" });
                 }
 
@@ -84,7 +84,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error retrieving product {Id}", id);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error retrieving product {Id}", id);
                 return StatusCode(500, new { message = "Failed to retrieve product" });
             }
         }
@@ -114,17 +114,17 @@ namespace Saas.Infra.MVC.Controllers.Api
                     request.Metadata);
 
                 var dto = MapProduct(product);
-                Log.Information("Product created: {Code} by {User}", request.Code, User.Identity?.Name);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Product created: {Code} by {User}", request.Code, User.Identity?.Name ?? "unknown");
                 return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, dto);
             }
-            catch (InvalidOperationException ex) when (ex.Message == "Product code already exists")
+            catch (InvalidOperationException ex) when (ex.Message == "Product code already exists.")
             {
-                Log.Warning("Product code {Code} already exists", request.Code);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Product code {Code} already exists", request.Code);
                 return Conflict(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error creating product: {Code}", request.Code);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error creating product: {Code}", request.Code);
                 return StatusCode(500, new { message = "Failed to create product" });
             }
         }
@@ -158,16 +158,16 @@ namespace Saas.Infra.MVC.Controllers.Api
 
                 if (product == null)
                 {
-                    Log.Warning("Product {Id} not found for update", id);
+                    UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Product {Id} not found for update", id);
                     return NotFound(new { message = "Product not found" });
                 }
 
-                Log.Information("Product {Id} updated by {User}", id, User.Identity?.Name);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Product {Id} updated by {User}", id, User.Identity?.Name ?? "unknown");
                 return Ok(MapProduct(product));
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error updating product {Id}", id);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error updating product {Id}", id);
                 return StatusCode(500, new { message = "Failed to update product" });
             }
         }
@@ -190,16 +190,16 @@ namespace Saas.Infra.MVC.Controllers.Api
                 var product = await _productApplicationService.SoftDeleteProductAsync(id);
                 if (product == null)
                 {
-                    Log.Warning("Product {Id} not found for deletion", id);
+                    UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Product {Id} not found for deletion", id);
                     return NotFound(new { message = "Product not found" });
                 }
 
-                Log.Information("Product {Id} ({Code}) soft-deleted by {User}", id, product.Code, User.Identity?.Name);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Product {Id} ({Code}) soft-deleted by {User}", id, product.Code, User.Identity?.Name ?? "unknown");
                 return Ok(new { message = "Product deleted successfully" });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error deleting product {Id}", id);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error deleting product {Id}", id);
                 return StatusCode(500, new { message = "Failed to delete product" });
             }
         }

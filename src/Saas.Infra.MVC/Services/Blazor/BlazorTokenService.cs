@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using Saas.Infra.Core;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Services.Blazor
 {
@@ -57,7 +59,7 @@ namespace Saas.Infra.MVC.Services.Blazor
                     var email = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email || c.Type == "email")?.Value;
                     var roles = string.Join(',', jwt.Claims.Where(c => c.Type == ClaimTypes.Role || c.Type == "role").Select(c => c.Value));
 
-                    Serilog.Log.Information(
+                    UtilityService.LogAndWriteLine(LogEventLevel.Information,
                         "[BLAZOR TOKEN] Token set. Name={Name}, Email={Email}, Roles={Roles}, ClaimsCount={Count}",
                         name ?? "(none)",
                         email ?? "(none)",
@@ -78,7 +80,7 @@ namespace Saas.Infra.MVC.Services.Blazor
         {
             _accessToken = null;
             _claims = new List<Claim>();
-            Serilog.Log.Information("[BLAZOR TOKEN] Token cleared.");
+            UtilityService.LogAndWriteLine("[BLAZOR TOKEN] Token cleared.", LogEventLevel.Information);
             NotifyStateChanged();
         }
 

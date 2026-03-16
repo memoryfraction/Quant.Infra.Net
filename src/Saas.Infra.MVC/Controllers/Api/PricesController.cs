@@ -5,7 +5,7 @@ using Saas.Infra.MVC.Models.Requests;
 using Saas.Infra.MVC.Models.Responses;
 using Saas.Infra.MVC.Security;
 using Saas.Infra.Services.Product;
-using Serilog;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
@@ -47,12 +47,12 @@ namespace Saas.Infra.MVC.Controllers.Api
             {
                 var prices = await _productApplicationService.GetPricesByProductAsync(productId);
                 var result = prices.Select(MapPrice).ToList();
-                Log.Information("Retrieved {Count} prices for product {ProductId}", result.Count, productId);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Retrieved {Count} prices for product {ProductId}", result.Count, productId);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error retrieving prices for product {ProductId}", productId);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error retrieving prices for product {ProductId}", productId);
                 return StatusCode(500, new { message = "Failed to retrieve prices" });
             }
         }
@@ -75,7 +75,7 @@ namespace Saas.Infra.MVC.Controllers.Api
                 var price = await _productApplicationService.GetPriceByIdAsync(id);
                 if (price == null)
                 {
-                    Log.Warning("Price {Id} not found", id);
+                    UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Price {Id} not found", id);
                     return NotFound(new { message = "Price not found" });
                 }
 
@@ -83,7 +83,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error retrieving price {Id}", id);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error retrieving price {Id}", id);
                 return StatusCode(500, new { message = "Failed to retrieve price" });
             }
         }
@@ -114,17 +114,17 @@ namespace Saas.Infra.MVC.Controllers.Api
                     request.IsActive);
 
                 var dto = MapPrice(price);
-                Log.Information("Price created for product {ProductId} by {User}", request.ProductId, User.Identity?.Name);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Price created for product {ProductId} by {User}", request.ProductId, User.Identity?.Name ?? "unknown");
                 return CreatedAtAction(nameof(GetPrice), new { id = price.Id }, dto);
             }
-            catch (InvalidOperationException ex) when (ex.Message == "Product not found")
+            catch (InvalidOperationException ex) when (ex.Message == "Product not found.")
             {
-                Log.Warning("Product {ProductId} not found when creating price", request.ProductId);
+                UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Product {ProductId} not found when creating price", request.ProductId);
                 return NotFound(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error creating price for product {ProductId}", request.ProductId);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error creating price for product {ProductId}", request.ProductId);
                 return StatusCode(500, new { message = "Failed to create price" });
             }
         }
@@ -152,16 +152,16 @@ namespace Saas.Infra.MVC.Controllers.Api
                 var price = await _productApplicationService.UpdatePriceAsync(id, request.Name, request.Amount, request.IsActive);
                 if (price == null)
                 {
-                    Log.Warning("Price {Id} not found for update", id);
+                    UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Price {Id} not found for update", id);
                     return NotFound(new { message = "Price not found" });
                 }
 
-                Log.Information("Price {Id} updated by {User}", id, User.Identity?.Name);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Price {Id} updated by {User}", id, User.Identity?.Name ?? "unknown");
                 return Ok(MapPrice(price));
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error updating price {Id}", id);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error updating price {Id}", id);
                 return StatusCode(500, new { message = "Failed to update price" });
             }
         }
@@ -184,16 +184,16 @@ namespace Saas.Infra.MVC.Controllers.Api
                 var price = await _productApplicationService.SoftDeletePriceAsync(id);
                 if (price == null)
                 {
-                    Log.Warning("Price {Id} not found for deletion", id);
+                    UtilityService.LogAndWriteLine(LogEventLevel.Warning, "Price {Id} not found for deletion", id);
                     return NotFound(new { message = "Price not found" });
                 }
 
-                Log.Information("Price {Id} soft-deleted by {User}", id, User.Identity?.Name);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Price {Id} soft-deleted by {User}", id, User.Identity?.Name ?? "unknown");
                 return Ok(new { message = "Price deleted successfully" });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error deleting price {Id}", id);
+                UtilityService.LogAndWriteLine(ex, LogEventLevel.Error, "Error deleting price {Id}", id);
                 return StatusCode(500, new { message = "Failed to delete price" });
             }
         }

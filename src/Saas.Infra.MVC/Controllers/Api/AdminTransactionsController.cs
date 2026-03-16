@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Saas.Infra.Core;
 using Saas.Infra.MVC.Security;
 using Saas.Infra.Services.Payment;
-using Serilog;
+using Serilog.Events;
 
 namespace Saas.Infra.MVC.Controllers.Api
 {
@@ -47,7 +47,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             try
             {
                 var result = await _adminTransactionExportService.ExportCsvAsync(gateway, status, fromDate, toDate);
-                Log.Information("Admin transactions CSV exported by {Operator}", User.Identity?.Name);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Admin transactions CSV exported by {Operator}", User.Identity?.Name ?? "unknown");
                 return File(result.Content, result.ContentType, result.FileName);
             }
             catch (ArgumentException ex)
@@ -75,7 +75,7 @@ namespace Saas.Infra.MVC.Controllers.Api
             try
             {
                 var result = await _adminTransactionExportService.ExportExcelAsync(gateway, status, fromDate, toDate);
-                Log.Information("Admin transactions Excel exported by {Operator}", User.Identity?.Name);
+                UtilityService.LogAndWriteLine(LogEventLevel.Information, "Admin transactions Excel exported by {Operator}", User.Identity?.Name ?? "unknown");
                 return File(result.Content, result.ContentType, result.FileName);
             }
             catch (ArgumentException ex)

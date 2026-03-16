@@ -1,4 +1,4 @@
-﻿# Deploy to Azure Container Apps (.NET 8, Oryx build)
+﻿# Deploy to Azure Container Apps (.NET 8, GHCR 替代 ACR)
 # Environment variables and secrets are managed manually in Azure Portal:
 #   Azure Portal > Container Apps > saas-web-app3 > Containers > Environment variables
 #   Required env vars (source = "Reference to secret"):
@@ -12,8 +12,7 @@
 #     ASPNETCORE_ENVIRONMENT       = Production
 # 使用 .NET 8 部署 Azure Container Apps
 # 采用服务主权凭证 (Service Principal JSON) 认证
-# 原生 .NET 部署 (Oryx)，不使用 Dockerfile
-
+# 原生 .NET 部署，镜像推送到 GHCR（替代 ACR）
 
 name: Deploy to Azure Container Apps
 
@@ -30,19 +29,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 新增步骤：登录 GHCR（替代原 ACR 登录）
+      - name: Login to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.REGISTRY_USERNAME }}  # 你的 GitHub 用户名：memoryfraction
+          password: ${{ secrets.REGISTRY_PASSWORD }}  # 你的 PAT 令牌
+
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Build and deploy Container App
+      - name: Build and deploy Container App (GHCR)
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}/src
           dockerfilePath: Saas.Infra.MVC/Dockerfile
-          registryUrl: saaswebreg001-cjd0cucyfdh7bcbk.azurecr.io
-          registryUsername: ${{ secrets.REGISTRY_USERNAME }}
-          registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
+          # 核心修改：替换为 GHCR 地址
+          registryUrl: ghcr.io
+          registryUsername: ${{ secrets.REGISTRY_USERNAME }}  # memoryfraction
+          registryPassword: ${{ secrets.REGISTRY_PASSWORD }}  # PAT 令牌
+          # 新增：指定镜像名称（GHCR 格式，全小写）
+          imageToBuild: ghcr.io/${{ secrets.REGISTRY_USERNAME }}/saas.infra.net:latest
           containerAppName: saas-web-app3
           resourceGroup: saas-infra-group
           targetPort: 8080

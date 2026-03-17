@@ -1,6 +1,6 @@
 # Saas.Infra.Net
 
-基于 .NET 10 的 SaaS 基础设施框架，提供 SSO 认证、支付集成、基于角色的访问控制和 Blazor Server UI —— 旨在为构建 SaaS 应用提供可复用的基础架构。
+基于 .NET 8 的 SaaS 基础设施框架，提供 SSO 认证、支付集成、基于角色的访问控制和 Blazor Server UI —— 旨在为构建 SaaS 应用提供可复用的基础架构。
 
 A .NET 10 SaaS infrastructure framework providing SSO authentication, payment integration, role-based access control, and Blazor Server UI — designed as a reusable foundation for building SaaS applications.
 

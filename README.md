@@ -1,6 +1,4 @@
 ﻿# Quant.Infra.Net
-
-[![NuGet](https://img.shields.io/nuget/v/Quant.Infra.Net?color=blue)](https://www.nuget.org/packages/Quant.Infra.Net)
 [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 > **Quant.Infra.Net** 是一个面向 .NET 的量化交易基础设施类库，帮助你用最少的代码完成数据获取、统计分析、交易执行和消息通知。

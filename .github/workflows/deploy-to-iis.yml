@@ -1,0 +1,58 @@
+﻿name: Deploy .NET to IIS
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '部署环境'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+        default: 'production' 
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    
+    steps:
+      - name: 显示部署信息
+        run: |
+          Write-Host "========== 开始部署 ==========" -ForegroundColor Cyan
+          Write-Host "环境: ${{ github.event.inputs.environment }}" -ForegroundColor Yellow
+          Write-Host "时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Yellow
+        shell: powershell
+      
+      - name: 构建.NET项目
+        run: |
+          Write-Host "开始构建.NET项目..." -ForegroundColor Yellow
+          
+          $projectPath = "E:\github\Quant.Infra.Net\src\Quant.Infra.Net\Quant.Infra.Net.csproj"
+          $outputPath = "E:\github\Quant.Infra.Net\publish"
+          
+          if (Test-Path $outputPath) {
+            Remove-Item $outputPath -Recurse -Force
+          }
+          
+          dotnet publish $projectPath -c Release -o $outputPath
+          
+          Write-Host " 构建完成" -ForegroundColor Green
+        shell: powershell
+      
+      - name: 部署到IIS
+        shell: powershell
+        run: |
+          Write-Host "========== 开始部署到IIS ==========" -ForegroundColor Cyan
+          
+          $sourcePath = "E:\github\Quant.Infra.Net\publish"
+          $targetPath = "${{ secrets.IIS_SITE_PATH }}"
+          
+          Write-Host "源路径: $sourcePath"
+          Write-Host "目标路径: $targetPath"
+          
+          Write-Host "复制文件..." -ForegroundColor Yellow
+          Copy-Item -Path "$sourcePath\*" -Destination $targetPath -Recurse -Force
+          
+          Write-Host "========== 部署完成 ==========" -ForegroundColor Green

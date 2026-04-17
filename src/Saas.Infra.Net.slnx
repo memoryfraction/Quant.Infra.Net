@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="Saas.Infra.Core/Saas.Infra.Core.csproj" />
+  <Project Path="Saas.Infra.Data/Saas.Infra.Data.csproj" />
+  <Project Path="Saas.Infra.MVC/Saas.Infra.MVC.csproj" Id="6e43d1c7-b55f-44df-9083-5d0736f095fc" />
+  <Project Path="Saas.Infra.Net.Tests/Saas.Infra.Net.Tests.csproj" Id="7565452b-9f7b-4fd2-a09c-9a1a3ba4d4e7">
+    <Build Solution="Debug|*" Project="false" />
+  </Project>
+  <Project Path="Saas.Infra.Payment/Saas.Infra.Payment.csproj" Id="82867c34-0902-4939-9663-8020df595e1b" />
+  <Project Path="Saas.Infra.Products/Saas.Infra.Products.csproj" Id="8d2f78df-0d5b-40bc-8bc1-1d0c5bbde199" />
+  <Project Path="Saas.Infra.SSO/Saas.Infra.SSO.csproj" />
+</Solution>

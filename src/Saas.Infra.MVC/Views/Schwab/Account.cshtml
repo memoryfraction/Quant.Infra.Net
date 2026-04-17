@@ -1,0 +1,162 @@
+@{
+    ViewData["Title"] = "我的嘉信账户";
+}
+
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- 返回按钮 -->
+        <div class="mb-4">
+            <a href="@Url.Action("Index", "Schwab")" class="inline-flex items-center text-gray-600 hover:text-gray-900">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                返回嘉信理财主页
+            </a>
+        </div>
+
+        <!-- 页面标题 -->
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">我的嘉信账户</h1>
+            <p class="text-gray-600">查看账户余额、持仓和交易历史</p>
+        </div>
+
+        <!-- 授权状态检查 -->
+        <div id="authRequired" class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
+            <div class="flex items-start">
+                <svg class="h-6 w-6 text-yellow-400 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                </svg>
+                <div>
+                    <h3 class="text-lg font-semibold text-yellow-800 mb-2">需要授权</h3>
+                    <p class="text-yellow-700 mb-4">
+                        您还未授权连接嘉信理财账户。授权后，您可以查看账户余额、持仓信息和交易历史。
+                    </p>
+                    <a href="@Url.Action("Authorize", "Schwab")" 
+                       class="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                        立即授权
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 账户信息（授权后显示） -->
+        <div id="accountInfo" class="hidden">
+            <!-- 账户概览 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-medium text-gray-600">账户余额</h3>
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div id="accountBalance" class="text-2xl font-bold text-gray-900">$0.00</div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-medium text-gray-600">可用现金</h3>
+                        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <div id="availableCash" class="text-2xl font-bold text-gray-900">$0.00</div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-medium text-gray-600">购买力</h3>
+                        <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                    </div>
+                    <div id="buyingPower" class="text-2xl font-bold text-gray-900">$0.00</div>
+                </div>
+            </div>
+
+            <!-- 持仓列表 -->
+            <div class="bg-white rounded-lg shadow-md mb-6">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">持仓</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">股票代码</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">数量</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">平均成本</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">当前价格</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">市值</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">盈亏</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">盈亏%</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positionsTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="8" class="px-6 py-4 text-center text-gray-500">暂无持仓数据</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 最近订单 -->
+            <div class="bg-white rounded-lg shadow-md">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">最近订单</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">股票代码</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">数量</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">价格</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">暂无订单数据</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 检查授权状态
+function checkAuthStatus() {
+    // TODO: 调用 API 检查授权状态
+    // 这里先显示未授权状态
+    const isAuthorized = false;
+    
+    if (isAuthorized) {
+        document.getElementById('authRequired').classList.add('hidden');
+        document.getElementById('accountInfo').classList.remove('hidden');
+        loadAccountData();
+    }
+}
+
+function loadAccountData() {
+    // TODO: 调用 API 加载账户数据
+    // 这里显示模拟数据
+    document.getElementById('accountBalance').textContent = '$125,450.75';
+    document.getElementById('availableCash').textContent = '$45,230.50';
+    document.getElementById('buyingPower').textContent = '$90,461.00';
+}
+
+// 页面加载时检查授权状态
+checkAuthStatus();
+</script>

@@ -78,6 +78,18 @@ namespace Saas.Infra.Data
         public DbSet<TransactionEntity> Transactions { get; set; } = null!;
 
         /// <summary>
+        /// 嘉信理财令牌实体集合。
+        /// Schwab tokens entity set.
+        /// </summary>
+        public DbSet<SchwabTokenEntity> SchwabTokens { get; set; } = null!;
+
+        /// <summary>
+        /// 嘉信理财账户实体集合。
+        /// Schwab accounts entity set.
+        /// </summary>
+        public DbSet<SchwabAccountEntity> SchwabAccounts { get; set; } = null!;
+
+        /// <summary>
         /// 配置实体模型映射关系。
         /// Configures entity model mappings.
         /// </summary>
@@ -311,6 +323,28 @@ namespace Saas.Infra.Data
                     .WithMany()
                     .HasForeignKey(e => e.SubscriptionId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // SchwabTokenEntity mapping
+            modelBuilder.Entity<SchwabTokenEntity>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.UserId).IsUnique();
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // SchwabAccountEntity mapping
+            modelBuilder.Entity<SchwabAccountEntity>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.UserId, e.AccountNumber }).IsUnique();
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

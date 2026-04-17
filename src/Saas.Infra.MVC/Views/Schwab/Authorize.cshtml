@@ -1,0 +1,133 @@
+@{
+    ViewData["Title"] = "授权嘉信理财账户";
+}
+
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <!-- 返回按钮 -->
+        <div class="mb-4">
+            <a href="@Url.Action("Index", "Schwab")" class="inline-flex items-center text-gray-600 hover:text-gray-900">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                返回嘉信理财主页
+            </a>
+        </div>
+
+        <!-- 授权说明 -->
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
+                    <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">授权嘉信理财账户</h1>
+                <p class="text-gray-600">安全连接您的嘉信理财账户</p>
+            </div>
+
+            <!-- 授权步骤 -->
+            <div class="space-y-6 mb-8">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-600 font-semibold">
+                            1
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-1">点击授权按钮</h3>
+                        <p class="text-gray-600">您将被重定向到嘉信理财官方登录页面</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-600 font-semibold">
+                            2
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-1">登录您的嘉信账户</h3>
+                        <p class="text-gray-600">使用您的嘉信理财账号和密码登录</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-600 font-semibold">
+                            3
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-1">授权访问权限</h3>
+                        <p class="text-gray-600">选择要授权的账户并确认授权</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-blue-600 font-semibold">
+                            4
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-1">完成授权</h3>
+                        <p class="text-gray-600">系统将自动返回，您即可开始使用账户功能</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 授权按钮 -->
+            <div class="text-center">
+                <button onclick="startAuthorization()" 
+                        class="inline-flex items-center px-6 py-3 bg-purple-600 text-white text-lg font-semibold rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    开始授权
+                </button>
+            </div>
+
+            <!-- 安全说明 -->
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <h3 class="text-sm font-semibold text-gray-900 mb-3">安全说明</h3>
+                <ul class="space-y-2 text-sm text-gray-600">
+                    <li class="flex items-start">
+                        <svg class="w-5 h-5 text-green-500 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>使用嘉信理财官方 OAuth 2.0 安全认证</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="w-5 h-5 text-green-500 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>我们不会存储您的嘉信账号密码</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="w-5 h-5 text-green-500 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>访问令牌有效期7天，到期后需重新授权</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="w-5 h-5 text-green-500 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>您可以随时在嘉信理财官网撤销授权</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function startAuthorization() {
+    // TODO: 调用 API 获取授权 URL
+    alert('授权功能正在开发中。\n\n需要先实现 SchwabAuthService 服务，然后创建 API 端点来生成授权 URL。\n\n完成后，用户将被重定向到嘉信理财官方登录页面进行授权。');
+    
+    // 实际实现示例：
+    // window.location.href = '/api/schwab/auth/authorize';
+}
+</script>

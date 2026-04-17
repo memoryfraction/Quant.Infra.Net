@@ -142,6 +142,13 @@ namespace Saas.Infra.MVC
                 builder.Services.AddScoped<ISubscriptionApplicationService, SubscriptionApplicationService>();
                 builder.Services.AddScoped<IAdminTransactionExportService, AdminTransactionExportService>();
 
+                // Schwab API 服务注册
+                builder.Services.Configure<Saas.Infra.Core.Schwab.SchwabOptions>(builder.Configuration.GetSection("Schwab"));
+                builder.Services.AddMemoryCache(); // 内存缓存
+                builder.Services.AddSingleton<Saas.Infra.Core.Schwab.ISchwabTokenRepository, Saas.Infra.Services.Schwab.SchwabTokenMemoryCacheRepository>();
+                builder.Services.AddSingleton<Saas.Infra.Core.Schwab.ISchwabAccountRepository, Saas.Infra.Services.Schwab.SchwabAccountMemoryCacheRepository>();
+                builder.Services.AddHttpClient<Saas.Infra.Services.Schwab.SchwabHttpClient>();
+
                 // 全局异常页面状态服务（/error 页面依赖，Singleton 因为跨请求共享状态）
                 builder.Services.AddSingleton<Saas.Infra.MVC.Services.Errors.GlobalExceptionPageService>();
 
@@ -159,7 +166,7 @@ namespace Saas.Infra.MVC
                 })
                 .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, DummyJwtAuthenticationHandler>(JwtBearerDefaults.AuthenticationScheme, _ => { });
 
-                builder.Services.AddControllers();
+                builder.Services.AddControllersWithViews();
                 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
                 builder.Services.AddHttpContextAccessor();
 
@@ -224,7 +231,16 @@ namespace Saas.Infra.MVC
                 app.UseAuthentication();
                 app.UseAuthorization();
                 app.UseAntiforgery();
-                app.MapControllers();
+                
+                // 根路径重定向到登录页
+                app.MapGet("/", () => Results.Redirect("/Account/Login"));
+                
+                // MVC 路由配置（支持传统控制器路由）
+                app.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                
+                app.MapControllers(); // API 控制器路由
                 app.MapRazorComponents<Saas.Infra.MVC.Components.App>().AddInteractiveServerRenderMode();
 
                 app.Run();
@@ -241,3 +257,4 @@ namespace Saas.Infra.MVC
         }
     }
 }
+

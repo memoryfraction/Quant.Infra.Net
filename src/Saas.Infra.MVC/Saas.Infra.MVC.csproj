@@ -8,13 +8,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Remove="Views\**" />
-	  <Content Remove="Views\**" />
-	  <EmbeddedResource Remove="Views\**" />
-	  <None Remove="Views\**" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<!-- JWT 认证核心包 -->
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.25" />
 		<!-- Blazor Web App (removed) -->

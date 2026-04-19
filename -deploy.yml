@@ -1,0 +1,87 @@
+name: Deploy .NET to IIS
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '部署环境'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+        default: 'production'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    
+    steps:
+      - name: 显示部署信息
+        run: |
+          Write-Host "========== 开始部署 ==========" -ForegroundColor Cyan
+          Write-Host "环境: ${{ github.event.inputs.environment }}" -ForegroundColor Yellow
+          Write-Host "时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Yellow
+        shell: powershell
+      
+      - name: 构建.NET项目
+        run: |
+          Write-Host "开始构建.NET项目..." -ForegroundColor Yellow
+          
+          $projectPath = "E:\github\Quant.Infra.Net\src\Quant.Infra.Net\Quant.Infra.Net.csproj"
+          $outputPath = "E:\github\Quant.Infra.Net\publish"
+          
+          # 清理旧的发布文件
+          if (Test-Path $outputPath) {
+            Remove-Item $outputPath -Recurse -Force
+          }
+          
+          # 发布项目
+          dotnet publish $projectPath -c Release -o $outputPath
+          
+          Write-Host "✓ 构建完成" -ForegroundColor Green
+        shell: powershell
+      
+      - name: 部署到IIS
+        shell: powershell
+        run: |
+          Write-Host "========== 开始部署到IIS ==========" -ForegroundColor Cyan
+          
+          $sourcePath = "E:\github\Quant.Infra.Net\publish"
+          $targetPath = "${{ secrets.IIS_SITE_PATH }}"
+          
+          Write-Host "源路径: $sourcePath"
+          Write-Host "目标路径: $targetPath"
+          
+          # 停止应用程序池（可选）
+          # Import-Module WebAdministration
+          # $siteName = "${{ secrets.IIS_SITE_NAME }}"
+          # $appPool = (Get-Website -Name $siteName).applicationPool
+          # Stop-WebAppPool -Name $appPool
+          # Start-Sleep -Seconds 3
+          
+          # 部署文件
+          Write-Host "复制文件..." -ForegroundColor Yellow
+          Copy-Item -Path "$sourcePath\*" -Destination $targetPath -Recurse -Force
+          
+          # 启动应用程序池（可选）
+          # Start-WebAppPool -Name $appPool
+          # Start-Sleep -Seconds 3
+          
+          Write-Host "========== 部署完成 ==========" -ForegroundColor Green
+          Write-Host "访问网站验证部署结果" -ForegroundColor Cyan
+      
+      - name: 部署成功通知
+        if: success()
+        run: |
+          Write-Host "✅ 部署成功！" -ForegroundColor Green
+          Write-Host "环境: ${{ github.event.inputs.environment }}" -ForegroundColor Cyan
+        shell: powershell
+      
+      - name: 部署失败通知
+        if: failure()
+        run: |
+          Write-Host "❌ 部署失败！" -ForegroundColor Red
+          Write-Host "请检查日志" -ForegroundColor Yellow
+        shell: powershell

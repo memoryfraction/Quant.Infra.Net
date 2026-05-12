@@ -4,7 +4,7 @@
     ViewData["Title"] = "Schwab Login";
 }
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -75,8 +75,8 @@
 <body>
 <div class="card">
     <div class="logo">
-        <h1>🏦 Charles Schwab</h1>
-        <p>量化交易平台 · Quant Trading</p>
+        <h1>Charles Schwab</h1>
+        <p>Quant Trading</p>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -89,10 +89,10 @@
         <div class="step">
             <div class="step-num">1</div>
             <div class="step-body">
-                <label>填写凭据</label>
-                <input type="text"     name="appKey"        id="appKey"        placeholder="Client ID（App Key）" autocomplete="off" />
+                <label>Enter credentials</label>
+                <input type="text"     name="appKey"        id="appKey"        placeholder="Client ID (App Key)" autocomplete="off" />
                 <input type="password" name="appSecret"     id="appSecret"     placeholder="Client Secret" />
-                <input type="text"     name="accountNumber" id="accountNumber" placeholder="Schwab 账户号码" />
+                <input type="text"     name="accountNumber" id="accountNumber" placeholder="Schwab account number" />
             </div>
         </div>
 
@@ -100,9 +100,9 @@
         <div class="step">
             <div class="step-num">2</div>
             <div class="step-body">
-                <label>前往 Schwab 授权</label>
-                <p>点击下方按钮，在当前窗口登录 Schwab 并点击 Allow。授权后会自动返回本页换取 Token。</p>
-                <button type="submit" class="btn btn-schwab">🔐 打开 Schwab 授权页面</button>
+                <label>Authorize with Schwab</label>
+                <p>Click the button below, sign in to Schwab, and approve access. The browser will return here automatically.</p>
+                <button type="submit" class="btn btn-schwab">Open Schwab Authorization</button>
             </div>
         </div>
     </form>
@@ -113,12 +113,12 @@
     <form method="post" asp-page-handler="Demo">
         <button type="submit" style="width:100%;padding:11px;border:2px dashed #bbb;border-radius:7px;
             background:#fafafa;color:#888;font-size:13px;cursor:pointer;margin-bottom:4px;">
-            🎭 演示模式（使用模拟数据，无需真实账户）
+            Demo mode (simulated data, no real account required)
         </button>
     </form>
 
     <div class="code-hint">
-        请从 <code>https://127.0.0.1/</code> 打开本页，并使用绿色授权按钮。授权后会自动返回并换取 Token。
+        Open this page from <code>https://127.0.0.1/</code>. After Schwab authorization, the app exchanges the authorization code for a token automatically.
     </div>
 </div>
 

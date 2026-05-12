@@ -1,6 +1,6 @@
 # Schwab 登录和授权使用说明
 
-这份说明用于本项目里的 Schwab Web 登录页面。真实登录入口不是 `SchwabLoginDemo.html` 静态演示页，而是本地 Web 服务：
+这份说明用于本项目里的 Schwab Web 登录页面。真实登录入口是本地 Web 服务：
 
 ```text
 https://127.0.0.1/
@@ -102,7 +102,7 @@ Orders：最近订单历史
 https://127.0.0.1/
 ```
 
-不要直接用浏览器打开 `SchwabLoginDemo.html`。那个文件只是静态说明页，不负责真实 OAuth 登录。
+不要直接打开静态 HTML 文件。真实 OAuth 登录只通过本地 Web 服务完成。
 
 ### 授权码换 Token 失败
 

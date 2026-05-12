@@ -6,7 +6,7 @@ namespace Quant.Infra.Net.Console
     {
 
         /// <summary>
-        /// 计算当前持仓的盈利百分比
+        /// Calculates the unrealized profit rate for the current position.
         /// </summary>
         /// <param name="symbol"></param>
         /// <param name="apiKey"></param>
@@ -19,7 +19,7 @@ namespace Quant.Infra.Net.Console
                 options.ApiCredentials = new ApiCredentials(apiKey, secret);
             });
 
-            // 创建 Binance 客户端            
+            // Create Binance client.
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();

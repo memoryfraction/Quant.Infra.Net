@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
-using System.Threading.Tasks;
+﻿using AutoMapper;
+using CryptoExchange.Net.Authentication;
+using CryptoExchange.Net.CommonObjects;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Quant.Infra.Net.Console
 {
@@ -8,59 +10,84 @@ namespace Quant.Infra.Net.Console
     {
         static async Task Main(string[] args)
         {
-            System.Console.OutputEncoding = System.Text.Encoding.UTF8;
-            
-            // 检查是否指定了 Schwab 演示
-            if (args.Length > 0 && args[0] == "schwab")
+            // Build configuration from appsettings.json and user secrets.
+            IConfiguration configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddUserSecrets<Program>() 
+                .Build();
+
+            #region Dependency Injection
+            var serviceCollection = new ServiceCollection();
+
+            #region Scoped
+            serviceCollection.AddScoped<IBinanceOrderService, BinanceOrderService>();
+            #endregion
+
+            #region Singleton
+            serviceCollection.AddSingleton<IConfiguration>(configuration);  // Injection IConfiguration to the container
+
+            // Register the Automapper to container
+            serviceCollection.AddSingleton<IMapper>(sp =>
             {
-                await SchwabAuthDemoProgram.RunAsync(args);
-                return;
-            }
-            
-            // 默认显示菜单
-            await ShowMainMenuAsync();
-        }
-        
-        static async Task ShowMainMenuAsync()
-        {
-            while (true)
-            {
-                System.Console.Clear();
-                System.Console.WriteLine("╔" + "═".PadRight(78, '═') + "╗");
-                System.Console.WriteLine("║" + " Quant.Infra.Net Console".PadRight(78) + "║");
-                System.Console.WriteLine("╚" + "═".PadRight(78, '═') + "╝");
-                System.Console.WriteLine();
-                System.Console.WriteLine("  1. Schwab OAuth 认证演示");
-                System.Console.WriteLine("  2. Binance 交易演示 (原有功能)");
-                System.Console.WriteLine("  0. 退出");
-                System.Console.WriteLine();
-                System.Console.Write("请选择 (输入数字): ");
-                
-                var choice = System.Console.ReadLine();
-                
-                switch (choice)
+                var autoMapperConfiguration = new MapperConfiguration(cfg =>
                 {
-                    case "1":
-                        await SchwabAuthDemoProgram.RunAsync(new string[0]);
-                        break;
-                        
-                    case "2":
-                        System.Console.WriteLine("\nBinance 功能暂时禁用，请使用旧版本 Program.cs");
-                        System.Console.WriteLine("按任意键继续...");
-                        System.Console.ReadKey();
-                        break;
-                        
-                    case "0":
-                        System.Console.WriteLine("\n再见！");
-                        return;
-                        
-                    default:
-                        System.Console.WriteLine("\n无效的选择，请重试。");
-                        System.Console.WriteLine("按任意键继续...");
-                        System.Console.ReadKey();
-                        break;
-                }
+                    cfg.AddProfile<MappingProfile>();
+                });
+                return new Mapper(autoMapperConfiguration);
+            });
+            #endregion
+            #endregion
+
+            var sp = serviceCollection.BuildServiceProvider();
+            var _configuration = sp.GetService<IConfiguration>();
+            var _apiKey =  _configuration["Exchange:apiKey"];
+            var _apiSecret = _configuration["Exchange:apiSecret"];
+
+            Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
+            {
+                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+            });
+
+                // Create Binance client.
+            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            {
+                // Margin account balance.
+                var account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
+                System.Console.WriteLine($"UsdFuturesApi Available Balance: {account.Data.AvailableBalance}.");
+
+
+                // Perpetual contract sample: open a short position.
+                //var enterShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
+                //symbol: "ALGOUSDT",
+                //   side: Binance.Net.Enums.OrderSide.Sell,
+                //   type: Binance.Net.Enums.FuturesOrderType.Market,
+                //   quantity: 40,
+                //   positionSide: Binance.Net.Enums.PositionSide.Short
+                //   // closePosition: true
+                //   );
+
+
+                // Get current position quantity.
+                account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
+                var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
+                var holdingPositions = position.Data.Where(x => x.Quantity != 0).Select(x => x);
+                var algoPosition = holdingPositions.Where(x => x.Symbol == "ALGOUSDT").FirstOrDefault();
+
+
+                // Close the short position.
+                var exitShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
+                   symbol: "ALGOUSDT",
+                   side: Binance.Net.Enums.OrderSide.Buy,
+                   type: Binance.Net.Enums.FuturesOrderType.Market,
+                   quantity: Math.Abs(algoPosition.Quantity),
+                   positionSide:Binance.Net.Enums.PositionSide.Short
+                   // closePosition: true
+                   );
+
+                System.Console.WriteLine("borrowed and repayed");
             }
+
         }
     }
 }

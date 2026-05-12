@@ -15,8 +15,8 @@ using System.Threading.Tasks;
 namespace Quant.Infra.Net.Broker.Service
 {
     /// <summary>
-    /// Charles Schwab 券商服务实现
-    /// Implementation of Charles Schwab broker service
+    /// Implementation of Charles Schwab broker service.
+    /// Charles Schwab 券商服务实现。
     /// </summary>
     public class SchwabBrokerService : ISchwabBrokerService
     {
@@ -44,7 +44,8 @@ namespace Quant.Infra.Net.Broker.Service
         #region Authentication
 
         /// <summary>
-        /// 外部注入已有的 access token（OAuth 授权码换取后存入 session）
+        /// Injects an OAuth access token after authorization.
+        /// 注入授权后的 OAuth access token。
         /// </summary>
         public void SetAccessToken(string accessToken, int expiresInSeconds = 1800)
         {
@@ -53,7 +54,8 @@ namespace Quant.Infra.Net.Broker.Service
         }
 
         /// <summary>
-        /// 获取访问令牌 - 仅使用已注入的 token，不自动申请
+        /// Gets the injected access token.
+        /// 获取已注入的 access token。
         /// </summary>
         private Task<string> GetAccessTokenAsync()
         {
@@ -61,12 +63,12 @@ namespace Quant.Infra.Net.Broker.Service
                 return Task.FromResult(_accessToken);
 
             throw new InvalidOperationException(
-                "Access token 已过期或未设置，请重新登录授权。");
+                "Access token is expired or missing. Please sign in again.");
         }
 
         /// <summary>
-        /// 设置请求头
-        /// Set request headers
+        /// Sets request headers.
+        /// 设置请求头。
         /// </summary>
         private async Task SetAuthHeaderAsync()
         {
@@ -152,12 +154,12 @@ namespace Quant.Infra.Net.Broker.Service
                     BuyingPower = GetJsonDecimal(currentBalances, "buyingPower", "cashAvailableForTrading")
                 };
 
-                UtilityService.LogAndWriteLine($"[Schwab] 账户信息: 总资产={account.TotalEquity:C}, 市值={account.MarketValue:C}, 现金={account.CashBalance:C}");
+                UtilityService.LogAndWriteLine($"[Schwab] Account loaded: equity={account.TotalEquity:C}, marketValue={account.MarketValue:C}, cash={account.CashBalance:C}");
                 return account;
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 获取账户信息失败: {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to load account: {ex.Message}");
                 throw;
             }
         }
@@ -198,19 +200,19 @@ namespace Quant.Infra.Net.Broker.Service
                             UnrealizedProfitLoss = pos.TryGetProperty("currentDayProfitLoss", out var pnl) 
                                 ? pnl.GetDecimal() 
                                 : null,
-                            EntryDateTime = DateTime.UtcNow // Schwab API 可能不提供入场时间
+                            EntryDateTime = DateTime.UtcNow
                         };
 
                         positions.Add(position);
                     }
                 }
 
-                UtilityService.LogAndWriteLine($"[Schwab] 获取到 {positions.Count} 个持仓");
+                UtilityService.LogAndWriteLine($"[Schwab] Loaded {positions.Count} positions");
                 return positions;
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 获取持仓信息失败: {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to load positions: {ex.Message}");
                 throw;
             }
         }
@@ -239,15 +241,15 @@ namespace Quant.Infra.Net.Broker.Service
                 if (quotesData.TryGetProperty(symbol, out var quoteData))
                 {
                     var quote = ParseQuote(symbol, quoteData);
-                    UtilityService.LogAndWriteLine($"[Schwab] {symbol} 报价: ${quote.LastPrice}");
+                    UtilityService.LogAndWriteLine($"[Schwab] {symbol} quote: ${quote.LastPrice}");
                     return quote;
                 }
 
-                throw new InvalidOperationException($"未找到 {symbol} 的报价数据");
+                throw new InvalidOperationException($"Quote data was not found for {symbol}.");
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 获取报价失败 ({symbol}): {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to load quote ({symbol}): {ex.Message}");
                 throw;
             }
         }
@@ -273,12 +275,12 @@ namespace Quant.Infra.Net.Broker.Service
                     }
                 }
 
-                UtilityService.LogAndWriteLine($"[Schwab] 获取到 {quotes.Count}/{symbols.Count} 个报价");
+                UtilityService.LogAndWriteLine($"[Schwab] Loaded {quotes.Count}/{symbols.Count} quotes");
                 return quotes;
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 批量获取报价失败: {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to load quotes: {ex.Message}");
                 throw;
             }
         }
@@ -333,24 +335,24 @@ namespace Quant.Infra.Net.Broker.Service
                     UnderlyingPrice = chainData.GetProperty("underlyingPrice").GetDecimal()
                 };
 
-                // 解析 Call 期权
+                // Parse call options.
                 if (chainData.TryGetProperty("callExpDateMap", out var callMap))
                 {
                     optionChain.CallOptions = ParseOptionContracts(callMap, "CALL");
                 }
 
-                // 解析 Put 期权
+                // Parse put options.
                 if (chainData.TryGetProperty("putExpDateMap", out var putMap))
                 {
                     optionChain.PutOptions = ParseOptionContracts(putMap, "PUT");
                 }
 
-                UtilityService.LogAndWriteLine($"[Schwab] {symbol} 期权链: {optionChain.CallOptions.Count} Calls, {optionChain.PutOptions.Count} Puts");
+                UtilityService.LogAndWriteLine($"[Schwab] {symbol} option chain: {optionChain.CallOptions.Count} calls, {optionChain.PutOptions.Count} puts");
                 return optionChain;
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 获取期权链失败 ({symbol}): {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to load option chain ({symbol}): {ex.Message}");
                 throw;
             }
         }
@@ -437,16 +439,16 @@ namespace Quant.Infra.Net.Broker.Service
                 var response = await _httpClient.PostAsync($"accounts/{accountHash}/orders", content);
                 response.EnsureSuccessStatusCode();
 
-                // Schwab 返回订单 ID 在 Location header 中
+                // Schwab returns the order id in the Location header.
                 var location = response.Headers.Location?.ToString() ?? "";
                 var orderId = location.Split('/').LastOrDefault() ?? "";
 
-                UtilityService.LogAndWriteLine($"[Schwab] 订单已提交: {orderId} ({orderRequest.Side} {orderRequest.Quantity} {orderRequest.Symbol})");
+                UtilityService.LogAndWriteLine($"[Schwab] Order submitted: {orderId} ({orderRequest.Side} {orderRequest.Quantity} {orderRequest.Symbol})");
                 return orderId;
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 下单失败: {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to place order: {ex.Message}");
                 throw;
             }
         }
@@ -467,7 +469,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 获取订单失败 ({orderId}): {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to load order ({orderId}): {ex.Message}");
                 throw;
             }
         }
@@ -481,12 +483,12 @@ namespace Quant.Infra.Net.Broker.Service
                 var response = await _httpClient.DeleteAsync($"accounts/{accountHash}/orders/{orderId}");
                 response.EnsureSuccessStatusCode();
 
-                UtilityService.LogAndWriteLine($"[Schwab] 订单已取消: {orderId}");
+                UtilityService.LogAndWriteLine($"[Schwab] Order canceled: {orderId}");
                 return true;
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 取消订单失败 ({orderId}): {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to cancel order ({orderId}): {ex.Message}");
                 return false;
             }
         }
@@ -515,12 +517,12 @@ namespace Quant.Infra.Net.Broker.Service
                     orders.Add(ParseOrder(orderData));
                 }
 
-                UtilityService.LogAndWriteLine($"[Schwab] 获取到 {orders.Count} 个订单");
+                UtilityService.LogAndWriteLine($"[Schwab] Loaded {orders.Count} orders");
                 return orders;
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 获取订单列表失败: {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to load orders: {ex.Message}");
                 throw;
             }
         }
@@ -625,7 +627,7 @@ namespace Quant.Infra.Net.Broker.Service
                     equity.TryGetProperty("EQ", out var eq))
                 {
                     var isOpen = eq.GetProperty("isOpen").GetBoolean();
-                    UtilityService.LogAndWriteLine($"[Schwab] 市场状态: {(isOpen ? "开盘" : "休市")}");
+                    UtilityService.LogAndWriteLine($"[Schwab] Market status: {(isOpen ? "open" : "closed")}");
                     return isOpen;
                 }
 
@@ -633,7 +635,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
             catch (Exception ex)
             {
-                UtilityService.LogAndWriteLine($"[Schwab] 获取市场状态失败: {ex.Message}");
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to load market status: {ex.Message}");
                 return false;
             }
         }

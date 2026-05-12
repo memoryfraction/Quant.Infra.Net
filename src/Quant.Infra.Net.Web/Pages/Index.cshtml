@@ -1,0 +1,151 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Schwab Login";
+}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: white; border-radius: 12px;
+            padding: 40px; width: 100%; max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        .logo { text-align:center; margin-bottom:28px; }
+        .logo h1 { font-size:22px; color:#333; }
+        .logo p  { font-size:13px; color:#888; margin-top:4px; }
+
+        .step {
+            display: flex; align-items: flex-start; gap: 14px;
+            margin-bottom: 20px;
+        }
+        .step-num {
+            background: #667eea; color: white;
+            border-radius: 50%; width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+        }
+        .step-body { flex: 1; }
+        .step-body label { display:block; font-size:13px; font-weight:600; color:#444; margin-bottom:6px; }
+        .step-body p { font-size:12px; color:#888; margin-bottom:8px; line-height:1.6; }
+
+        input[type=text], input[type=password] {
+            width:100%; padding:10px 12px;
+            border:2px solid #e0e0e0; border-radius:7px;
+            font-size:14px; transition:border-color .2s; margin-bottom:8px;
+        }
+        input:focus { outline:none; border-color:#667eea; }
+
+        .btn {
+            width:100%; padding:12px; border:none; border-radius:7px;
+            font-size:15px; font-weight:700; cursor:pointer; transition:opacity .2s;
+        }
+        .btn-schwab { background:linear-gradient(135deg,#11998e,#38ef7d); color:white; }
+        .btn-login  { background:linear-gradient(135deg,#667eea,#764ba2); color:white; }
+        .btn:hover  { opacity:.88; }
+
+        .divider { border:none; border-top:2px dashed #eee; margin:20px 0; }
+
+        .code-hint {
+            background:#fffbea; border:1px solid #ffe082; border-radius:7px;
+            padding:12px 14px; font-size:12px; color:#795548; margin-bottom:8px;
+            line-height:1.7;
+        }
+        .code-hint code { background:#fff3cd; padding:2px 6px; border-radius:3px; font-size:11px; }
+
+        .error-box {
+            background:#fff0f0; border-left:4px solid #e53935;
+            border-radius:5px; padding:10px 14px; margin-bottom:16px;
+            font-size:13px; color:#c62828;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">
+        <h1>🏦 Charles Schwab</h1>
+        <p>量化交易平台 · Quant Trading</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="error-box">⚠️ @Model.ErrorMessage</div>
+    }
+
+    <form method="post" asp-page-handler="StartAuth">
+        <!-- Step 1: Credentials -->
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+                <label>填写凭据</label>
+                <input type="text"     name="appKey"        id="appKey"        placeholder="Client ID（App Key）" autocomplete="off" />
+                <input type="password" name="appSecret"     id="appSecret"     placeholder="Client Secret" />
+                <input type="text"     name="accountNumber" id="accountNumber" placeholder="Schwab 账户号码" />
+            </div>
+        </div>
+
+        <!-- Step 2: Open Schwab -->
+        <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+                <label>前往 Schwab 授权</label>
+                <p>点击下方按钮，在当前窗口登录 Schwab 并点击 Allow。授权后会自动返回本页换取 Token。</p>
+                <button type="submit" class="btn btn-schwab">🔐 打开 Schwab 授权页面</button>
+            </div>
+        </div>
+    </form>
+
+    <hr class="divider" />
+
+    <!-- Demo mode shortcut -->
+    <form method="post" asp-page-handler="Demo">
+        <button type="submit" style="width:100%;padding:11px;border:2px dashed #bbb;border-radius:7px;
+            background:#fafafa;color:#888;font-size:13px;cursor:pointer;margin-bottom:4px;">
+            🎭 演示模式（使用模拟数据，无需真实账户）
+        </button>
+    </form>
+
+    <div class="code-hint">
+        请从 <code>https://127.0.0.1/</code> 打开本页，并使用绿色授权按钮。授权后会自动返回并换取 Token。
+    </div>
+</div>
+
+<script>
+    // Keep this exactly the same as the Callback URL configured in the Schwab Developer Portal.
+    const REDIRECT = "https://127.0.0.1";
+
+    // Restore from sessionStorage on page load
+    window.onload = () => {
+        if (location.hostname === 'localhost') {
+            location.href = 'https://127.0.0.1/';
+            return;
+        }
+
+        const k = sessionStorage.getItem('appKey');
+        const s = sessionStorage.getItem('appSecret');
+        const a = sessionStorage.getItem('accountNumber');
+        if (k) document.getElementById('appKey').value = k;
+        if (s) document.getElementById('appSecret').value = s;
+        if (a) document.getElementById('accountNumber').value = a;
+    };
+
+    document.querySelector('form[method="post"]').addEventListener('submit', () => {
+        sessionStorage.setItem('appKey', document.getElementById('appKey').value);
+        sessionStorage.setItem('appSecret', document.getElementById('appSecret').value);
+        sessionStorage.setItem('accountNumber', document.getElementById('accountNumber').value);
+    });
+</script>
+</body>
+</html>

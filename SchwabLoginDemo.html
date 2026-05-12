@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charles Schwab OAuth 登录演示</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .header, .panel {
+            background: #fff;
+            width: 100%;
+            max-width: 920px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,.2);
+        }
+        .header { padding: 24px 32px; margin-bottom: 24px; text-align: center; }
+        .header h1 { color: #263246; font-size: 28px; margin-bottom: 10px; }
+        .header p { color: #667085; line-height: 1.6; }
+        .panel { padding: 32px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+        h2 { color: #263246; margin-bottom: 16px; font-size: 20px; }
+        label { display: block; color: #4b5565; margin: 14px 0 8px; font-size: 14px; font-weight: 600; }
+        input { width: 100%; padding: 12px; border: 1px solid #d7dce5; border-radius: 6px; font-size: 14px; }
+        input:focus { outline: none; border-color: #0066cc; }
+        button {
+            width: 100%;
+            margin-top: 18px;
+            padding: 13px;
+            border: 0;
+            border-radius: 6px;
+            background: #0066cc;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        button.secondary { background: #28a745; }
+        .info {
+            margin-top: 24px;
+            padding: 16px;
+            border-left: 4px solid #0066cc;
+            background: #eef6ff;
+            color: #405066;
+            line-height: 1.7;
+            border-radius: 6px;
+        }
+        code { background: #fff; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Charles Schwab OAuth 登录演示</h1>
+        <p>这是一个本地说明页。真实授权请运行 Web 项目后，从 <code>https://127.0.0.1/</code> 打开登录页。</p>
+    </div>
+
+    <div class="panel">
+        <div class="grid">
+            <section>
+                <h2>真实登录流程</h2>
+                <label>Client ID（App Key）</label>
+                <input type="text" placeholder="在 Schwab Developer Portal 获取">
+                <label>Client Secret</label>
+                <input type="password" placeholder="在 Schwab Developer Portal 获取">
+                <label>Schwab 账户号码</label>
+                <input type="text" placeholder="填写你的嘉信证券账户号">
+                <button onclick="location.href='https://127.0.0.1/'">打开 Web 登录页</button>
+            </section>
+
+            <section>
+                <h2>授权后可以访问</h2>
+                <p>账户余额、购买力、总资产</p>
+                <p>持仓列表和成本信息</p>
+                <p>实时行情和期权链</p>
+                <p>最近订单历史</p>
+                <button class="secondary" onclick="location.reload()">重新演示</button>
+            </section>
+        </div>
+
+        <div class="info">
+            <strong>注意：</strong>这个 HTML 文件不会向 Schwab 发送真实登录请求。实际调试请启动
+            <code>src/Quant.Infra.Net.Web</code>，并确保 Schwab Developer Portal 里的 Callback URL
+            与 <code>https://127.0.0.1</code> 完全一致。
+        </div>
+    </div>
+</body>
+</html>

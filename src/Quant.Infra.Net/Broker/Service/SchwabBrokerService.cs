@@ -25,7 +25,9 @@ namespace Quant.Infra.Net.Broker.Service
         private readonly string _apiSecret;
         private readonly string _accountNumber;
         private readonly string _baseUrl;
+        private const string MarketDataBaseUrl = "https://api.schwabapi.com/marketdata/v1/";
         private string? _accessToken;
+        private string? _accountHash;
         private DateTime _tokenExpiry;
 
         public SchwabBrokerService(BrokerCredentials credentials, string accountNumber)
@@ -33,60 +35,33 @@ namespace Quant.Infra.Net.Broker.Service
             _apiKey = credentials.ApiKey;
             _apiSecret = credentials.Secret;
             _accountNumber = accountNumber;
-            _baseUrl = credentials.BaseUrl ?? "https://api.schwabapi.com/trader/v1";
+            _baseUrl = (credentials.BaseUrl ?? "https://api.schwabapi.com/trader/v1").TrimEnd('/');
             
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(_baseUrl)
-            };
+            _httpClient = new HttpClient();
+            _httpClient.BaseAddress = new Uri(_baseUrl + "/");
         }
 
         #region Authentication
 
         /// <summary>
-        /// 获取访问令牌
-        /// Get access token
+        /// 外部注入已有的 access token（OAuth 授权码换取后存入 session）
         /// </summary>
-        private async Task<string> GetAccessTokenAsync()
+        public void SetAccessToken(string accessToken, int expiresInSeconds = 1800)
         {
-            // 如果令牌仍然有效，直接返回
+            _accessToken = accessToken;
+            _tokenExpiry = DateTime.UtcNow.AddSeconds(expiresInSeconds - 60);
+        }
+
+        /// <summary>
+        /// 获取访问令牌 - 仅使用已注入的 token，不自动申请
+        /// </summary>
+        private Task<string> GetAccessTokenAsync()
+        {
             if (!string.IsNullOrEmpty(_accessToken) && DateTime.UtcNow < _tokenExpiry)
-            {
-                return _accessToken;
-            }
+                return Task.FromResult(_accessToken);
 
-            try
-            {
-                // Schwab 使用 OAuth 2.0 认证
-                var authUrl = "https://api.schwabapi.com/v1/oauth/token";
-                var authClient = new HttpClient();
-
-                var authData = new Dictionary<string, string>
-                {
-                    { "grant_type", "client_credentials" },
-                    { "client_id", _apiKey },
-                    { "client_secret", _apiSecret }
-                };
-
-                var content = new FormUrlEncodedContent(authData);
-                var response = await authClient.PostAsync(authUrl, content);
-                response.EnsureSuccessStatusCode();
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-                var tokenResponse = JsonSerializer.Deserialize<JsonElement>(responseContent);
-
-                _accessToken = tokenResponse.GetProperty("access_token").GetString();
-                var expiresIn = tokenResponse.GetProperty("expires_in").GetInt32();
-                _tokenExpiry = DateTime.UtcNow.AddSeconds(expiresIn - 60); // 提前60秒刷新
-
-                UtilityService.LogAndWriteLine($"[Schwab] 成功获取访问令牌，有效期: {expiresIn} 秒");
-                return _accessToken ?? throw new InvalidOperationException("Failed to get access token");
-            }
-            catch (Exception ex)
-            {
-                UtilityService.LogAndWriteLine($"[Schwab] 获取访问令牌失败: {ex.Message}");
-                throw;
-            }
+            throw new InvalidOperationException(
+                "Access token 已过期或未设置，请重新登录授权。");
         }
 
         /// <summary>
@@ -99,6 +74,55 @@ namespace Quant.Infra.Net.Broker.Service
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
+        private async Task<string> GetAccountHashAsync()
+        {
+            if (!string.IsNullOrEmpty(_accountHash))
+                return _accountHash;
+
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.GetAsync("accounts/accountNumbers");
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var accounts = JsonSerializer.Deserialize<JsonElement>(content);
+
+            foreach (var account in accounts.EnumerateArray())
+            {
+                var accountNumber = account.GetProperty("accountNumber").GetString() ?? "";
+                var hashValue = account.GetProperty("hashValue").GetString() ?? "";
+
+                if (IsRequestedAccount(accountNumber, hashValue))
+                {
+                    _accountHash = hashValue;
+                    return _accountHash;
+                }
+            }
+
+            if (accounts.GetArrayLength() == 1)
+            {
+                _accountHash = accounts[0].GetProperty("hashValue").GetString();
+                if (!string.IsNullOrEmpty(_accountHash))
+                    return _accountHash;
+            }
+
+            throw new InvalidOperationException($"Schwab account {_accountNumber} was not found in authorized accounts.");
+        }
+
+        private bool IsRequestedAccount(string accountNumber, string hashValue)
+        {
+            var requested = NormalizeAccountNumber(_accountNumber);
+            var actual = NormalizeAccountNumber(accountNumber);
+
+            return actual.Equals(requested, StringComparison.OrdinalIgnoreCase) ||
+                   hashValue.Equals(_accountNumber, StringComparison.OrdinalIgnoreCase) ||
+                   (requested.Length >= 4 && actual.EndsWith(requested, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string NormalizeAccountNumber(string value)
+        {
+            return new string(value.Where(char.IsLetterOrDigit).ToArray());
+        }
+
         #endregion
 
         #region Account
@@ -108,7 +132,8 @@ namespace Quant.Infra.Net.Broker.Service
             try
             {
                 await SetAuthHeaderAsync();
-                var response = await _httpClient.GetAsync($"/accounts/{_accountNumber}");
+                var accountHash = await GetAccountHashAsync();
+                var response = await _httpClient.GetAsync($"accounts/{accountHash}?fields=positions");
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -121,10 +146,10 @@ namespace Quant.Infra.Net.Broker.Service
                 {
                     AccountNumber = _accountNumber,
                     AccountType = securitiesAccount.GetProperty("type").GetString() ?? "",
-                    CashBalance = currentBalances.GetProperty("cashBalance").GetDecimal(),
-                    MarketValue = currentBalances.GetProperty("longMarketValue").GetDecimal(),
-                    TotalEquity = currentBalances.GetProperty("equity").GetDecimal(),
-                    BuyingPower = currentBalances.GetProperty("buyingPower").GetDecimal()
+                    CashBalance = GetJsonDecimal(currentBalances, "cashBalance"),
+                    MarketValue = GetJsonDecimal(currentBalances, "longMarketValue"),
+                    TotalEquity = GetJsonDecimal(currentBalances, "equity", "liquidationValue", "accountValue"),
+                    BuyingPower = GetJsonDecimal(currentBalances, "buyingPower", "cashAvailableForTrading")
                 };
 
                 UtilityService.LogAndWriteLine($"[Schwab] 账户信息: 总资产={account.TotalEquity:C}, 市值={account.MarketValue:C}, 现金={account.CashBalance:C}");
@@ -146,7 +171,8 @@ namespace Quant.Infra.Net.Broker.Service
             try
             {
                 await SetAuthHeaderAsync();
-                var response = await _httpClient.GetAsync($"/accounts/{_accountNumber}");
+                var accountHash = await GetAccountHashAsync();
+                var response = await _httpClient.GetAsync($"accounts/{accountHash}?fields=positions");
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -166,8 +192,8 @@ namespace Quant.Infra.Net.Broker.Service
                         var position = new Position
                         {
                             Symbol = symbol,
-                            Quantity = pos.GetProperty("longQuantity").GetDecimal(),
-                            CostPrice = pos.GetProperty("averagePrice").GetDecimal(),
+                            Quantity = GetJsonDecimal(pos, "longQuantity") - GetJsonDecimal(pos, "shortQuantity"),
+                            CostPrice = GetJsonDecimal(pos, "averagePrice", "averageLongPrice", "averageShortPrice"),
                             AssetType = ParseAssetType(assetType),
                             UnrealizedProfitLoss = pos.TryGetProperty("currentDayProfitLoss", out var pnl) 
                                 ? pnl.GetDecimal() 
@@ -204,7 +230,7 @@ namespace Quant.Infra.Net.Broker.Service
             try
             {
                 await SetAuthHeaderAsync();
-                var response = await _httpClient.GetAsync($"/marketdata/v1/quotes?symbols={symbol}");
+                var response = await GetMarketDataAsync($"quotes?symbols={Uri.EscapeDataString(symbol)}");
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -231,8 +257,8 @@ namespace Quant.Infra.Net.Broker.Service
             try
             {
                 await SetAuthHeaderAsync();
-                var symbolsParam = string.Join(",", symbols);
-                var response = await _httpClient.GetAsync($"/marketdata/v1/quotes?symbols={symbolsParam}");
+                var symbolsParam = string.Join(",", symbols.Select(Uri.EscapeDataString));
+                var response = await GetMarketDataAsync($"quotes?symbols={symbolsParam}");
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -287,14 +313,14 @@ namespace Quant.Infra.Net.Broker.Service
             {
                 await SetAuthHeaderAsync();
                 
-                var queryParams = new List<string> { $"symbol={symbol}" };
+                var queryParams = new List<string> { $"symbol={Uri.EscapeDataString(symbol)}" };
                 if (!string.IsNullOrEmpty(contractType))
                     queryParams.Add($"contractType={contractType}");
                 if (strikeCount.HasValue)
                     queryParams.Add($"strikeCount={strikeCount.Value}");
 
                 var queryString = string.Join("&", queryParams);
-                var response = await _httpClient.GetAsync($"/marketdata/v1/chains?{queryString}");
+                var response = await GetMarketDataAsync($"chains?{queryString}");
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -407,7 +433,8 @@ namespace Quant.Infra.Net.Broker.Service
                 var json = JsonSerializer.Serialize(orderPayload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync($"/accounts/{_accountNumber}/orders", content);
+                var accountHash = await GetAccountHashAsync();
+                var response = await _httpClient.PostAsync($"accounts/{accountHash}/orders", content);
                 response.EnsureSuccessStatusCode();
 
                 // Schwab 返回订单 ID 在 Location header 中
@@ -429,7 +456,8 @@ namespace Quant.Infra.Net.Broker.Service
             try
             {
                 await SetAuthHeaderAsync();
-                var response = await _httpClient.GetAsync($"/accounts/{_accountNumber}/orders/{orderId}");
+                var accountHash = await GetAccountHashAsync();
+                var response = await _httpClient.GetAsync($"accounts/{accountHash}/orders/{orderId}");
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -449,7 +477,8 @@ namespace Quant.Infra.Net.Broker.Service
             try
             {
                 await SetAuthHeaderAsync();
-                var response = await _httpClient.DeleteAsync($"/accounts/{_accountNumber}/orders/{orderId}");
+                var accountHash = await GetAccountHashAsync();
+                var response = await _httpClient.DeleteAsync($"accounts/{accountHash}/orders/{orderId}");
                 response.EnsureSuccessStatusCode();
 
                 UtilityService.LogAndWriteLine($"[Schwab] 订单已取消: {orderId}");
@@ -467,7 +496,14 @@ namespace Quant.Infra.Net.Broker.Service
             try
             {
                 await SetAuthHeaderAsync();
-                var response = await _httpClient.GetAsync($"/accounts/{_accountNumber}/orders?maxResults={maxResults}");
+                var accountHash = await GetAccountHashAsync();
+                var toEnteredTime = DateTime.UtcNow;
+                var fromEnteredTime = toEnteredTime.AddDays(-60);
+                var query = $"maxResults={maxResults}" +
+                    $"&fromEnteredTime={Uri.EscapeDataString(fromEnteredTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))}" +
+                    $"&toEnteredTime={Uri.EscapeDataString(toEnteredTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))}";
+
+                var response = await _httpClient.GetAsync($"accounts/{accountHash}/orders?{query}");
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -491,24 +527,82 @@ namespace Quant.Infra.Net.Broker.Service
 
         private SchwabOrder ParseOrder(JsonElement orderData)
         {
-            var orderLeg = orderData.GetProperty("orderLegCollection")[0];
-            var instrument = orderLeg.GetProperty("instrument");
+            JsonElement orderLeg = default;
+            JsonElement instrument = default;
+            var hasLeg = orderData.TryGetProperty("orderLegCollection", out var legs) &&
+                         legs.ValueKind == JsonValueKind.Array &&
+                         legs.GetArrayLength() > 0;
+            if (hasLeg)
+            {
+                orderLeg = legs[0];
+                orderLeg.TryGetProperty("instrument", out instrument);
+            }
 
             return new SchwabOrder
             {
-                OrderId = orderData.GetProperty("orderId").GetString() ?? "",
-                Symbol = instrument.GetProperty("symbol").GetString() ?? "",
-                Status = orderData.GetProperty("status").GetString() ?? "",
-                OrderType = orderData.GetProperty("orderType").GetString() ?? "",
-                Side = orderLeg.GetProperty("instruction").GetString() ?? "",
-                Quantity = orderLeg.GetProperty("quantity").GetInt32(),
-                FilledQuantity = orderData.TryGetProperty("filledQuantity", out var filled) ? filled.GetInt32() : 0,
-                LimitPrice = orderData.TryGetProperty("price", out var price) ? price.GetDecimal() : null,
-                StopPrice = orderData.TryGetProperty("stopPrice", out var stop) ? stop.GetDecimal() : null,
-                AverageFilledPrice = orderData.TryGetProperty("averageFilledPrice", out var avg) ? avg.GetDecimal() : null,
-                TimeInForce = orderData.GetProperty("duration").GetString() ?? "",
-                CreatedAt = orderData.GetProperty("enteredTime").GetString() ?? "",
+                OrderId = GetJsonString(orderData, "orderId"),
+                Symbol = instrument.ValueKind == JsonValueKind.Object ? GetJsonString(instrument, "symbol") : "",
+                Status = GetJsonString(orderData, "status"),
+                OrderType = GetJsonString(orderData, "orderType"),
+                Side = hasLeg ? GetJsonString(orderLeg, "instruction") : "",
+                Quantity = hasLeg ? (int)GetJsonDecimal(orderLeg, "quantity") : 0,
+                FilledQuantity = (int)GetJsonDecimal(orderData, "filledQuantity"),
+                LimitPrice = TryGetNullableDecimal(orderData, "price"),
+                StopPrice = TryGetNullableDecimal(orderData, "stopPrice"),
+                AverageFilledPrice = TryGetNullableDecimal(orderData, "averageFilledPrice"),
+                TimeInForce = GetJsonString(orderData, "duration"),
+                CreatedAt = GetJsonString(orderData, "enteredTime"),
                 UpdatedAt = orderData.TryGetProperty("closeTime", out var close) ? close.GetString() ?? "" : ""
+            };
+        }
+
+        private static decimal GetJsonDecimal(JsonElement element, params string[] propertyNames)
+        {
+            foreach (var propertyName in propertyNames)
+            {
+                if (!element.TryGetProperty(propertyName, out var property))
+                    continue;
+
+                if (property.ValueKind == JsonValueKind.Number && property.TryGetDecimal(out var number))
+                    return number;
+
+                if (property.ValueKind == JsonValueKind.String &&
+                    decimal.TryParse(property.GetString(), out var parsed))
+                    return parsed;
+            }
+
+            return 0;
+        }
+
+        private static decimal? TryGetNullableDecimal(JsonElement element, string propertyName)
+        {
+            if (!element.TryGetProperty(propertyName, out var property) ||
+                property.ValueKind == JsonValueKind.Null ||
+                property.ValueKind == JsonValueKind.Undefined)
+                return null;
+
+            if (property.ValueKind == JsonValueKind.Number && property.TryGetDecimal(out var number))
+                return number;
+
+            if (property.ValueKind == JsonValueKind.String &&
+                decimal.TryParse(property.GetString(), out var parsed))
+                return parsed;
+
+            return null;
+        }
+
+        private static string GetJsonString(JsonElement element, string propertyName)
+        {
+            if (!element.TryGetProperty(propertyName, out var property))
+                return string.Empty;
+
+            return property.ValueKind switch
+            {
+                JsonValueKind.String => property.GetString() ?? string.Empty,
+                JsonValueKind.Number => property.GetRawText(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                _ => property.GetRawText()
             };
         }
 
@@ -521,7 +615,7 @@ namespace Quant.Infra.Net.Broker.Service
             try
             {
                 await SetAuthHeaderAsync();
-                var response = await _httpClient.GetAsync("/marketdata/v1/markets?markets=equity");
+                var response = await GetMarketDataAsync("markets?markets=equity");
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -552,12 +646,19 @@ namespace Quant.Infra.Net.Broker.Service
         {
             return assetType.ToUpper() switch
             {
-                "EQUITY" => AssetType.USEquity,
-                "OPTION" => AssetType.Option,
-                "MUTUAL_FUND" => AssetType.USEquity,
-                "FIXED_INCOME" => AssetType.USEquity,
-                _ => AssetType.USEquity
+                "EQUITY" => AssetType.UsEquity,
+                "OPTION" => AssetType.UsOption,
+                "MUTUAL_FUND" => AssetType.UsEquity,
+                "FIXED_INCOME" => AssetType.UsEquity,
+                _ => AssetType.UsEquity
             };
+        }
+
+        private async Task<HttpResponseMessage> GetMarketDataAsync(string pathAndQuery)
+        {
+            await SetAuthHeaderAsync();
+            var uri = new Uri(new Uri(MarketDataBaseUrl), pathAndQuery);
+            return await _httpClient.GetAsync(uri);
         }
 
         #endregion

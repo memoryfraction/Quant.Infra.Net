@@ -30,14 +30,21 @@ namespace Quant.Infra.Net.Broker.Service
         private string? _accountHash;
         private DateTime _tokenExpiry;
 
-        public SchwabBrokerService(BrokerCredentials credentials, string accountNumber)
+        /// <summary>
+        /// Creates a Schwab broker service with broker credentials and an optional HTTP client.
+        /// 使用券商凭据和可选 HTTP 客户端创建 Schwab 券商服务。
+        /// </summary>
+        /// <param name="credentials">Schwab API credentials. / Schwab API 凭据。</param>
+        /// <param name="accountNumber">Requested Schwab account number or hash. / 请求使用的 Schwab 账户号码或哈希。</param>
+        /// <param name="httpClient">Optional HTTP client for dependency injection and testing. / 用于依赖注入和测试的可选 HTTP 客户端。</param>
+        public SchwabBrokerService(BrokerCredentials credentials, string accountNumber, HttpClient? httpClient = null)
         {
             _apiKey = credentials.ApiKey;
             _apiSecret = credentials.Secret;
             _accountNumber = accountNumber;
             _baseUrl = (credentials.BaseUrl ?? "https://api.schwabapi.com/trader/v1").TrimEnd('/');
             
-            _httpClient = new HttpClient();
+            _httpClient = httpClient ?? new HttpClient();
             _httpClient.BaseAddress = new Uri(_baseUrl + "/");
         }
 
@@ -129,6 +136,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         #region Account
 
+        /// <inheritdoc />
         public async Task<SchwabAccount> GetAccountAsync()
         {
             try
@@ -168,6 +176,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         #region Positions
 
+        /// <inheritdoc />
         public async Task<List<Position>> GetPositionsAsync()
         {
             try
@@ -217,6 +226,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
         }
 
+        /// <inheritdoc />
         public async Task<Position?> GetPositionAsync(string symbol)
         {
             var positions = await GetPositionsAsync();
@@ -227,6 +237,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         #region Quotes
 
+        /// <inheritdoc />
         public async Task<SchwabQuote> GetQuoteAsync(string symbol)
         {
             try
@@ -254,6 +265,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
         }
 
+        /// <inheritdoc />
         public async Task<Dictionary<string, SchwabQuote>> GetQuotesAsync(List<string> symbols)
         {
             try
@@ -309,6 +321,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         #region Option Chain
 
+        /// <inheritdoc />
         public async Task<SchwabOptionChain> GetOptionChainAsync(string symbol, string? contractType = null, int? strikeCount = null)
         {
             try
@@ -403,6 +416,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         #region Orders
 
+        /// <inheritdoc />
         public async Task<string> PlaceOrderAsync(SchwabOrderRequest orderRequest)
         {
             try
@@ -453,6 +467,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
         }
 
+        /// <inheritdoc />
         public async Task<SchwabOrder> GetOrderAsync(string orderId)
         {
             try
@@ -474,6 +489,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
         }
 
+        /// <inheritdoc />
         public async Task<bool> CancelOrderAsync(string orderId)
         {
             try
@@ -493,6 +509,7 @@ namespace Quant.Infra.Net.Broker.Service
             }
         }
 
+        /// <inheritdoc />
         public async Task<List<SchwabOrder>> GetOrdersAsync(int maxResults = 100)
         {
             try
@@ -612,6 +629,7 @@ namespace Quant.Infra.Net.Broker.Service
 
         #region Market Status
 
+        /// <inheritdoc />
         public async Task<bool> IsMarketOpenAsync()
         {
             try

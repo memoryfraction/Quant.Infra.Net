@@ -327,8 +327,8 @@ namespace Quant.Infra.Net.Account.Service
                 .RetryAsync(3, (exception, retryCount) =>
                 {
                     var message = $"Retry {retryCount} due to: {exception.Message}";
-                    Console.WriteLine(message); // 控制台输出
-                    Log.Warning(message); // 日志记录
+                    Console.WriteLine(message); // Console output.
+                    Log.Warning(message); // Log record.
                 });
             try
             {
@@ -392,8 +392,8 @@ namespace Quant.Infra.Net.Account.Service
             {
                 // 记录最终异常
                 var errorMessage = $"Error fetching OHLCV data for {underlying.Symbol}: {ex.Message}";
-                Console.WriteLine(errorMessage); // 控制台输出
-                Log.Error(ex, errorMessage); // 日志记录
+                Console.WriteLine(errorMessage); // Console output.
+                Log.Error(ex, errorMessage); // Log record.
                 throw; // 重新抛出异常以便上层处理
             }
         }

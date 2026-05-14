@@ -52,7 +52,7 @@ namespace Quant.Infra.Net.Notification.Service
 			}
 			catch (Exception ex)
 			{
-				UtilityService.LogAndWriteLine($"[PersonalEmailService] 错误: {ex.Message}");
+				UtilityService.LogAndWriteLine($"[PersonalEmailService] Error: {ex.Message}");
 				return false;
 			}
 		}

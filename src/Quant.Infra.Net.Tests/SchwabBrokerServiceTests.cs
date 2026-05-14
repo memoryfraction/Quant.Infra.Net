@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Model;
@@ -10,22 +10,30 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Tests
 {
+    /// <summary>
+    /// Integration tests for the Schwab broker service.
+    /// Schwab 券商服务的集成测试。
+    /// </summary>
     [TestClass]
     public class SchwabBrokerServiceTests
     {
         private ISchwabBrokerService _schwabService = null!;
         private IConfiguration _config = null!;
 
+        /// <summary>
+        /// Loads Schwab test configuration.
+        /// 加载 Schwab 测试配置。
+        /// </summary>
         [TestInitialize]
         public void Setup()
         {
-            // 加载配置
+            // Load configuration.
             _config = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.test.json", optional: true)
                 .AddUserSecrets<SchwabBrokerServiceTests>()
                 .Build();
 
-            // 从配置中读取 Schwab 凭据
+            // Read Schwab credentials from configuration.
             var schwabConfig = _config.GetSection("Schwab");
             var credentials = new BrokerCredentials
             {
@@ -39,6 +47,10 @@ namespace Quant.Infra.Net.Tests
             _schwabService = new SchwabBrokerService(credentials, accountNumber);
         }
 
+        /// <summary>
+        /// Gets Schwab account data.
+        /// 获取 Schwab 账户数据。
+        /// </summary>
         [TestMethod]
         public async Task Test_GetAccount()
         {
@@ -50,14 +62,18 @@ namespace Quant.Infra.Net.Tests
             Assert.IsFalse(string.IsNullOrEmpty(account.AccountNumber));
             Assert.IsTrue(account.TotalEquity > 0);
 
-            Console.WriteLine($"账户号码: {account.AccountNumber}");
-            Console.WriteLine($"账户类型: {account.AccountType}");
-            Console.WriteLine($"总资产: ${account.TotalEquity:N2}");
-            Console.WriteLine($"市值: ${account.MarketValue:N2}");
-            Console.WriteLine($"现金余额: ${account.CashBalance:N2}");
-            Console.WriteLine($"购买力: ${account.BuyingPower:N2}");
+            Console.WriteLine($"Account number: {account.AccountNumber}");
+            Console.WriteLine($"Account type: {account.AccountType}");
+            Console.WriteLine($"Total equity: ${account.TotalEquity:N2}");
+            Console.WriteLine($"Market value: ${account.MarketValue:N2}");
+            Console.WriteLine($"Cash balance: ${account.CashBalance:N2}");
+            Console.WriteLine($"Buying power: ${account.BuyingPower:N2}");
         }
 
+        /// <summary>
+        /// Gets Schwab account positions.
+        /// 获取 Schwab 账户持仓。
+        /// </summary>
         [TestMethod]
         public async Task Test_GetPositions()
         {
@@ -66,27 +82,31 @@ namespace Quant.Infra.Net.Tests
 
             // Assert
             Assert.IsNotNull(positions);
-            Console.WriteLine($"持仓数量: {positions.Count}");
+            Console.WriteLine($"Position count: {positions.Count}");
 
             foreach (var position in positions)
             {
-                Console.WriteLine($"标的: {position.Symbol}");
-                Console.WriteLine($"  数量: {position.Quantity}");
-                Console.WriteLine($"  成本价: ${position.CostPrice:N2}");
-                Console.WriteLine($"  资产类型: {position.AssetType}");
+                Console.WriteLine($"Symbol: {position.Symbol}");
+                Console.WriteLine($"  Quantity: {position.Quantity}");
+                Console.WriteLine($"  Cost price: ${position.CostPrice:N2}");
+                Console.WriteLine($"  Asset type: {position.AssetType}");
                 if (position.UnrealizedProfitLoss.HasValue)
                 {
-                    Console.WriteLine($"  未实现盈亏: ${position.UnrealizedProfitLoss.Value:N2}");
+                    Console.WriteLine($"  Unrealized P/L: ${position.UnrealizedProfitLoss.Value:N2}");
                 }
                 Console.WriteLine();
             }
         }
 
+        /// <summary>
+        /// Gets one Schwab position by symbol.
+        /// 按标的代码获取单个 Schwab 持仓。
+        /// </summary>
         [TestMethod]
         public async Task Test_GetPosition_SpecificSymbol()
         {
             // Arrange
-            var symbol = "AAPL"; // 测试苹果股票
+            var symbol = "AAPL"; // Test Apple stock.
 
             // Act
             var position = await _schwabService.GetPositionAsync(symbol);
@@ -94,16 +114,20 @@ namespace Quant.Infra.Net.Tests
             // Assert
             if (position != null)
             {
-                Console.WriteLine($"找到 {symbol} 持仓:");
-                Console.WriteLine($"  数量: {position.Quantity}");
-                Console.WriteLine($"  成本价: ${position.CostPrice:N2}");
+                Console.WriteLine($"Found {symbol} position:");
+                Console.WriteLine($"  Quantity: {position.Quantity}");
+                Console.WriteLine($"  Cost price: ${position.CostPrice:N2}");
             }
             else
             {
-                Console.WriteLine($"未找到 {symbol} 持仓");
+                Console.WriteLine($"No {symbol} position found");
             }
         }
 
+        /// <summary>
+        /// Gets one Schwab quote.
+        /// 获取单个 Schwab 报价。
+        /// </summary>
         [TestMethod]
         public async Task Test_GetQuote()
         {
@@ -118,19 +142,23 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(symbol, quote.Symbol);
             Assert.IsTrue(quote.LastPrice > 0);
 
-            Console.WriteLine($"{symbol} 报价信息:");
-            Console.WriteLine($"  最新价: ${quote.LastPrice:N2}");
-            Console.WriteLine($"  买价: ${quote.BidPrice:N2}");
-            Console.WriteLine($"  卖价: ${quote.AskPrice:N2}");
-            Console.WriteLine($"  开盘价: ${quote.Open:N2}");
-            Console.WriteLine($"  最高价: ${quote.High:N2}");
-            Console.WriteLine($"  最低价: ${quote.Low:N2}");
-            Console.WriteLine($"  收盘价: ${quote.Close:N2}");
-            Console.WriteLine($"  涨跌额: ${quote.Change:N2}");
-            Console.WriteLine($"  涨跌幅: {quote.ChangePercent:N2}%");
-            Console.WriteLine($"  成交量: {quote.Volume:N0}");
+            Console.WriteLine($"{symbol} quote:");
+            Console.WriteLine($"  Last price: ${quote.LastPrice:N2}");
+            Console.WriteLine($"  Bid: ${quote.BidPrice:N2}");
+            Console.WriteLine($"  Ask: ${quote.AskPrice:N2}");
+            Console.WriteLine($"  Open: ${quote.Open:N2}");
+            Console.WriteLine($"  High: ${quote.High:N2}");
+            Console.WriteLine($"  Low: ${quote.Low:N2}");
+            Console.WriteLine($"  Close: ${quote.Close:N2}");
+            Console.WriteLine($"  Change: ${quote.Change:N2}");
+            Console.WriteLine($"  Change percent: {quote.ChangePercent:N2}%");
+            Console.WriteLine($"  Volume: {quote.Volume:N0}");
         }
 
+        /// <summary>
+        /// Gets multiple Schwab quotes.
+        /// 批量获取多个 Schwab 报价。
+        /// </summary>
         [TestMethod]
         public async Task Test_GetQuotes_Multiple()
         {
@@ -144,19 +172,23 @@ namespace Quant.Infra.Net.Tests
             Assert.IsNotNull(quotes);
             Assert.IsTrue(quotes.Count > 0);
 
-            Console.WriteLine($"获取到 {quotes.Count} 个报价:");
+            Console.WriteLine($"Loaded {quotes.Count} quotes:");
             foreach (var kvp in quotes)
             {
                 Console.WriteLine($"{kvp.Key}: ${kvp.Value.LastPrice:N2} ({kvp.Value.ChangePercent:+0.00;-0.00}%)");
             }
         }
 
+        /// <summary>
+        /// Gets a Schwab option chain.
+        /// 获取 Schwab 期权链。
+        /// </summary>
         [TestMethod]
         public async Task Test_GetOptionChain()
         {
             // Arrange
             var symbol = "AAPL";
-            var strikeCount = 5; // 只获取5个行权价
+            var strikeCount = 5; // Load five strikes only.
 
             // Act
             var optionChain = await _schwabService.GetOptionChainAsync(symbol, strikeCount: strikeCount);
@@ -166,46 +198,50 @@ namespace Quant.Infra.Net.Tests
             Assert.AreEqual(symbol, optionChain.Symbol);
             Assert.IsTrue(optionChain.UnderlyingPrice > 0);
 
-            Console.WriteLine($"{symbol} 期权链:");
-            Console.WriteLine($"  标的价格: ${optionChain.UnderlyingPrice:N2}");
-            Console.WriteLine($"  Call 期权数量: {optionChain.CallOptions.Count}");
-            Console.WriteLine($"  Put 期权数量: {optionChain.PutOptions.Count}");
+            Console.WriteLine($"{symbol} option chain:");
+            Console.WriteLine($"  Underlying price: ${optionChain.UnderlyingPrice:N2}");
+            Console.WriteLine($"  Call count: {optionChain.CallOptions.Count}");
+            Console.WriteLine($"  Put count: {optionChain.PutOptions.Count}");
 
-            // 显示前5个 Call 期权
-            Console.WriteLine("\n前5个 Call 期权:");
+            // Show the first five call contracts.
+            Console.WriteLine("\nFirst five call contracts:");
             foreach (var call in optionChain.CallOptions.Take(5))
             {
                 Console.WriteLine($"  {call.Symbol}");
-                Console.WriteLine($"    到期日: {call.ExpirationDate}");
-                Console.WriteLine($"    行权价: ${call.Strike:N2}");
-                Console.WriteLine($"    买价/卖价: ${call.Bid:N2} / ${call.Ask:N2}");
-                Console.WriteLine($"    最新价: ${call.Last:N2}");
-                Console.WriteLine($"    隐含波动率: {call.ImpliedVolatility:P2}");
+                Console.WriteLine($"    Expiration: {call.ExpirationDate}");
+                Console.WriteLine($"    Strike: ${call.Strike:N2}");
+                Console.WriteLine($"    Bid/Ask: ${call.Bid:N2} / ${call.Ask:N2}");
+                Console.WriteLine($"    Last price: ${call.Last:N2}");
+                Console.WriteLine($"    Implied volatility: {call.ImpliedVolatility:P2}");
                 Console.WriteLine($"    Delta: {call.Delta:N4}");
-                Console.WriteLine($"    成交量: {call.Volume:N0}");
-                Console.WriteLine($"    未平仓合约: {call.OpenInterest:N0}");
-                Console.WriteLine($"    价内: {(call.InTheMoney ? "是" : "否")}");
+                Console.WriteLine($"    Volume: {call.Volume:N0}");
+                Console.WriteLine($"    Open interest: {call.OpenInterest:N0}");
+                Console.WriteLine($"    In the money: {(call.InTheMoney ? "yes" : "no")}");
                 Console.WriteLine();
             }
 
-            // 显示前5个 Put 期权
-            Console.WriteLine("前5个 Put 期权:");
+            // Show the first five put contracts.
+            Console.WriteLine("First five put contracts:");
             foreach (var put in optionChain.PutOptions.Take(5))
             {
                 Console.WriteLine($"  {put.Symbol}");
-                Console.WriteLine($"    到期日: {put.ExpirationDate}");
-                Console.WriteLine($"    行权价: ${put.Strike:N2}");
-                Console.WriteLine($"    买价/卖价: ${put.Bid:N2} / ${put.Ask:N2}");
-                Console.WriteLine($"    最新价: ${put.Last:N2}");
-                Console.WriteLine($"    隐含波动率: {put.ImpliedVolatility:P2}");
+                Console.WriteLine($"    Expiration: {put.ExpirationDate}");
+                Console.WriteLine($"    Strike: ${put.Strike:N2}");
+                Console.WriteLine($"    Bid/Ask: ${put.Bid:N2} / ${put.Ask:N2}");
+                Console.WriteLine($"    Last price: ${put.Last:N2}");
+                Console.WriteLine($"    Implied volatility: {put.ImpliedVolatility:P2}");
                 Console.WriteLine($"    Delta: {put.Delta:N4}");
-                Console.WriteLine($"    成交量: {put.Volume:N0}");
-                Console.WriteLine($"    未平仓合约: {put.OpenInterest:N0}");
-                Console.WriteLine($"    价内: {(put.InTheMoney ? "是" : "否")}");
+                Console.WriteLine($"    Volume: {put.Volume:N0}");
+                Console.WriteLine($"    Open interest: {put.OpenInterest:N0}");
+                Console.WriteLine($"    In the money: {(put.InTheMoney ? "yes" : "no")}");
                 Console.WriteLine();
             }
         }
 
+        /// <summary>
+        /// Gets call-only Schwab option chains.
+        /// 获取仅包含看涨期权的 Schwab 期权链。
+        /// </summary>
         [TestMethod]
         public async Task Test_GetOptionChain_CallsOnly()
         {
@@ -218,13 +254,17 @@ namespace Quant.Infra.Net.Tests
             // Assert
             Assert.IsNotNull(optionChain);
             Assert.IsTrue(optionChain.CallOptions.Count > 0);
-            Assert.AreEqual(0, optionChain.PutOptions.Count); // 只请求 Call，Put 应该为空
+            Assert.AreEqual(0, optionChain.PutOptions.Count); // Only calls were requested, so puts should be empty.
 
-            Console.WriteLine($"{symbol} Call 期权链:");
-            Console.WriteLine($"  标的价格: ${optionChain.UnderlyingPrice:N2}");
-            Console.WriteLine($"  Call 期权数量: {optionChain.CallOptions.Count}");
+            Console.WriteLine($"{symbol} call option chain:");
+            Console.WriteLine($"  Underlying price: ${optionChain.UnderlyingPrice:N2}");
+            Console.WriteLine($"  Call count: {optionChain.CallOptions.Count}");
         }
 
+        /// <summary>
+        /// Gets Schwab market status.
+        /// 获取 Schwab 市场状态。
+        /// </summary>
         [TestMethod]
         public async Task Test_IsMarketOpen()
         {
@@ -232,11 +272,15 @@ namespace Quant.Infra.Net.Tests
             var isOpen = await _schwabService.IsMarketOpenAsync();
 
             // Assert
-            Console.WriteLine($"市场状态: {(isOpen ? "开盘" : "休市")}");
+            Console.WriteLine($"Market status: {(isOpen ? "open" : "closed")}");
         }
 
+        /// <summary>
+        /// Places a live Schwab market buy order.
+        /// 提交 Schwab 真实市价买入订单。
+        /// </summary>
         [TestMethod]
-        [Ignore] // 默认忽略，避免意外下单
+        [Ignore] // Ignored by default to avoid accidental live orders.
         public async Task Test_PlaceOrder_MarketBuy()
         {
             // Arrange
@@ -255,14 +299,18 @@ namespace Quant.Infra.Net.Tests
 
             // Assert
             Assert.IsFalse(string.IsNullOrEmpty(orderId));
-            Console.WriteLine($"订单已提交，订单ID: {orderId}");
+            Console.WriteLine($"Order submitted. Order ID: {orderId}");
 
-            // 等待一下，然后查询订单状态
+            // Wait briefly before querying order status.
             await Task.Delay(2000);
             var order = await _schwabService.GetOrderAsync(orderId);
-            Console.WriteLine($"订单状态: {order.Status}");
+            Console.WriteLine($"Order status: {order.Status}");
         }
 
+        /// <summary>
+        /// Gets recent Schwab orders.
+        /// 获取 Schwab 最近订单。
+        /// </summary>
         [TestMethod]
         public async Task Test_GetOrders()
         {
@@ -271,26 +319,30 @@ namespace Quant.Infra.Net.Tests
 
             // Assert
             Assert.IsNotNull(orders);
-            Console.WriteLine($"最近 {orders.Count} 个订单:");
+            Console.WriteLine($"Latest {orders.Count} orders:");
 
             foreach (var order in orders)
             {
-                Console.WriteLine($"订单ID: {order.OrderId}");
-                Console.WriteLine($"  标的: {order.Symbol}");
-                Console.WriteLine($"  方向: {order.Side}");
-                Console.WriteLine($"  数量: {order.Quantity}");
-                Console.WriteLine($"  已成交: {order.FilledQuantity}");
-                Console.WriteLine($"  状态: {order.Status}");
-                Console.WriteLine($"  订单类型: {order.OrderType}");
-                Console.WriteLine($"  创建时间: {order.CreatedAt}");
+                Console.WriteLine($"Order ID: {order.OrderId}");
+                Console.WriteLine($"  Symbol: {order.Symbol}");
+                Console.WriteLine($"  Side: {order.Side}");
+                Console.WriteLine($"  Quantity: {order.Quantity}");
+                Console.WriteLine($"  Filled: {order.FilledQuantity}");
+                Console.WriteLine($"  Status: {order.Status}");
+                Console.WriteLine($"  Order type: {order.OrderType}");
+                Console.WriteLine($"  Created at: {order.CreatedAt}");
                 if (order.AverageFilledPrice.HasValue)
                 {
-                    Console.WriteLine($"  成交均价: ${order.AverageFilledPrice.Value:N2}");
+                    Console.WriteLine($"  Average fill price: ${order.AverageFilledPrice.Value:N2}");
                 }
                 Console.WriteLine();
             }
         }
 
+        /// <summary>
+        /// Gets positions enriched with real-time quotes.
+        /// 获取带实时报价的持仓详情。
+        /// </summary>
         [TestMethod]
         public async Task Test_GetPositions_WithQuotes()
         {
@@ -299,7 +351,7 @@ namespace Quant.Infra.Net.Tests
             
             if (positions.Count == 0)
             {
-                Console.WriteLine("当前没有持仓");
+                Console.WriteLine("No positions found.");
                 return;
             }
 
@@ -307,9 +359,9 @@ namespace Quant.Infra.Net.Tests
             var quotes = await _schwabService.GetQuotesAsync(symbols);
 
             // Assert
-            Console.WriteLine("持仓详情（含实时报价）:");
+            Console.WriteLine("Position details with real-time quotes:");
             Console.WriteLine(new string('-', 100));
-            Console.WriteLine($"{"标的",-10} {"数量",10} {"成本价",12} {"当前价",12} {"市值",15} {"盈亏",15} {"盈亏率",10}");
+            Console.WriteLine($"{"Symbol",-10} {"Quantity",10} {"Cost",12} {"Last",12} {"Market Value",15} {"P/L",15} {"P/L %",10}");
             Console.WriteLine(new string('-', 100));
 
             decimal totalCost = 0;
@@ -334,7 +386,9 @@ namespace Quant.Infra.Net.Tests
             Console.WriteLine(new string('-', 100));
             var totalPnl = totalMarketValue - totalCost;
             var totalPnlPercent = totalCost != 0 ? (totalPnl / totalCost) * 100 : 0;
-            Console.WriteLine($"{"总计",-10} {"",-10} ${totalCost,10:N2} {"",-12} ${totalMarketValue,13:N2} ${totalPnl,13:N2} {totalPnlPercent,9:N2}%");
+            Console.WriteLine($"{"Total",-10} {"",-10} ${totalCost,10:N2} {"",-12} ${totalMarketValue,13:N2} ${totalPnl,13:N2} {totalPnlPercent,9:N2}%");
         }
     }
 }
+
+

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting; // 必须引用
-using Moq; // 建议安装 NuGet 包: Moq
+using Microsoft.Extensions.Hosting;
+using Moq;
 using Quant.Infra.Net.Notification.Model;
 using Quant.Infra.Net.Notification.Service;
 
@@ -12,37 +12,37 @@ namespace Quant.Infra.Net.Tests
 	{
 		private EmailServiceFactory _factory;
 		private IConfiguration _config;
-		private IServiceProvider _serviceProvider; // 提升为成员变量以便直接获取服务
+		private IServiceProvider _serviceProvider;
 		private string _testRecipient = "yuanyuancomecome@outlook.com";
 
 		[TestInitialize]
 		public void Setup()
 		{
-			// 1. 加载配置
+			// 1. Load configuration.
 			_config = new ConfigurationBuilder()
 				.AddJsonFile("appsettings.test.json", optional: true)
 				.AddUserSecrets<EmailIntegrationTests>()
 				.Build();
 
-			// 2. 模拟生产环境的 DI 容器注册
+			// 2. Register services as the application DI container would.
 			var services = new ServiceCollection();
 
-			// --- 关键修改：模拟并注册 IHostEnvironment ---
+			// Register a mocked IHostEnvironment.
 			var mockEnv = new Mock<IHostEnvironment>();
 			mockEnv.Setup(m => m.EnvironmentName).Returns("Development");
 			mockEnv.Setup(m => m.ContentRootPath).Returns(AppDomain.CurrentDomain.BaseDirectory);
 			services.AddSingleton(mockEnv.Object);
 
-			// 注册具体的实现类
+			// Register concrete services.
 			services.AddTransient<PersonalEmailService>();
 			services.AddTransient<CommercialEmailService>();
 
-			// 将 IConfiguration 注入容器
+			// Register IConfiguration.
 			services.AddSingleton(_config);
 
 			_serviceProvider = services.BuildServiceProvider();
 
-			// 3. 初始化工厂
+			// 3. Initialize the factory.
 			_factory = new EmailServiceFactory(_serviceProvider, _config);
 		}
 
@@ -55,7 +55,7 @@ namespace Quant.Infra.Net.Tests
 			{
 				To = recipients,
 				Subject = $"MVP Factory Test - {DateTime.Now:HH:mm}",
-				Body = "<h1>MVP 发送测试</h1><p>通过 EmailServiceFactory 路由至 PersonalEmailService 发送。</p>",
+				Body = "<h1>MVP send test</h1><p>Sent through EmailServiceFactory to PersonalEmailService.</p>",
 				IsHtml = true
 			};
 
@@ -89,8 +89,8 @@ namespace Quant.Infra.Net.Tests
 			var message = new EmailMessage
 			{
 				To = recipients,
-				Subject = $"🎯 量化交易系统邮件测试 - {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-				Body = "<h1>测试内容已省略...</h1>", // 保持你原来的 HTML 内容
+				Subject = $"Quant trading system email test - {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+				Body = "<h1>Test content omitted...</h1>", // Keep the original HTML content shape.
 				IsHtml = true
 			};
 
@@ -112,23 +112,23 @@ namespace Quant.Infra.Net.Tests
 			// --- 关键修改：从 DI 容器获取服务，而不是 new ---
 			var service = _serviceProvider.GetRequiredService<CommercialEmailService>();
 
-			// 验证逻辑
-			Console.WriteLine($"✅ 使用由 DI 容器注入 IHostEnvironment 的 CommercialEmailService");
+			// Verification.
+			Console.WriteLine($"CommercialEmailService resolved from DI with IHostEnvironment injected");
 
 			if (settings.Password.StartsWith("xkeysib-"))
 			{
-				Assert.Fail("检测到 API Key，但该测试需要 SMTP 凭据 (xsmtpsib-...)");
+				Assert.Fail("API key detected, but this test requires SMTP credentials (xsmtpsib-...)");
 			}
 
-			// 2. 调用真实发送
+			// 2. Send a real email.
 			try
 			{
 				var result = await service.SendBulkEmailAsync(message, settings);
-				Assert.IsTrue(result, "Brevo 真实邮件发送失败");
+				Assert.IsTrue(result, "Brevo real email delivery failed");
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"❌ 异常: {ex.Message}");
+				Console.WriteLine($"Exception: {ex.Message}");
 				throw;
 			}
 		}

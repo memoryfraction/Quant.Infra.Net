@@ -1,13 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.8.34408.163
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11527.330 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Quant.Infra.Net.Tests", "Quant.Infra.Net.Tests\Quant.Infra.Net.Tests.csproj", "{51FE4E76-EBC7-4CAD-920F-9E9184C8381A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Quant.Infra.Net", "Quant.Infra.Net\Quant.Infra.Net.csproj", "{70E19226-664D-495E-A609-AE8ECC266F26}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InterReact", "..\..\InterReact\InterReact\InterReact.csproj", "{3A506A02-708E-49BD-81CD-D89017E133CE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyQuantApp", "MyQuantApp\MyQuantApp.csproj", "{A8370D05-04D8-BFDF-CCB8-EE75AC2E0E57}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{3A506A02-708E-49BD-81CD-D89017E133CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3A506A02-708E-49BD-81CD-D89017E133CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3A506A02-708E-49BD-81CD-D89017E133CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8370D05-04D8-BFDF-CCB8-EE75AC2E0E57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8370D05-04D8-BFDF-CCB8-EE75AC2E0E57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8370D05-04D8-BFDF-CCB8-EE75AC2E0E57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8370D05-04D8-BFDF-CCB8-EE75AC2E0E57}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

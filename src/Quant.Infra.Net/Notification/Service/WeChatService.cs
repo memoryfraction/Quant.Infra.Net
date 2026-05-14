@@ -1,4 +1,5 @@
 ﻿using RestSharp;
+using System;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Notification.Service
@@ -13,6 +14,8 @@ namespace Quant.Infra.Net.Notification.Service
         /// <returns></returns>
         public async Task<RestResponse> SendTextNotificationAsync(string content, string webHook)
         {
+            if (string.IsNullOrWhiteSpace(content)) throw new ArgumentException("content must not be null or empty.", nameof(content));
+            if (string.IsNullOrWhiteSpace(webHook)) throw new ArgumentException("webHook must not be null or empty.", nameof(webHook));
             // 创建一个 RestClient 对象，传入 webHook 参数作为基地址
             var client = new RestClient();
             // 创建一个 RestRequest 对象，指定请求方法为 POST

@@ -15,6 +15,7 @@ namespace Quant.Infra.Net.Exchange.Service
 
         public IBKRService(IMapper mapper)
         {
+            if (mapper == null) throw new ArgumentNullException(nameof(mapper));
             _mapper = mapper;
             if (_client == null)
                 _client = InterReactClient.ConnectAsync().Result;
@@ -41,6 +42,12 @@ namespace Quant.Infra.Net.Exchange.Service
         {
             // https://github.com/dshe/InterReact/blob/master/InterReact.Tests/SystemTests/Orders/PlaceOrderTests.cs
 
+            if (order == null) throw new ArgumentNullException(nameof(order));
+            if (string.IsNullOrWhiteSpace(order.Symbol)) throw new ArgumentException("order.Symbol must not be null or empty.", nameof(order));
+
+            // Ensure mapper and client remain available
+            if (_mapper == null) throw new InvalidOperationException("IMapper is not initialized.");
+
             _client = await InterReactClient.ConnectAsync();
             InterReact.Contract interReactContract = new()
             {
@@ -54,6 +61,9 @@ namespace Quant.Infra.Net.Exchange.Service
             InterReact.Order interReactOrder = new InterReact.Order();
             if (order.ExecutionType == OrderExecutionType.Limit)
             {
+                if (order.Quantity == null || order.Quantity <= 0) throw new ArgumentException("order.Quantity must be positive for limit orders.", nameof(order));
+                if (order.Price == null || order.Price <= 0) throw new ArgumentException("order.Price must be positive for limit orders.", nameof(order));
+
                 interReactOrder = new()
                 {
                     Action = order.ActionType.ToString(),
@@ -65,6 +75,8 @@ namespace Quant.Infra.Net.Exchange.Service
             }
             else if (order.ExecutionType == OrderExecutionType.Market)
             {
+                if (order.Quantity == null || order.Quantity == 0) throw new ArgumentException("order.Quantity must not be zero for market orders.", nameof(order));
+
                 interReactOrder = new InterReact.Order()
                 {
                     Action = order.ActionType.ToString(),

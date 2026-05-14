@@ -39,7 +39,7 @@ namespace Quant.Infra.Net.Notification.Service
 
         private async Task<bool> SendRealBrevoEmail(EmailMessage message, EmailSettingBase setting)
         {
-            UtilityService.LogAndWriteLine($"[CommercialService - Brevo] Starting real email delivery");
+            UtilityService.LogAndWriteLine($"[CommercialService - Brevo] Starting real email sending");
             UtilityService.LogAndWriteLine($"[Brevo] Sender: {setting.SenderEmail} ({setting.SenderName})");
             UtilityService.LogAndWriteLine($"[Brevo] Subject: {message.Subject}");
             UtilityService.LogAndWriteLine($"[Brevo] Recipient count: {message.To.Count}");
@@ -59,36 +59,36 @@ namespace Quant.Infra.Net.Notification.Service
                 // 检查密钥类型
                 if (setting.Password.StartsWith("xkeysib-"))
                 {
-                    UtilityService.LogAndWriteLine($"[Brevo] API key detected, but SMTP requires SMTP credentials");
-                    UtilityService.LogAndWriteLine($"[Brevo] Get SMTP credentials with these steps:");
-                    UtilityService.LogAndWriteLine($"[Brevo] 1. Sign in to your Brevo account");
-                    UtilityService.LogAndWriteLine($"[Brevo] 2. Open Settings -> SMTP & API from the top-right profile menu");
-                    UtilityService.LogAndWriteLine($"[Brevo] 3. Generate a new SMTP key from the SMTP tab");
+                    UtilityService.LogAndWriteLine($"[Brevo] ERROR: API Key detected, but SMTP requires SMTP credentials");
+                    UtilityService.LogAndWriteLine($"[Brevo] Please follow these steps to get SMTP credentials:");
+                    UtilityService.LogAndWriteLine($"[Brevo] 1. Log in to your Brevo account");
+                    UtilityService.LogAndWriteLine($"[Brevo] 2. Click avatar -> Settings -> SMTP & API");
+                    UtilityService.LogAndWriteLine($"[Brevo] 3. In the SMTP tab, generate a new SMTP key");
                     UtilityService.LogAndWriteLine($"[Brevo] 4. Copy the SMTP username and SMTP key");
                     UtilityService.LogAndWriteLine($"[Brevo] 5. Update user secrets:");
-                    UtilityService.LogAndWriteLine($"[Brevo]    dotnet user-secrets set \"Email:Commercial:Username\" \"your-smtp-username\"");
-                    UtilityService.LogAndWriteLine($"[Brevo]    dotnet user-secrets set \"Email:Commercial:Password\" \"your-smtp-key\"");
+                    UtilityService.LogAndWriteLine($"[Brevo]    dotnet user-secrets set \"Email:Commercial:Username\" \"your-SMTP-username\"");
+                    UtilityService.LogAndWriteLine($"[Brevo]    dotnet user-secrets set \"Email:Commercial:Password\" \"your-SMTP-key\"");
                     return false;
                 }
                 else if (!setting.Password.StartsWith("xsmtpsib-"))
                 {
-                    UtilityService.LogAndWriteLine($"[Brevo] Unrecognized key format. Expected SMTP key (xsmtpsib-...)");
+                    UtilityService.LogAndWriteLine($"[Brevo] ERROR: Unrecognized key format, expected SMTP key (xsmtpsib-...)");
                     return false;
                 }
                 
                 // 检查是否有 SMTP 用户名
                 if (string.IsNullOrEmpty(setting.Username))
                 {
-                    UtilityService.LogAndWriteLine($"[Brevo] Missing SMTP username");
-                    UtilityService.LogAndWriteLine($"[Brevo] Get the SMTP username from Brevo SMTP settings, then run:");
-                    UtilityService.LogAndWriteLine($"[Brevo] dotnet user-secrets set \"Email:Commercial:Username\" \"your-smtp-username\"");
+                    UtilityService.LogAndWriteLine($"[Brevo] ERROR: Missing SMTP username");
+                    UtilityService.LogAndWriteLine($"[Brevo] Please get the SMTP username from Brevo SMTP settings page, then run:");
+                    UtilityService.LogAndWriteLine($"[Brevo] dotnet user-secrets set \"Email:Commercial:Username\" \"your-SMTP-username\"");
                     return false;
                 }
                 
                 // 使用 SMTP 用户名和密钥进行认证
                 string smtpUsername = !string.IsNullOrEmpty(setting.Username) ? setting.Username : setting.SenderEmail;
                 await client.AuthenticateAsync(smtpUsername, setting.Password);
-                UtilityService.LogAndWriteLine($"[Brevo] Authentication succeeded. Username: {smtpUsername}");
+                UtilityService.LogAndWriteLine($"[Brevo] Authentication succeeded, username: {smtpUsername}");
 
                 foreach (var recipient in message.To)
                 {
@@ -109,7 +109,7 @@ namespace Quant.Infra.Net.Notification.Service
                     UtilityService.LogAndWriteLine($"[Brevo] Sending email to: {recipient}");
                     // 发送邮件
                     await client.SendAsync(email);
-                    UtilityService.LogAndWriteLine($"[Brevo] Real email sent to: {recipient}");
+                    UtilityService.LogAndWriteLine($"[Brevo] Email sent to: {recipient}");
 
                     // 批量发送时添加延迟，避免触发限制
                     if (message.To.Count > 1)
@@ -120,7 +120,7 @@ namespace Quant.Infra.Net.Notification.Service
 
                 UtilityService.LogAndWriteLine($"[Brevo] Disconnecting...");
                 await client.DisconnectAsync(true);
-                UtilityService.LogAndWriteLine($"[Brevo] Real email delivery finished. Sent {message.To.Count} messages");
+                UtilityService.LogAndWriteLine($"[Brevo] Email sending completed, {message.To.Count} email(s) sent");
                 return true;
             }
             catch (Exception ex)
@@ -131,9 +131,9 @@ namespace Quant.Infra.Net.Notification.Service
                 // 如果是认证错误，提供更详细的信息
                 if (ex.Message.Contains("authentication") || ex.Message.Contains("Authentication"))
                 {
-                    UtilityService.LogAndWriteLine($"[Brevo SMTP] Authentication failed. Please check:");
-                    UtilityService.LogAndWriteLine($"[Brevo SMTP] 1. Username should be the sender email: {setting.SenderEmail}");
-                    UtilityService.LogAndWriteLine($"[Brevo SMTP] 2. Password should be the Brevo API key");
+                    UtilityService.LogAndWriteLine($"[Brevo SMTP] Authentication failed - please check:");
+                    UtilityService.LogAndWriteLine($"[Brevo SMTP] 1. Username should be sender email: {setting.SenderEmail}");
+                    UtilityService.LogAndWriteLine($"[Brevo SMTP] 2. Password should be Brevo API Key");
                     UtilityService.LogAndWriteLine($"[Brevo SMTP] 3. Sender email must be verified in Brevo");
                 }
                 
@@ -143,11 +143,11 @@ namespace Quant.Infra.Net.Notification.Service
 
         private async Task<bool> SimulateBrevoEmail(EmailMessage message, EmailSettingBase setting)
         {
-            UtilityService.LogAndWriteLine($"[CommercialService - Brevo] Starting simulated bulk email delivery");
+            UtilityService.LogAndWriteLine($"[CommercialService - Brevo] Starting simulated batch email sending");
             UtilityService.LogAndWriteLine($"[Brevo] Sender: {setting.SenderEmail} ({setting.SenderName})");
             UtilityService.LogAndWriteLine($"[Brevo] Subject: {message.Subject}");
             UtilityService.LogAndWriteLine($"[Brevo] Recipient count: {message.To.Count}");
-            UtilityService.LogAndWriteLine($"[Brevo] Message format: {(message.IsHtml ? "HTML" : "plain text")}");
+            UtilityService.LogAndWriteLine($"[Brevo] Email format: {(message.IsHtml ? "HTML" : "Plain text")}");
 
             // 模拟 Brevo API 调用延迟
             await Task.Delay(500);
@@ -163,12 +163,10 @@ namespace Quant.Infra.Net.Notification.Service
                 UtilityService.LogAndWriteLine($"[Brevo] Sent to: {recipient}");
             }
 
-            UtilityService.LogAndWriteLine($"[Brevo] Bulk email delivery finished. Sent {message.To.Count} messages");
-            UtilityService.LogAndWriteLine($"[Brevo] Message body preview: {(message.Body.Length > 50 ? message.Body.Substring(0, 50) + "..." : message.Body)}");
+            UtilityService.LogAndWriteLine($"[Brevo] Batch email sending completed, {message.To.Count} email(s) sent");
+            UtilityService.LogAndWriteLine($"[Brevo] Email content preview: {(message.Body.Length > 50 ? message.Body.Substring(0, 50) + "..." : message.Body)}");
 
             return true;
         }
     }
 }
-
-

@@ -16,30 +16,95 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.SourceData.Service
 {
+    /// <summary>
+    /// 加密货币数据源服务接口，提供Binance等加密货币交易所的数据获取功能。
+    /// Cryptocurrency data source service interface, provides data retrieval functionality for crypto exchanges like Binance.
+    /// </summary>
     public interface ICryptoSourceDataService
     {
+        /// <summary>
+        /// 下载Binance现货历史K线数据。
+        /// Downloads Binance spot historical K-line data.
+        /// </summary>
+        /// <param name="symbols">交易对列表 / List of trading pairs.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="path">保存路径（可选）/ Save path (optional).</param>
+        /// <param name="klineInterval">K线间隔 / K-line interval.</param>
         Task DownloadBinanceSpotAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
 
+        /// <summary>
+        /// 下载Binance USD合约历史K线数据。
+        /// Downloads Binance USD futures historical K-line data.
+        /// </summary>
+        /// <param name="symbols">交易对列表 / List of trading pairs.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="path">保存路径（可选）/ Save path (optional).</param>
+        /// <param name="klineInterval">K线间隔 / K-line interval.</param>
         Task DownloadBinanceUsdFutureAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
 
+        /// <summary>
+        /// 从CoinMarketCap获取市值前N名的加密货币符号列表。
+        /// Gets the top N cryptocurrency symbols by market cap from CoinMarketCap.
+        /// </summary>
+        /// <param name="cmcApiKey">CoinMarketCap API密钥 / CoinMarketCap API key.</param>
+        /// <param name="cmcBaseUrl">API基础URL / API base URL.</param>
+        /// <param name="count">获取数量 / Number of symbols to retrieve.</param>
+        /// <returns>加密货币符号列表 / List of cryptocurrency symbols.</returns>
         public Task<List<string>> GetTopMarketCapSymbolsFromCoinMarketCapAsync(string cmcApiKey, string cmcBaseUrl = "https://pro-api.coinmarketcap.com", int count = 50);
 
+        /// <summary>
+        /// 获取所有Binance现货交易对列表。
+        /// Gets all Binance spot trading pair symbols.
+        /// </summary>
+        /// <returns>现货交易对列表 / List of spot trading pairs.</returns>
         public Task<List<string>> GetAllBinanceSpotSymbolsAsync();
 
+        /// <summary>
+        /// 获取所有Binance USD合约交易对列表。
+        /// Gets all Binance USD futures trading pair symbols.
+        /// </summary>
+        /// <returns>合约交易对列表 / List of futures trading pairs.</returns>
         public Task<List<string>> GetAllBinanceUsdFutureSymbolsAsync();
 
         /// <summary>
-        /// 下载差额数据;
+        /// 下载Binance现货增量数据（仅下载缺失的数据）。
+        /// Downloads Binance spot incremental data (only downloads missing data).
         /// </summary>
+        /// <param name="symbols">交易对列表 / List of trading pairs.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="path">保存路径（可选）/ Save path (optional).</param>
+        /// <param name="klineInterval">K线间隔 / K-line interval.</param>
         public Task DownloadBinanceSpotIncrementalDataAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
 
+        /// <summary>
+        /// 下载Binance永续合约增量数据（仅下载缺失的数据）。
+        /// Downloads Binance perpetual contract incremental data (only downloads missing data).
+        /// </summary>
+        /// <param name="symbols">交易对列表 / List of trading pairs.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="path">保存路径（可选）/ Save path (optional).</param>
+        /// <param name="klineInterval">K线间隔 / K-line interval.</param>
         public Task DownloadBinancePerpetualContractIncrementalDataAsync(IEnumerable<string> symbols, DateTime startDt, DateTime endDt, string path = "", KlineInterval klineInterval = KlineInterval.OneHour);
     }
 
+    /// <summary>
+    /// 加密货币数据源服务实现类，提供Binance等交易所的数据下载和管理功能。
+    /// Cryptocurrency data source service implementation, provides data download and management functionality for exchanges like Binance.
+    /// </summary>
     public class CryptoSourceDataService : ICryptoSourceDataService
     {
         private readonly IOService _ioService;
 
+        /// <summary>
+        /// 初始化加密货币数据源服务。
+        /// Initializes the cryptocurrency data source service.
+        /// </summary>
+        /// <param name="ioService">IO服务实例 / IO service instance.</param>
+        /// <exception cref="ArgumentNullException">当ioService为null时抛出 / Thrown when ioService is null.</exception>
         public CryptoSourceDataService(IOService ioService)
         {
             if (ioService == null) throw new ArgumentNullException(nameof(ioService));
@@ -55,11 +120,11 @@ namespace Quant.Infra.Net.SourceData.Service
             int count = 50)
         {
             if (string.IsNullOrWhiteSpace(cmcApiKey))
-                throw new ArgumentException("cmcApiKey 不能为空。", nameof(cmcApiKey));
+                throw new ArgumentException("CoinMarketCap API key must not be null or empty.", nameof(cmcApiKey));
             if (string.IsNullOrWhiteSpace(cmcBaseUrl))
-                throw new ArgumentException("cmcBaseUrl 不能为空。", nameof(cmcBaseUrl));
+                throw new ArgumentException("CoinMarketCap base URL must not be null or empty.", nameof(cmcBaseUrl));
             if (!Uri.TryCreate(cmcBaseUrl, UriKind.Absolute, out var baseUri))
-                throw new ArgumentException("cmcBaseUrl 不是有效的绝对 URL。", nameof(cmcBaseUrl));
+                throw new ArgumentException("CoinMarketCap base URL must be a valid absolute URL.", nameof(cmcBaseUrl));
             if (count <= 0) throw new ArgumentOutOfRangeException(nameof(count), "count must be positive.");
 
             var limit = Math.Min(count, 5000); // CMC 单次上限足够
@@ -85,10 +150,10 @@ namespace Quant.Infra.Net.SourceData.Service
             });
 
             if (payload?.Status is null)
-                throw new InvalidOperationException("CoinMarketCap: 响应缺少 status 字段。");
+                throw new InvalidOperationException("CoinMarketCap: Response missing status field.");
 
             if (payload.Status.ErrorCode != 0)
-                throw new InvalidOperationException($"CoinMarketCap 错误 {payload.Status.ErrorCode}: {payload.Status.ErrorMessage ?? "Unknown error"}");
+                throw new InvalidOperationException($"CoinMarketCap error {payload.Status.ErrorCode}: {payload.Status.ErrorMessage ?? "Unknown error"}");
 
             return payload.Data?
                 .Select(d => d.Symbol)
@@ -450,6 +515,15 @@ namespace Quant.Infra.Net.SourceData.Service
 
         #endregion
 
+        /// <summary>
+        /// 下载Binance现货历史K线数据并保存到CSV文件。
+        /// Downloads Binance spot historical K-line data and saves to CSV files.
+        /// </summary>
+        /// <param name="symbols">交易对列表 / List of trading pairs.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="path">保存路径（可选，默认为data/spot）/ Save path (optional, defaults to data/spot).</param>
+        /// <param name="klineInterval">K线间隔 / K-line interval.</param>
         public async Task DownloadBinanceSpotAsync(
             IEnumerable<string> symbols,
             DateTime startDt,
@@ -499,6 +573,15 @@ namespace Quant.Infra.Net.SourceData.Service
             UtilityService.LogAndWriteLine("Spot data download for all specified symbols done!");
         }
 
+        /// <summary>
+        /// 下载Binance USD合约历史K线数据并保存到CSV文件。
+        /// Downloads Binance USD futures historical K-line data and saves to CSV files.
+        /// </summary>
+        /// <param name="symbols">交易对列表 / List of trading pairs.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="path">保存路径（可选，默认为data/usd_future）/ Save path (optional, defaults to data/usd_future).</param>
+        /// <param name="klineInterval">K线间隔 / K-line interval.</param>
         public async Task DownloadBinanceUsdFutureAsync(
             IEnumerable<string> symbols,
             DateTime startDt,
@@ -552,6 +635,11 @@ namespace Quant.Infra.Net.SourceData.Service
             UtilityService.LogAndWriteLine("USD Future data download are done!");
         }
 
+        /// <summary>
+        /// 获取所有Binance现货交易对列表。
+        /// Gets all Binance spot trading pair symbols.
+        /// </summary>
+        /// <returns>现货交易对符号列表 / List of spot trading pair symbols.</returns>
         public async Task<List<string>> GetAllBinanceSpotSymbolsAsync()
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
@@ -562,6 +650,11 @@ namespace Quant.Infra.Net.SourceData.Service
             }
         }
 
+        /// <summary>
+        /// 获取所有Binance USD合约交易对列表。
+        /// Gets all Binance USD futures trading pair symbols.
+        /// </summary>
+        /// <returns>合约交易对符号列表 / List of futures trading pair symbols.</returns>
         public async Task<List<string>> GetAllBinanceUsdFutureSymbolsAsync()
         {
             using (var client = new Binance.Net.Clients.BinanceRestClient())
@@ -572,6 +665,17 @@ namespace Quant.Infra.Net.SourceData.Service
             }
         }
 
+        /// <summary>
+        /// 下载Binance现货增量数据（仅下载缺失的数据）。
+        /// Downloads Binance spot incremental data (only downloads missing data).
+        /// </summary>
+        /// <param name="symbols">交易对列表 / List of trading pairs.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="path">保存路径 / Save path.</param>
+        /// <param name="klineInterval">K线间隔 / K-line interval.</param>
+        /// <exception cref="ArgumentException">当参数无效时抛出 / Thrown when parameters are invalid.</exception>
+        /// <exception cref="ArgumentNullException">当path为null时抛出 / Thrown when path is null.</exception>
         public async Task DownloadBinanceSpotIncrementalDataAsync(
             IEnumerable<string> symbols,
             DateTime startDt,
@@ -667,6 +771,17 @@ namespace Quant.Infra.Net.SourceData.Service
             }
         }
 
+        /// <summary>
+        /// 下载Binance永续合约增量数据（仅下载缺失的数据）。
+        /// Downloads Binance perpetual contract incremental data (only downloads missing data).
+        /// </summary>
+        /// <param name="symbols">交易对列表 / List of trading pairs.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="path">保存路径 / Save path.</param>
+        /// <param name="klineInterval">K线间隔 / K-line interval.</param>
+        /// <exception cref="ArgumentException">当参数无效时抛出 / Thrown when parameters are invalid.</exception>
+        /// <exception cref="ArgumentNullException">当path为null时抛出 / Thrown when path is null.</exception>
         public async Task DownloadBinancePerpetualContractIncrementalDataAsync(
             IEnumerable<string> symbols,
             DateTime startDt,

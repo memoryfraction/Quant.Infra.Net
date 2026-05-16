@@ -3,14 +3,25 @@
 namespace Quant.Infra.Net.Shared.Model
 {
     /// <summary>
-    /// 交易所环境：测试、实盘、模拟盘。
-    /// Exchange environment: testnet, live, or paper.
+    /// 交易所环境：测试网、实盘、模拟盘。
+    /// Exchange environment: testnet, live, or paper trading.
     /// </summary>
     public enum ExchangeEnvironment
     {
-        Testnet=0,
-        Live=1,
-        Paper=2
+        /// <summary>
+        /// 测试网环境，用于开发和测试 / Testnet environment for development and testing.
+        /// </summary>
+        Testnet = 0,
+        
+        /// <summary>
+        /// 实盘环境，使用真实资金进行交易 / Live environment with real funds for trading.
+        /// </summary>
+        Live = 1,
+        
+        /// <summary>
+        /// 模拟盘环境，使用虚拟资金模拟实盘 / Paper trading environment with virtual funds simulating live trading.
+        /// </summary>
+        Paper = 2
     }
 
     /// <summary>
@@ -80,18 +91,65 @@ namespace Quant.Infra.Net.Shared.Model
     /// </summary>
     public enum Broker
     {
-        Binance = 1,              // Binance
-        OKEX = 2,                 // OKEX
-        InteractiveBrokers = 3,   // Interactive Brokers
-        Coinbase = 4,             // Coinbase
-        Kraken = 5,               // Kraken
-        Bitfinex = 6,             // Bitfinex
-        Bitstamp = 7,             // Bitstamp
-        FTX = 8,                  // FTX
-        Deribit = 9,              // Deribit
-        Huobi = 10,               // Huobi
-        Kucoin = 11,              // Kucoin
-        Gemini = 12               // Gemini
+        /// <summary>
+        /// 币安交易所 / Binance exchange.
+        /// </summary>
+        Binance = 1,
+        
+        /// <summary>
+        /// OKEX交易所 / OKEX exchange.
+        /// </summary>
+        OKEX = 2,
+        
+        /// <summary>
+        /// 盈透证券 / Interactive Brokers.
+        /// </summary>
+        InteractiveBrokers = 3,
+        
+        /// <summary>
+        /// Coinbase交易所 / Coinbase exchange.
+        /// </summary>
+        Coinbase = 4,
+        
+        /// <summary>
+        /// Kraken交易所 / Kraken exchange.
+        /// </summary>
+        Kraken = 5,
+        
+        /// <summary>
+        /// Bitfinex交易所 / Bitfinex exchange.
+        /// </summary>
+        Bitfinex = 6,
+        
+        /// <summary>
+        /// Bitstamp交易所 / Bitstamp exchange.
+        /// </summary>
+        Bitstamp = 7,
+        
+        /// <summary>
+        /// FTX交易所（已破产）/ FTX exchange (bankrupted).
+        /// </summary>
+        FTX = 8,
+        
+        /// <summary>
+        /// Deribit交易所 / Deribit exchange.
+        /// </summary>
+        Deribit = 9,
+        
+        /// <summary>
+        /// 火币交易所 / Huobi exchange.
+        /// </summary>
+        Huobi = 10,
+        
+        /// <summary>
+        /// Kucoin交易所 / Kucoin exchange.
+        /// </summary>
+        Kucoin = 11,
+        
+        /// <summary>
+        /// Gemini交易所 / Gemini exchange.
+        /// </summary>
+        Gemini = 12
     }
 
 
@@ -151,14 +209,45 @@ namespace Quant.Infra.Net.Shared.Model
     /// </summary>
     public enum AssetType
     {
+        /// <summary>
+        /// 其他类型 / Other type.
+        /// </summary>
         Other = 0,
-        UsEquity = 1,                  // US Equity
-        UsOption = 2,                  // US Option
-        CryptoSpot = 3,                // Cryptocurrency Spot
-        CryptoPerpetualContract = 4,   // Cryptocurrency Perpetual Contract
-        CnEquity = 5,                  // China Equity
-        HkEquity = 6,                  // Hong Kong Equity
-        CryptoOption = 7               // Cryptocurrency Option
+        
+        /// <summary>
+        /// 美股 / US Equity.
+        /// </summary>
+        UsEquity = 1,
+        
+        /// <summary>
+        /// 美股期权 / US Option.
+        /// </summary>
+        UsOption = 2,
+        
+        /// <summary>
+        /// 加密货币现货 / Cryptocurrency Spot.
+        /// </summary>
+        CryptoSpot = 3,
+        
+        /// <summary>
+        /// 加密货币永续合约 / Cryptocurrency Perpetual Contract.
+        /// </summary>
+        CryptoPerpetualContract = 4,
+        
+        /// <summary>
+        /// A股 / China Equity.
+        /// </summary>
+        CnEquity = 5,
+        
+        /// <summary>
+        /// 港股 / Hong Kong Equity.
+        /// </summary>
+        HkEquity = 6,
+        
+        /// <summary>
+        /// 加密货币期权 / Cryptocurrency Option.
+        /// </summary>
+        CryptoOption = 7
     }
 
     /// <summary>
@@ -198,8 +287,19 @@ namespace Quant.Infra.Net.Shared.Model
     /// </summary>
     public enum DataSource
     {
+        /// <summary>
+        /// Yahoo Finance数据源 / Yahoo Finance data source.
+        /// </summary>
         YahooFinance = 0,
+        
+        /// <summary>
+        /// Binance数据源 / Binance data source.
+        /// </summary>
         Binance = 1,
+        
+        /// <summary>
+        /// MongoDB Web API数据源 / MongoDB Web API data source.
+        /// </summary>
         MongoDBWebApi = 2
     }
 
@@ -336,23 +436,27 @@ namespace Quant.Infra.Net.Shared.Model
         /// <summary>
         /// 美元 / US Dollar.
         /// </summary>
-        USD=0,
+        USD = 0,
+        
         /// <summary>
         /// 人民币 / Chinese Yuan.
         /// </summary>
-        CNY=1,
+        CNY = 1,
+        
         /// <summary>
         /// 港币 / Hong Kong Dollar.
         /// </summary>
-        HKD=2,
+        HKD = 2,
+        
         /// <summary>
         /// 泰达币 / Tether (USDT).
         /// </summary>
-        USDT=3,
+        USDT = 3,
+        
         /// <summary>
         /// USD Coin / USD Coin (USDC).
         /// </summary>
-        USDC=4
+        USDC = 4
     }
 
 
@@ -365,23 +469,27 @@ namespace Quant.Infra.Net.Shared.Model
         /// <summary>
         /// 开仓 / Open position.
         /// </summary>
-        Open=0,
+        Open = 0,
+        
         /// <summary>
         /// 止盈 / Take profit.
         /// </summary>
-        TakeProfit=1,
+        TakeProfit = 1,
+        
         /// <summary>
         /// 止损 / Stop loss.
         /// </summary>
-        StopLoss=2,
+        StopLoss = 2,
+        
         /// <summary>
         /// 均值回归退出 / Mean reversion exit.
         /// </summary>
-        MeanReverseExit=3,
+        MeanReverseExit = 3,
+        
         /// <summary>
         /// 不操作 / Do nothing.
         /// </summary>
-        DoNothing=4
+        DoNothing = 4
     }
 
     /// <summary>

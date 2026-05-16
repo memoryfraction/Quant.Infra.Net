@@ -14,6 +14,19 @@
 | 1.2.0 | 2024-03-10 | Improved Python integration stability and added new statistical analysis methods |
 | 1.3.0 | 2024-04-05 | Enhanced notification services with email templates and improved error handling |
 | 1.4.0 | 2024-05-16 | Updated API integrations to handle recent broker changes, added comprehensive documentation |
+| 1.5.0 | 2024-05-16 | Enforced comprehensive code standards: SOLID principles, bilingual XML documentation, parameter validation, English-only runtime messages, UTC time standardization, centralized enum management, sensitive data protection, and created complete code standards documentation |
+
+---
+
+## Documentation Update Policy
+
+This README follows a strict update policy to ensure consistency and accuracy:
+
+- **Synchronization**: Every code change that affects public APIs must be reflected in this document simultaneously in both English and Chinese sections.
+- **Versioning**: Version numbers follow Semantic Versioning (MAJOR.MINOR.PATCH) standards.
+- **Change Log**: Each version entry must include: version number, release date, and concise description of changes.
+- **Bilingual Consistency**: Both English and Chinese sections must maintain identical information and structure.
+- **Last Updated**: 2024-05-16 (Version 1.5.0)
 
 ---
 

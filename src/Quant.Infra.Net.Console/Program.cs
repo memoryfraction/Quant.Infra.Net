@@ -10,7 +10,7 @@ namespace Quant.Infra.Net.Console
     {
         static async Task Main(string[] args)
         {
-            // Build the configuration for config file, e.g. appsettings.json
+            // Build configuration from appsettings.json and user secrets.
             IConfiguration configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -21,7 +21,7 @@ namespace Quant.Infra.Net.Console
             var serviceCollection = new ServiceCollection();
 
             #region Scoped
-            serviceCollection.AddScoped<IBinanceOrderService, BinanceOrderService>(); // Injection ITestService to the container
+            serviceCollection.AddScoped<IBinanceOrderService, BinanceOrderService>();
             #endregion
 
             #region Singleton
@@ -49,40 +49,40 @@ namespace Quant.Infra.Net.Console
                 options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
             });
 
-            // 创建 Binance 客户端            
+                // Create Binance client.
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                // Margin Account Balance
+                // Margin account balance.
                 var account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
-                System.Console.WriteLine($"UsdFuturesApi Available Balance: {account.Data.AvailableBalance}."); // 获取合约账户的Margin Balance
+                System.Console.WriteLine($"UsdFuturesApi Available Balance: {account.Data.AvailableBalance}.");
 
 
-                // 永续合约，开空仓
+                // Perpetual contract sample: open a short position.
                 //var enterShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
                 //symbol: "ALGOUSDT",
-                //   side: Binance.Net.Enums.OrderSide.Sell, // 开关仓此信号需要相反
+                //   side: Binance.Net.Enums.OrderSide.Sell,
                 //   type: Binance.Net.Enums.FuturesOrderType.Market,
-                //   quantity: 40, // 关仓数量需要与开仓数量一致， 总是正数
-                //   positionSide: Binance.Net.Enums.PositionSide.Short // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
-                //                                                      // closePosition: true // 不建议使用
+                //   quantity: 40,
+                //   positionSide: Binance.Net.Enums.PositionSide.Short
+                //   // closePosition: true
                 //   );
 
 
-                // 获取当前持仓数量
+                // Get current position quantity.
                 account = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
                 var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
                 var holdingPositions = position.Data.Where(x => x.Quantity != 0).Select(x => x);
                 var algoPosition = holdingPositions.Where(x => x.Symbol == "ALGOUSDT").FirstOrDefault();
 
 
-                // 关空仓
+                // Close the short position.
                 var exitShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
                    symbol: "ALGOUSDT",
-                   side: Binance.Net.Enums.OrderSide.Buy, // 开关仓此信号需要相反
+                   side: Binance.Net.Enums.OrderSide.Buy,
                    type: Binance.Net.Enums.FuturesOrderType.Market,
-                   quantity: Math.Abs(algoPosition.Quantity), // 关仓数量需要与开仓数量一致， 总是正数
-                   positionSide:Binance.Net.Enums.PositionSide.Short // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
-                   // closePosition: true // 不建议使用
+                   quantity: Math.Abs(algoPosition.Quantity),
+                   positionSide:Binance.Net.Enums.PositionSide.Short
+                   // closePosition: true
                    );
 
                 System.Console.WriteLine("borrowed and repayed");

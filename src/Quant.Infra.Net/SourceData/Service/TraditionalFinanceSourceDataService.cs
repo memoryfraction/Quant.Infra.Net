@@ -15,17 +15,22 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.SourceData.Service
 {
+    /// <summary>
+    /// 传统金融数据源服务，提供股票等传统金融资产的数据获取功能。
+    /// Traditional finance data source service, provides data retrieval functionality for traditional financial assets like stocks.
+    /// </summary>
     public class TraditionalFinanceSourceDataService : ITraditionalFinanceSourceDataService
     {
         private readonly IMapper _mapper;
         private readonly IHistoricalDataSourceService _historicalDataSourceService;
 
         /// <summary>
-        /// 构造函数。
-        /// Constructor for TraditionalFinanceSourceDataService.
+        /// 初始化传统金融数据源服务。
+        /// Initializes the traditional finance data source service.
         /// </summary>
-        /// <param name="mapper">AutoMapper instance.</param>
-        /// <param name="historicalDataSourceService">Historical data source service.</param>
+        /// <param name="mapper">AutoMapper实例 / AutoMapper instance.</param>
+        /// <param name="historicalDataSourceService">历史数据源服务 / Historical data source service.</param>
+        /// <exception cref="ArgumentNullException">当参数为null时抛出 / Thrown when parameters are null.</exception>
         public TraditionalFinanceSourceDataService(IMapper mapper, IHistoricalDataSourceService historicalDataSourceService)
         {
             if (mapper == null) throw new ArgumentNullException(nameof(mapper));
@@ -36,9 +41,16 @@ namespace Quant.Infra.Net.SourceData.Service
         }
 
         /// <summary>
-        /// Begin syncing source daily data (not implemented).
         /// 开始同步每日数据（未实现）。
+        /// Begin syncing source daily data (not implemented).
         /// </summary>
+        /// <param name="symbol">交易符号 / Trading symbol.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="fullPathFileName">完整文件路径 / Full file path.</param>
+        /// <param name="Period">分辨率级别 / Resolution level.</param>
+        /// <returns>OHLCV数据集合 / OHLCV data collection.</returns>
+        /// <exception cref="ArgumentException">当参数无效时抛出 / Thrown when parameters are invalid.</exception>
         public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Shared.Model.ResolutionLevel Period = Shared.Model.ResolutionLevel.Daily)
         {
             if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
@@ -48,9 +60,16 @@ namespace Quant.Infra.Net.SourceData.Service
         }
 
         /// <summary>
-        /// Download Ohlcv list for a traditional finance symbol from the configured historical source.
-        /// 从配置的历史数据源下载指定标的的 Ohlcv 列表。
+        /// 从配置的历史数据源下载指定标的的OHLCV列表。
+        /// Download OHLCV list for a traditional finance symbol from the configured historical source.
         /// </summary>
+        /// <param name="symbol">交易符号 / Trading symbol.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="period">分辨率级别 / Resolution level.</param>
+        /// <param name="dataSource">数据源类型 / Data source type.</param>
+        /// <returns>OHLCV数据集合 / OHLCV data collection.</returns>
+        /// <exception cref="ArgumentException">当参数无效时抛出 / Thrown when parameters are invalid.</exception>
         public async Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Shared.Model.ResolutionLevel period = Shared.Model.ResolutionLevel.Daily, DataSource dataSource = DataSource.MongoDBWebApi)
         {
             if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
@@ -77,9 +96,13 @@ namespace Quant.Infra.Net.SourceData.Service
       
 
         /// <summary>
-        /// Read Ohlcv list from a CSV file.
-        /// 从 CSV 文件读取 Ohlcv 列表。
+        /// 从CSV文件读取OHLCV列表。
+        /// Read OHLCV list from a CSV file.
         /// </summary>
+        /// <param name="fullPathFileName">CSV文件完整路径 / Full path of the CSV file.</param>
+        /// <returns>OHLCV数据列表 / List of OHLCV data.</returns>
+        /// <exception cref="ArgumentException">当文件路径无效时抛出 / Thrown when file path is invalid.</exception>
+        /// <exception cref="FileNotFoundException">当文件不存在时抛出 / Thrown when file does not exist.</exception>
         public async Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFileName)
         {
             if (string.IsNullOrWhiteSpace(fullPathFileName)) throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));
@@ -105,12 +128,13 @@ namespace Quant.Infra.Net.SourceData.Service
         }
 
         /// <summary>
-        /// 获取 S&P500 的成分股 symbol 列表。
+        /// 获取S&P 500成分股符号列表。
+        /// Gets S&P 500 constituent symbols.
         /// </summary>
-        /// <summary>
-        /// 获取 S&P500 的成分股 symbol 列表。
-        /// Get S&P500 constituent symbols.
-        /// </summary>
+        /// <param name="number">获取数量（默认500）/ Number of symbols to retrieve (default 500).</param>
+        /// <returns>S&P 500成分股符号列表 / List of S&P 500 constituent symbols.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">当number为非正数时抛出 / Thrown when number is not positive.</exception>
+        /// <exception cref="Exception">当解析Wikipedia表格失败时抛出 / Thrown when parsing Wikipedia table fails.</exception>
         public async Task<IEnumerable<string>> GetSp500SymbolsAsync(int number = 500)
         {
             var url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies";
@@ -141,9 +165,13 @@ namespace Quant.Infra.Net.SourceData.Service
         }
 
         /// <summary>
-        /// Save Ohlcv list to CSV.
-        /// 将 Ohlcv 列表保存到 CSV 文件。
+        /// 将OHLCV列表保存到CSV文件。
+        /// Save OHLCV list to CSV file.
         /// </summary>
+        /// <param name="ohlcvList">OHLCV数据列表 / List of OHLCV data.</param>
+        /// <param name="fullPathFileName">CSV文件完整路径 / Full path of the CSV file.</param>
+        /// <exception cref="ArgumentException">当文件路径无效时抛出 / Thrown when file path is invalid.</exception>
+        /// <exception cref="ArgumentNullException">当ohlcvList为null时抛出 / Thrown when ohlcvList is null.</exception>
         public async Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName)
         {
             if (string.IsNullOrWhiteSpace(fullPathFileName)) throw new ArgumentException("fullPathFileName must not be null or empty.", nameof(fullPathFileName));

@@ -707,7 +707,7 @@ Quant.Infra.Net/
 
 ## 社区与支持
 
-由于券商API变动频繁，欢迎加入 Quant.Infra.Net 技术交流群，实时获取最新接口变更通知与实盘踩坑经验。
+由于券商API变动频繁，欢迎加入 Quant.Infra.Net 技术交流群。
 
 - Telegram群组: [https://t.me/+VPy-VLis8gVmYWM1](https://t.me/+VPy-VLis8gVmYWM1)
 - 商业授权与定制开发咨询请联系: rex.fan18@gmail.com

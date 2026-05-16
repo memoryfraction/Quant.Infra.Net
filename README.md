@@ -346,6 +346,12 @@ Quant.Infra.Net/
 - **Binance IP Restrictions**: The Binance API restricts access from certain countries/regions. If you encounter connection errors when running Binance-related unit tests, this is not a code issue. Please refer to the [Binance official documentation](https://www.binance.com/en/support) for the list of restricted regions.
 - **Compliance Disclaimer**: This project provides quantitative trading infrastructure tools only and does not constitute investment advice. Users are solely responsible for ensuring compliance with all applicable laws, regulations, and exchange rules in their jurisdiction. The authors assume no liability for any legal or financial consequences arising from the use of this library.
 
+## Roadmap Feedback Wanted: Should We Build a Pro Edition?
+> Quant.Infra.Net will continue to maintain this public repository as the **Community Edition**. Existing open-source features will remain available here.
+> We are evaluating whether it is worth investing significant development effort into a separate **Pro Edition** for advanced broker integrations and production trading workflows, such as Charles Schwab, Interactive Brokers, multi-broker abstractions, risk controls, deployment templates, and priority support.
+> This is not a pricing announcement. It is a roadmap validation request. If you need Schwab / IB integration, use this project in real trading workflows, or have concerns about the Community + Pro direction, please share your feedback in GitHub Discussions, join the community group below, or contact `rex.fan18@gmail.com`.
+> **Your feedback will directly affect how much time we invest in this direction.**
+
 ---
 
 # 中文版
@@ -692,6 +698,12 @@ Quant.Infra.Net/
 - **ExchangeEnvironment**：支持 `Testnet`（测试网）、`Paper`（模拟盘）、`Live`（实盘）三种环境，建议开发阶段使用 Testnet 或 Paper。
 - **Binance IP 限制**：Binance API 对部分国家/地区的 IP 存在访问限制，如果你在运行 Binance 相关单元测试时遇到连接错误，这并非代码问题，请查阅 [Binance 官方文档](https://www.binance.com/en/support) 了解受限地区列表。
 - **合规免责声明**：本项目仅提供量化交易基础设施工具，不构成任何投资建议。用户需自行确保使用本库时符合所在国家/地区的法律法规及交易所合规要求，因使用本库产生的任何法律或财务后果由用户自行承担。
+
+## 路线图反馈征集：是否值得开发 Pro Edition？
+> Quant.Infra.Net 会继续维护当前公开仓库作为 **Community Edition（免费版）**，现有开源功能会继续保留在这里。
+> 我们正在评估是否值得投入较多开发精力，建设一个独立的 **Pro Edition**，用于承载更高级的券商接入和生产级交易基础设施，例如 Charles Schwab、Interactive Brokers、多券商统一抽象、风控、部署模板和优先支持。
+> 这不是正式定价公告，而是一次路线图验证。如果你需要 Schwab / IB 接入，正在真实交易流程中使用本项目，或对 Community + Pro 双线路线有担忧和建议，欢迎在 GitHub Discussions 留言、加入下方技术交流群，或邮件联系 `rex.fan18@gmail.com`。
+> **你的反馈会直接影响我们是否投入、以及投入多少精力做这件事。**
 
 ## 社区与支持
 

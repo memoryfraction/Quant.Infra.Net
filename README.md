@@ -1,14 +1,350 @@
 ﻿# Quant.Infra.Net
 [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)
 
-> **Quant.Infra.Net** 是一个面向 .NET 的量化交易基础设施类库，帮助你用最少的代码完成数据获取、统计分析、交易执行和消息通知。
->
 > **Quant.Infra.Net** is a .NET quantitative trading infrastructure library that lets you fetch data, run statistical analysis, execute trades, and send notifications with minimal code.
 
 ---
 
-- [中文版](#中文版)
-- [English](#english)
+## Version History
+
+| Version | Date | Description |
+|---------|------|-------------|
+| 1.0.0 | 2024-01-15 | Initial release with core features: data acquisition, statistical analysis, trade execution, and notifications |
+| 1.1.0 | 2024-02-20 | Added support for Schwab broker integration and enhanced portfolio performance metrics |
+| 1.2.0 | 2024-03-10 | Improved Python integration stability and added new statistical analysis methods |
+| 1.3.0 | 2024-04-05 | Enhanced notification services with email templates and improved error handling |
+| 1.4.0 | 2024-05-16 | Updated API integrations to handle recent broker changes, added comprehensive documentation |
+
+---
+
+# English
+
+## Why Use This Library
+
+When developing quantitative trading systems, you likely face these recurring problems:
+
+| Problem | What this library provides |
+|---|---|
+| Stock / crypto data APIs are scattered with inconsistent formats | Unified `ITraditionalFinanceSourceDataService` and `ICryptoSourceDataService` with standardized OHLCV models |
+| Pair trading requires ADF test, OLS regression, Z-Score, correlation | `IAnalysisService` provides ready-to-use methods in one line |
+| Integrating Binance, Alpaca, etc. means rewriting boilerplate | `IBinanceUsdFutureService`, `IUSEquityBrokerService` unified abstractions |
+| No notification pipeline after strategy runs | DingTalk `IDingtalkService`, WeChat `IWeChatService`, Email `EmailService` |
+| CAGR, Sharpe, Calmar, max drawdown must be coded from scratch | `StrategyPerformanceAnalyzer` with all metrics built in |
+| Timers and rolling windows rewritten every project | `IntervalTrigger`, `RollingWindow<T>` ready to use |
+
+In short: **stop reinventing the wheel — focus on your strategy.**
+
+## What Problems It Solves
+
+1. **Data Acquisition** — Download stock daily bars from Yahoo Finance, batch-download crypto klines from Binance, read local data from CSV/MySQL/MongoDB.
+2. **Statistical Analysis** — Correlation, ADF stationarity test, OLS regression, Z-Score, Shapiro-Wilk normality test, pair-trading spread calculation.
+3. **Trade Execution** — Binance futures order/liquidate, Alpaca US equity order/liquidate, with Testnet/Paper/Live environment switching.
+4. **Notifications** — DingTalk bot, WeChat Work webhook, personal/commercial bulk email.
+5. **Portfolio & Performance** — Portfolio snapshots, equity curve charting, CAGR/Sharpe/Calmar/MaxDrawdown calculation.
+6. **Utilities** — Rolling window, interval trigger, resolution conversion, DataFrame I/O.
+
+## Quick Start
+
+> **Note on Data Sources**
+>
+> The C# package `YahooFinanceApi` cannot keep up with Yahoo Finance's frequent API changes and often returns `401 Unauthorized`.
+> The Python [`yfinance`](https://github.com/ranaroussi/yfinance) package is maintained more actively by a large community. This project uses [`pythonnet`](https://github.com/pythonnet/pythonnet) to call `yfinance` from C# via a local Anaconda virtual environment.
+
+### Step 1: Install
+
+```bash
+dotnet new console -n MyQuantApp
+cd MyQuantApp
+dotnet add package Quant.Infra.Net
+dotnet add package pythonnet
+dotnet add package Microsoft.Extensions.DependencyInjection
+```
+
+Or use a ProjectReference when developing inside the repo:
+
+```xml
+<ProjectReference Include="..\Quant.Infra.Net\Quant.Infra.Net.csproj" />
+```
+
+### Step 2: Create a Python Virtual Environment (One-Time Setup)
+
+> **Why Python?** The C# package `YahooFinanceApi` cannot keep up with Yahoo Finance's frequent API changes and often returns `401 Unauthorized`. The Python [`yfinance`](https://github.com/ranaroussi/yfinance) package is maintained more actively by a large community. This project uses [`pythonnet`](https://github.com/pythonnet/pythonnet) to call `yfinance` from C# via a local Anaconda virtual environment.
+
+1. Install [Anaconda](https://www.anaconda.com/download) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+
+2. Create a virtual environment and install `yfinance`:
+
+```bash
+conda create -n quant python=3.9 -y
+conda activate quant
+pip install yfinance
+```
+
+3. Note the environment path and Python DLL filename for the code:
+
+```
+# Windows example
+Env path:    D:\ProgramData\PythonVirtualEnvs\pair_trading
+         or  C:\Users\<you>\miniconda3\envs\quant
+Python DLL:  python39.dll    (for Python 3.9)
+```
+
+### Step 3: Update Python Environment Path in Program.cs
+
+Set these two constants to match your environment:
+
+```csharp
+private const string CondaEnvPath  = @"D:\ProgramData\PythonVirtualEnvs\pair_trading";
+private const string PythonDllName = "python39.dll";
+```
+
+### Step 4: Copy This Program.cs and Run
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Python.Runtime;
+using Quant.Infra.Net.Analysis.Service;
+using Quant.Infra.Net.Shared.Model;
+
+class Program
+{
+    private const string CondaEnvPath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading";
+    private const string PythonDllName = "python39.dll";
+
+    static async Task Main(string[] args)
+    {
+        // 1. Register services
+        var services = new ServiceCollection();
+        services.AddScoped<IAnalysisService, AnalysisService>();
+        var provider = services.BuildServiceProvider();
+        var analysis = provider.GetRequiredService<IAnalysisService>();
+
+        // 2. Download AAPL & MSFT via Python yfinance
+        var end = DateTime.UtcNow;
+        var start = end.AddYears(-1);
+
+        InitializePython();
+
+        Console.WriteLine("Downloading AAPL daily OHLCV via yfinance...");
+        var aaplClose = DownloadCloseViaYFinance("AAPL", start, end);
+        Console.WriteLine($"AAPL rows: {aaplClose.Count}");
+
+        Console.WriteLine("Downloading MSFT daily OHLCV via yfinance...");
+        var msftClose = DownloadCloseViaYFinance("MSFT", start, end);
+        Console.WriteLine($"MSFT rows: {msftClose.Count}");
+
+        // 3. Correlation
+        int minLen = Math.Min(aaplClose.Count, msftClose.Count);
+        aaplClose = aaplClose.Take(minLen).ToList();
+        msftClose = msftClose.Take(minLen).ToList();
+
+        double corr = analysis.CalculateCorrelation(aaplClose, msftClose);
+        Console.WriteLine($"AAPL vs MSFT correlation: {corr:F4}");
+
+        // 4. OLS regression
+        var (slope, intercept) = analysis.PerformOLSRegression(aaplClose, msftClose);
+        Console.WriteLine($"OLS regression: Slope={slope:F4}, Intercept={intercept:F4}");
+
+        // 5. ADF stationarity test
+        var spread = msftClose
+            .Zip(aaplClose, (m, a) => m - slope * a - intercept).ToList();
+        bool isStationary = analysis.AugmentedDickeyFullerTest(spread, adfTestStatisticThreshold: -2.86);
+        Console.WriteLine($"Spread ADF stationary: {isStationary}");
+
+        // 6. Z-Score
+        double zScore = analysis.CalculateZScores(spread, spread.Last());
+        Console.WriteLine($"Latest Z-Score: {zScore:F4}");
+
+        await Task.CompletedTask;
+    }
+
+    private static bool _pythonInitialized;
+    private static readonly object _initLock = new();
+
+    private static void InitializePython()
+    {
+        if (_pythonInitialized) return;
+        lock (_initLock)
+        {
+            if (_pythonInitialized) return;
+            var infra = PythonNetInfra.GetPythonInfra(CondaEnvPath, PythonDllName);
+            Runtime.PythonDLL = infra.PythonDLL;
+            PythonEngine.PythonHome = infra.PythonHome;
+            PythonEngine.PythonPath = infra.PythonPath;
+            PythonEngine.Initialize();
+            _pythonInitialized = true;
+        }
+    }
+
+    private static List<double> DownloadCloseViaYFinance(string symbol, DateTime start, DateTime end)
+    {
+        using (Py.GIL())
+        {
+            dynamic yf = Py.Import("yfinance");
+            string startStr = start.ToString("yyyy-MM-dd");
+            string endStr = end.ToString("yyyy-MM-dd");
+            dynamic df = yf.download(symbol, start: startStr, end: endStr, auto_adjust: true);
+            dynamic closeSeries = df.__getitem__("Close");
+            dynamic pyList = closeSeries.values.flatten().tolist();
+            var result = new List<double>();
+            foreach (dynamic item in pyList)
+                result.Add((double)item);
+            return result;
+        }
+    }
+}
+```
+
+Run:
+
+```bash
+dotnet run
+```
+
+Expected output:
+
+```
+Downloading AAPL daily OHLCV via yfinance...
+AAPL rows: 251
+Downloading MSFT daily OHLCV via yfinance...
+MSFT rows: 251
+AAPL vs MSFT correlation: 0.9213
+OLS regression: Slope=1.8472, Intercept=23.5610
+Spread ADF stationary: True
+Latest Z-Score: -0.3172
+```
+
+## More Usage Scenarios
+
+### Scenario 1: Get S&P 500 Constituent Symbols
+
+```csharp
+var dataService = provider.GetRequiredService<ITraditionalFinanceSourceDataService>();
+var symbols = await dataService.GetSp500SymbolsAsync();
+Console.WriteLine($"S&P 500 count: {symbols.Count()}");
+```
+
+### Scenario 2: Binance Futures Trading (API Key Required)
+
+```csharp
+var futureService = provider.GetRequiredService<IBinanceUsdFutureService>();
+futureService.ExchangeEnvironment = ExchangeEnvironment.Testnet;
+
+decimal balance = await futureService.GetusdFutureAccountBalanceAsync();
+Console.WriteLine($"Balance: {balance}");
+
+await futureService.SetUsdFutureHoldingsAsync("BTCUSDT", 0.10, PositionSide.Long);
+
+var positions = await futureService.GetHoldingPositionAsync();
+Console.WriteLine($"Positions: {positions.Count()}");
+
+await futureService.LiquidateUsdFutureAsync("BTCUSDT");
+```
+
+### Scenario 3: Alpaca US Equity Trading (API Key Required)
+
+```csharp
+var broker = provider.GetRequiredService<IUSEquityBrokerService>();
+broker.ExchangeEnvironment = ExchangeEnvironment.Paper;
+
+decimal equity = await broker.GetAccountEquityAsync();
+Console.WriteLine($"Account equity: {equity}");
+
+await broker.SetHoldingsAsync("AAPL", 0.05m);
+await broker.LiquidateAsync("AAPL");
+```
+
+### Scenario 4: DingTalk / WeChat Notifications
+
+```csharp
+var dingtalk = provider.GetRequiredService<IDingtalkService>();
+await dingtalk.SendNotificationAsync("Signal: Buy AAPL", accessToken, secret);
+
+var wechat = provider.GetRequiredService<IWeChatService>();
+await wechat.SendTextNotificationAsync("Order filled", webHookUrl);
+```
+
+### Scenario 5: Full Statistical Analysis Pipeline
+
+```csharp
+var analysis = provider.GetRequiredService<IAnalysisService>();
+
+double corr = analysis.CalculateCorrelation(seriesA, seriesB);
+
+var (slope, intercept) = analysis.PerformOLSRegression(seriesA, seriesB);
+
+bool isStationary = analysis.AugmentedDickeyFullerTest(spread);
+
+AdfTestResult adfResult = analysis.AugmentedDickeyFullerTestPython(spread);
+
+double z = analysis.CalculateZScores(spread, currentValue);
+
+bool isNormal = analysis.PerformShapiroWilkTest(spread);
+```
+
+### Scenario 6: Rolling Window & Interval Trigger
+
+```csharp
+var window = new RollingWindow<double>(20);
+window.Add(100.5);
+window.Add(101.2);
+if (window.IsReady)
+    Console.WriteLine($"Window full, count={window.Count}");
+
+var trigger = new IntervalTrigger(StartMode.NextHour, TimeSpan.FromMinutes(-1));
+trigger.IntervalTriggered += (sender, e) =>
+{
+    Console.WriteLine($"Triggered at {DateTime.UtcNow}");
+};
+trigger.Start();
+```
+
+### Scenario 7: Portfolio Performance Analysis
+
+```csharp
+double cagr   = StrategyPerformanceAnalyzer.CalculateCAGR(marketValueDict);
+double sharpe  = StrategyPerformanceAnalyzer.CalculateSharpeRatio(marketValueDict, riskFreeRate);
+double calmar  = StrategyPerformanceAnalyzer.CalculateCalmarRatio(marketValueDict);
+double maxDD   = StrategyPerformanceAnalyzer.CalculateMaximumDrawdown(values);
+
+Console.WriteLine($"CAGR={cagr:P2}, Sharpe={sharpe:F2}, Calmar={calmar:F2}, MaxDD={maxDD:P2}");
+```
+
+## Running Unit Tests
+
+```bash
+cd src
+dotnet restore
+dotnet build
+dotnet test
+```
+
+Run a specific test class:
+
+```bash
+dotnet test --filter "FullyQualifiedName~AnalysisServiceTests"
+```
+
+## Project Structure
+
+```
+Quant.Infra.Net/
+├── Analysis/           # Statistical analysis: ADF, OLS, correlation, Z-Score, pair trading
+├── Broker/             # Broker integration: Binance, Alpaca, InteractiveBrokers
+├── Notification/       # Notifications: DingTalk, WeChat Work, Email
+├── Order/              # Order models
+├── Portfolio/          # Portfolio snapshots, performance analysis, equity curves
+├── Shared/             # Common models, enums, RollingWindow, IntervalTrigger, UtilityService
+└── SourceData/         # Data: Yahoo Finance, Binance, CSV, MySQL, MongoDB
+```
+
+## Notes
+
+- **ADF Python mode**: `AugmentedDickeyFullerTestPython` requires a local Python environment with `numpy`, `pandas`, and `statsmodels`. If Python is not available, use `AugmentedDickeyFullerTest` (pure .NET implementation).
+- **API Key configuration**: Binance / Alpaca live trading requires API Key and Secret in `appsettings.json` or User Secrets.
+- **ExchangeEnvironment**: Supports `Testnet`, `Paper`, and `Live`. Use Testnet or Paper during development.
+- **Binance IP Restrictions**: The Binance API restricts access from certain countries/regions. If you encounter connection errors when running Binance-related unit tests, this is not a code issue. Please refer to the [Binance official documentation](https://www.binance.com/en/support) for the list of restricted regions.
+- **Compliance Disclaimer**: This project provides quantitative trading infrastructure tools only and does not constitute investment advice. Users are solely responsible for ensuring compliance with all applicable laws, regulations, and exchange rules in their jurisdiction. The authors assume no liability for any legal or financial consequences arising from the use of this library.
 
 ---
 
@@ -357,338 +693,12 @@ Quant.Infra.Net/
 - **Binance IP 限制**：Binance API 对部分国家/地区的 IP 存在访问限制，如果你在运行 Binance 相关单元测试时遇到连接错误，这并非代码问题，请查阅 [Binance 官方文档](https://www.binance.com/en/support) 了解受限地区列表。
 - **合规免责声明**：本项目仅提供量化交易基础设施工具，不构成任何投资建议。用户需自行确保使用本库时符合所在国家/地区的法律法规及交易所合规要求，因使用本库产生的任何法律或财务后果由用户自行承担。
 
-**Quant.Infra.Net** is a professional quantitative trading infrastructure framework built on **.NET 8**. It is designed to provide a robust foundation for quant developers, covering market data ingestion, advanced statistical analysis, order execution, and automated monitoring.
+## 社区与支持
 
----
+由于券商API变动频繁，欢迎加入 Quant.Infra.Net 技术交流群，实时获取最新接口变更通知与实盘踩坑经验。
 
-# English
-
-## Why Use This Library
-
-When developing quantitative trading systems, you likely face these recurring problems:
-
-| Problem | What this library provides |
-|---|---|
-| Stock / crypto data APIs are scattered with inconsistent formats | Unified `ITraditionalFinanceSourceDataService` and `ICryptoSourceDataService` with standardized OHLCV models |
-| Pair trading requires ADF test, OLS regression, Z-Score, correlation | `IAnalysisService` provides ready-to-use methods in one line |
-| Integrating Binance, Alpaca, etc. means rewriting boilerplate | `IBinanceUsdFutureService`, `IUSEquityBrokerService` unified abstractions |
-| No notification pipeline after strategy runs | DingTalk `IDingtalkService`, WeChat `IWeChatService`, Email `EmailService` |
-| CAGR, Sharpe, Calmar, max drawdown must be coded from scratch | `StrategyPerformanceAnalyzer` with all metrics built in |
-| Timers and rolling windows rewritten every project | `IntervalTrigger`, `RollingWindow<T>` ready to use |
-
-In short: **stop reinventing the wheel — focus on your strategy.**
-
-## What Problems It Solves
-
-1. **Data Acquisition** — Download stock daily bars from Yahoo Finance, batch-download crypto klines from Binance, read local data from CSV/MySQL/MongoDB.
-2. **Statistical Analysis** — Correlation, ADF stationarity test, OLS regression, Z-Score, Shapiro-Wilk normality test, pair-trading spread calculation.
-3. **Trade Execution** — Binance futures order/liquidate, Alpaca US equity order/liquidate, with Testnet/Paper/Live environment switching.
-4. **Notifications** — DingTalk bot, WeChat Work webhook, personal/commercial bulk email.
-5. **Portfolio & Performance** — Portfolio snapshots, equity curve charting, CAGR/Sharpe/Calmar/MaxDrawdown calculation.
-6. **Utilities** — Rolling window, interval trigger, resolution conversion, DataFrame I/O.
-
-## Quick Start
-
-> **Note on Data Sources**
->
-> The C# package `YahooFinanceApi` cannot keep up with Yahoo Finance's frequent API changes and often returns `401 Unauthorized`.
-> The Python [`yfinance`](https://github.com/ranaroussi/yfinance) package is maintained more actively by a large community. This project uses [`pythonnet`](https://github.com/pythonnet/pythonnet) to call `yfinance` from C# via a local Anaconda virtual environment.
-
-### Step 1: Install
-
-```bash
-dotnet new console -n MyQuantApp
-cd MyQuantApp
-dotnet add package Quant.Infra.Net
-dotnet add package pythonnet
-dotnet add package Microsoft.Extensions.DependencyInjection
-```
-
-Or use a ProjectReference when developing inside the repo:
-
-```xml
-<ProjectReference Include="..\Quant.Infra.Net\Quant.Infra.Net.csproj" />
-```
-
-### Step 2: Create a Python Virtual Environment (One-Time Setup)
-
-> **Why Python?** The C# package `YahooFinanceApi` cannot keep up with Yahoo Finance's frequent API changes and often returns `401 Unauthorized`. The Python [`yfinance`](https://github.com/ranaroussi/yfinance) package is maintained more actively by a large community. This project uses [`pythonnet`](https://github.com/pythonnet/pythonnet) to call `yfinance` from C# via a local Anaconda virtual environment.
-
-1. Install [Anaconda](https://www.anaconda.com/download) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
-
-2. Create a virtual environment and install `yfinance`:
-
-```bash
-conda create -n quant python=3.9 -y
-conda activate quant
-pip install yfinance
-```
-
-3. Note the environment path and Python DLL filename for the code:
-
-```
-# Windows example
-Env path:    D:\ProgramData\PythonVirtualEnvs\pair_trading
-         or  C:\Users\<you>\miniconda3\envs\quant
-Python DLL:  python39.dll    (for Python 3.9)
-```
-
-### Step 3: Update Python Environment Path in Program.cs
-
-Set these two constants to match your environment:
-
-```csharp
-private const string CondaEnvPath  = @"D:\ProgramData\PythonVirtualEnvs\pair_trading";
-private const string PythonDllName = "python39.dll";
-```
-
-### Step 4: Copy This Program.cs and Run
-
-```csharp
-using Microsoft.Extensions.DependencyInjection;
-using Python.Runtime;
-using Quant.Infra.Net.Analysis.Service;
-using Quant.Infra.Net.Shared.Model;
-
-class Program
-{
-    private const string CondaEnvPath = @"D:\ProgramData\PythonVirtualEnvs\pair_trading";
-    private const string PythonDllName = "python39.dll";
-
-    static async Task Main(string[] args)
-    {
-        // 1. Register services
-        var services = new ServiceCollection();
-        services.AddScoped<IAnalysisService, AnalysisService>();
-        var provider = services.BuildServiceProvider();
-        var analysis = provider.GetRequiredService<IAnalysisService>();
-
-        // 2. Download AAPL & MSFT via Python yfinance
-        var end = DateTime.UtcNow;
-        var start = end.AddYears(-1);
-
-        InitializePython();
-
-        Console.WriteLine("Downloading AAPL daily OHLCV via yfinance...");
-        var aaplClose = DownloadCloseViaYFinance("AAPL", start, end);
-        Console.WriteLine($"AAPL rows: {aaplClose.Count}");
-
-        Console.WriteLine("Downloading MSFT daily OHLCV via yfinance...");
-        var msftClose = DownloadCloseViaYFinance("MSFT", start, end);
-        Console.WriteLine($"MSFT rows: {msftClose.Count}");
-
-        // 3. Correlation
-        int minLen = Math.Min(aaplClose.Count, msftClose.Count);
-        aaplClose = aaplClose.Take(minLen).ToList();
-        msftClose = msftClose.Take(minLen).ToList();
-
-        double corr = analysis.CalculateCorrelation(aaplClose, msftClose);
-        Console.WriteLine($"AAPL vs MSFT correlation: {corr:F4}");
-
-        // 4. OLS regression
-        var (slope, intercept) = analysis.PerformOLSRegression(aaplClose, msftClose);
-        Console.WriteLine($"OLS regression: Slope={slope:F4}, Intercept={intercept:F4}");
-
-        // 5. ADF stationarity test
-        var spread = msftClose
-            .Zip(aaplClose, (m, a) => m - slope * a - intercept).ToList();
-        bool isStationary = analysis.AugmentedDickeyFullerTest(spread, adfTestStatisticThreshold: -2.86);
-        Console.WriteLine($"Spread ADF stationary: {isStationary}");
-
-        // 6. Z-Score
-        double zScore = analysis.CalculateZScores(spread, spread.Last());
-        Console.WriteLine($"Latest Z-Score: {zScore:F4}");
-
-        await Task.CompletedTask;
-    }
-
-    private static bool _pythonInitialized;
-    private static readonly object _initLock = new();
-
-    private static void InitializePython()
-    {
-        if (_pythonInitialized) return;
-        lock (_initLock)
-        {
-            if (_pythonInitialized) return;
-            var infra = PythonNetInfra.GetPythonInfra(CondaEnvPath, PythonDllName);
-            Runtime.PythonDLL = infra.PythonDLL;
-            PythonEngine.PythonHome = infra.PythonHome;
-            PythonEngine.PythonPath = infra.PythonPath;
-            PythonEngine.Initialize();
-            _pythonInitialized = true;
-        }
-    }
-
-    private static List<double> DownloadCloseViaYFinance(string symbol, DateTime start, DateTime end)
-    {
-        using (Py.GIL())
-        {
-            dynamic yf = Py.Import("yfinance");
-            string startStr = start.ToString("yyyy-MM-dd");
-            string endStr = end.ToString("yyyy-MM-dd");
-            dynamic df = yf.download(symbol, start: startStr, end: endStr, auto_adjust: true);
-            dynamic closeSeries = df.__getitem__("Close");
-            dynamic pyList = closeSeries.values.flatten().tolist();
-            var result = new List<double>();
-            foreach (dynamic item in pyList)
-                result.Add((double)item);
-            return result;
-        }
-    }
-}
-```
-
-Run:
-
-```bash
-dotnet run
-```
-
-Expected output:
-
-```
-Downloading AAPL daily OHLCV via yfinance...
-AAPL rows: 251
-Downloading MSFT daily OHLCV via yfinance...
-MSFT rows: 251
-AAPL vs MSFT correlation: 0.9213
-OLS regression: Slope=1.8472, Intercept=23.5610
-Spread ADF stationary: True
-Latest Z-Score: -0.3172
-```
-
-## More Usage Scenarios
-
-### Scenario 1: Get S&P 500 Constituent Symbols
-
-```csharp
-var dataService = provider.GetRequiredService<ITraditionalFinanceSourceDataService>();
-var symbols = await dataService.GetSp500SymbolsAsync();
-Console.WriteLine($"S&P 500 count: {symbols.Count()}");
-```
-
-### Scenario 2: Binance Futures Trading (API Key Required)
-
-```csharp
-var futureService = provider.GetRequiredService<IBinanceUsdFutureService>();
-futureService.ExchangeEnvironment = ExchangeEnvironment.Testnet;
-
-decimal balance = await futureService.GetusdFutureAccountBalanceAsync();
-Console.WriteLine($"Balance: {balance}");
-
-await futureService.SetUsdFutureHoldingsAsync("BTCUSDT", 0.10, PositionSide.Long);
-
-var positions = await futureService.GetHoldingPositionAsync();
-Console.WriteLine($"Positions: {positions.Count()}");
-
-await futureService.LiquidateUsdFutureAsync("BTCUSDT");
-```
-
-### Scenario 3: Alpaca US Equity Trading (API Key Required)
-
-```csharp
-var broker = provider.GetRequiredService<IUSEquityBrokerService>();
-broker.ExchangeEnvironment = ExchangeEnvironment.Paper;
-
-decimal equity = await broker.GetAccountEquityAsync();
-Console.WriteLine($"Account equity: {equity}");
-
-await broker.SetHoldingsAsync("AAPL", 0.05m);
-await broker.LiquidateAsync("AAPL");
-```
-
-### Scenario 4: DingTalk / WeChat Notifications
-
-```csharp
-var dingtalk = provider.GetRequiredService<IDingtalkService>();
-await dingtalk.SendNotificationAsync("Signal: Buy AAPL", accessToken, secret);
-
-var wechat = provider.GetRequiredService<IWeChatService>();
-await wechat.SendTextNotificationAsync("Order filled", webHookUrl);
-```
-
-### Scenario 5: Full Statistical Analysis Pipeline
-
-```csharp
-var analysis = provider.GetRequiredService<IAnalysisService>();
-
-double corr = analysis.CalculateCorrelation(seriesA, seriesB);
-
-var (slope, intercept) = analysis.PerformOLSRegression(seriesA, seriesB);
-
-bool isStationary = analysis.AugmentedDickeyFullerTest(spread);
-
-AdfTestResult adfResult = analysis.AugmentedDickeyFullerTestPython(spread);
-
-double z = analysis.CalculateZScores(spread, currentValue);
-
-bool isNormal = analysis.PerformShapiroWilkTest(spread);
-```
-
-### Scenario 6: Rolling Window & Interval Trigger
-
-```csharp
-var window = new RollingWindow<double>(20);
-window.Add(100.5);
-window.Add(101.2);
-if (window.IsReady)
-    Console.WriteLine($"Window full, count={window.Count}");
-
-var trigger = new IntervalTrigger(StartMode.NextHour, TimeSpan.FromMinutes(-1));
-trigger.IntervalTriggered += (sender, e) =>
-{
-    Console.WriteLine($"Triggered at {DateTime.UtcNow}");
-};
-trigger.Start();
-```
-
-### Scenario 7: Portfolio Performance Analysis
-
-```csharp
-double cagr   = StrategyPerformanceAnalyzer.CalculateCAGR(marketValueDict);
-double sharpe  = StrategyPerformanceAnalyzer.CalculateSharpeRatio(marketValueDict, riskFreeRate);
-double calmar  = StrategyPerformanceAnalyzer.CalculateCalmarRatio(marketValueDict);
-double maxDD   = StrategyPerformanceAnalyzer.CalculateMaximumDrawdown(values);
-
-Console.WriteLine($"CAGR={cagr:P2}, Sharpe={sharpe:F2}, Calmar={calmar:F2}, MaxDD={maxDD:P2}");
-```
-
-## Running Unit Tests
-
-```bash
-cd src
-dotnet restore
-dotnet build
-dotnet test
-```
-
-Run a specific test class:
-
-```bash
-dotnet test --filter "FullyQualifiedName~AnalysisServiceTests"
-```
-
-## Project Structure
-
-```
-Quant.Infra.Net/
-├── Analysis/           # Statistical analysis: ADF, OLS, correlation, Z-Score, pair trading
-├── Broker/             # Broker integration: Binance, Alpaca, InteractiveBrokers
-├── Notification/       # Notifications: DingTalk, WeChat Work, Email
-├── Order/              # Order models
-├── Portfolio/          # Portfolio snapshots, performance analysis, equity curves
-├── Shared/             # Common models, enums, RollingWindow, IntervalTrigger, UtilityService
-└── SourceData/         # Data: Yahoo Finance, Binance, CSV, MySQL, MongoDB
-```
-
-## Notes
-
-- **ADF Python mode**: `AugmentedDickeyFullerTestPython` requires a local Python environment with `numpy`, `pandas`, and `statsmodels`. If Python is not available, use `AugmentedDickeyFullerTest` (pure .NET implementation).
-- **API Key configuration**: Binance / Alpaca live trading requires API Key and Secret in `appsettings.json` or User Secrets.
-- **ExchangeEnvironment**: Supports `Testnet`, `Paper`, and `Live`. Use Testnet or Paper during development.
-- **Binance IP Restrictions**: The Binance API restricts access from certain countries/regions. If you encounter connection errors when running Binance-related unit tests, this is not a code issue. Please refer to the [Binance official documentation](https://www.binance.com/en/support) for the list of restricted regions.
-- **Compliance Disclaimer**: This project provides quantitative trading infrastructure tools only and does not constitute investment advice. Users are solely responsible for ensuring compliance with all applicable laws, regulations, and exchange rules in their jurisdiction. The authors assume no liability for any legal or financial consequences arising from the use of this library.
+- Telegram群组: [https://t.me/+VPy-VLis8gVmYWM1](https://t.me/+VPy-VLis8gVmYWM1)
+- 商业授权与定制开发咨询请联系: rex.fan18@gmail.com
 
 ## License
 

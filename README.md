@@ -700,6 +700,10 @@ Quant.Infra.Net/
 - Telegram群组: [https://t.me/+VPy-VLis8gVmYWM1](https://t.me/+VPy-VLis8gVmYWM1)
 - 商业授权与定制开发咨询请联系: rex.fan18@gmail.com
 
+扫码加入Telegram群组：
+
+![Telegram QR Code](https://github.com/memoryfraction/Quant.Infra.Net/blob/main/images/telegram%20QR%20Code.jpg?raw=true)
+
 ## License
 
 See [LICENSE](LICENSE) for details.

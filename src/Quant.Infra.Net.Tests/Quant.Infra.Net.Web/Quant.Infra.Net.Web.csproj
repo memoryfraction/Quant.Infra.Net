@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Quant.Infra.Net\Quant.Infra.Net.csproj" />
+    <ProjectReference Include="..\..\Quant.Infra.Net\Quant.Infra.Net.csproj" />
   </ItemGroup>
 
 </Project>

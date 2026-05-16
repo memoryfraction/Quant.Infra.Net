@@ -43,7 +43,7 @@ https
 在项目根目录运行：
 
 ```powershell
-dotnet run --project src/Quant.Infra.Net.Web/Quant.Infra.Net.Web.csproj
+dotnet run --project src/Quant.Infra.Net.Tests/Quant.Infra.Net.Web/Quant.Infra.Net.Web.csproj
 ```
 
 启动后浏览器打开：

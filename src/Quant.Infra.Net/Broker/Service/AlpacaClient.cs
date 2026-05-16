@@ -351,7 +351,7 @@ namespace Quant.Infra.Net.Broker.Service
             ResolutionLevel resolutionLevel)
         {
             if (underlying == null) throw new ArgumentNullException(nameof(underlying));
-            if (limit <= 0) throw new ArgumentException("limit必须大于0", nameof(limit));
+            if (limit <= 0) throw new ArgumentException("Limit must be greater than zero.", nameof(limit));
 
             var startUtc = await CalculateUSEquityStartUtcAsync(endUtc, limit, resolutionLevel);
             startUtc = DateTime.SpecifyKind(startUtc, DateTimeKind.Utc);
@@ -362,7 +362,7 @@ namespace Quant.Infra.Net.Broker.Service
                 ResolutionLevel.Minute => BarTimeFrame.Minute,
                 ResolutionLevel.Hourly => BarTimeFrame.Hour,
                 ResolutionLevel.Daily => BarTimeFrame.Day,
-                _ => throw new NotSupportedException($"不支持的时间级别: {resolutionLevel}")
+                _ => throw new NotSupportedException($"Unsupported resolution level: {resolutionLevel}")
             };
 
             const int MaxPageSize = 1000;

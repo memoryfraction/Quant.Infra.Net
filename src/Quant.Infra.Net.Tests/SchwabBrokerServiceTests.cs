@@ -1,12 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Broker.Model;
 using Quant.Infra.Net.Broker.Service;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Tests
 {
@@ -387,6 +382,31 @@ namespace Quant.Infra.Net.Tests
             var totalPnl = totalMarketValue - totalCost;
             var totalPnlPercent = totalCost != 0 ? (totalPnl / totalCost) * 100 : 0;
             Console.WriteLine($"{"Total",-10} {"",-10} ${totalCost,10:N2} {"",-12} ${totalMarketValue,13:N2} ${totalPnl,13:N2} {totalPnlPercent,9:N2}%");
+        }
+
+        /// <summary>
+        /// Tests the Schwab OAuth authorization flow manually.
+        /// 手动测试 Schwab OAuth 授权流程。
+        /// </summary>
+        [TestMethod]
+        [Ignore] // Ignored by default as it requires manual interaction.
+        public void Test_Schwab_Authorization_Flow_Manual()
+        {
+            // This test demonstrates how to generate the authorization URL and handle the token exchange.
+            // In a real scenario, you would open the URL in a browser, log in, and paste the code back here.
+            
+            var appKey = _config["Schwab:ApiKey"];
+            var redirectUri = "https://127.0.0.1"; // Must match the one registered in Schwab Developer Portal.
+
+            var authUrl = "https://api.schwabapi.com/v1/oauth/authorize"
+                + $"?response_type=code"
+                + $"&client_id={Uri.EscapeDataString(appKey)}"
+                + $"&redirect_uri={Uri.EscapeDataString(redirectUri)}";
+
+            Console.WriteLine("Please open the following URL in your browser to authorize:");
+            Console.WriteLine(authUrl);
+            Console.WriteLine("\nAfter authorization, you will be redirected. Copy the 'code' parameter from the URL.");
+            Console.WriteLine("Then use that code to call ExchangeCodeForTokenAsync (internal logic of SchwabBrokerService).");
         }
     }
 }

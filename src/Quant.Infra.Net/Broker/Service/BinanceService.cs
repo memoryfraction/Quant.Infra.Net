@@ -18,8 +18,8 @@ using System.Threading.Tasks;
 namespace Quant.Infra.Net.Account.Service
 {
     /// <summary>
-    /// Binance服务类，实现了与Binance相关的操作
-    /// Binance Service class, implements operations related to Binance
+    /// Binance服务类，实现了与Binance相关的操作，包括历史数据获取和实时数据服务。
+    /// Binance Service class, implements operations related to Binance including historical data retrieval and real-time data services.
     /// </summary>
     public class BinanceService : BrokerServiceBase, IHistoricalDataSourceServiceCryptoBinance, IRealtimeDataSourceServiceCrypto
     {
@@ -500,7 +500,7 @@ namespace Quant.Infra.Net.Account.Service
                 ResolutionLevel.Daily => (int)Math.Ceiling(timeSpan.TotalDays),         // 每天
                 ResolutionLevel.Weekly => (int)Math.Ceiling(timeSpan.TotalDays / 7),    // 每周
                 ResolutionLevel.Monthly => (int)Math.Ceiling(timeSpan.TotalDays / 30),  // 近似为每月30天
-                _ => throw new ArgumentException("Unsupported resolution level")        // 不支持的解析级别
+                _ => throw new ArgumentException("Unsupported resolution level.")
             };
         }
 

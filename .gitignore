@@ -400,3 +400,16 @@ FodyWeavers.xsd
 result
 .kiro
 tools
+/src/MyQuantApp/MyQuantApp.csproj.lscache
+/src/Quant.Infra.Net/Quant.Infra.Net.csproj.lscache
+/src/Quant.Infra.Net.Console/Quant.Infra.Net.Console.csproj.lscache
+/src/Quant.Infra.Net.Tests/Quant.Infra.Net.Tests.csproj.lscache
+/src/Quant.Infra.Net.Web/Quant.Infra.Net.Web.csproj.lscache
+
+# Sensitive data - API keys and secrets
+appsettings.json
+appsettings.*.json
+!appsettings.example.json
+*.secret
+*.env
+secrets.json

@@ -12,9 +12,18 @@ using System.Text;
 
 namespace Quant.Infra.Net.SourceData.Service
 {
+    /// <summary>
+    /// IO服务类，提供CSV文件读写和时间序列数据处理功能。
+    /// IO service class, provides CSV file read/write and time series data processing functionality.
+    /// </summary>
     public class IOService
     {
         private readonly ResolutionConversionService _resolutionService;
+        
+        /// <summary>
+        /// 初始化IO服务。
+        /// Initializes the IO service.
+        /// </summary>
         public IOService()
         {
             _resolutionService = new ResolutionConversionService();
@@ -241,11 +250,20 @@ namespace Quant.Infra.Net.SourceData.Service
 
 
 
-        /// 读取文件CSV文件，获取TimeSeries
         /// <summary>
-        /// 读取两个 CSV 文件并返回差值 TimeSeries。
+        /// 读取两个CSV文件并计算差值时间序列：diff = seriesB - slope * seriesA - intercept。
         /// Read two CSV files, compute diff = seriesB - slope * seriesA - intercept, and return as TimeSeries.
         /// </summary>
+        /// <param name="fullPathFileName1">第一个CSV文件路径 / Path to the first CSV file.</param>
+        /// <param name="fullPathFileName2">第二个CSV文件路径 / Path to the second CSV file.</param>
+        /// <param name="slope">斜率 / Slope value.</param>
+        /// <param name="intercept">截距 / Intercept value.</param>
+        /// <param name="startDt">开始时间 / Start date.</param>
+        /// <param name="endDt">结束时间 / End date.</param>
+        /// <param name="resolution">分辨率级别 / Resolution level.</param>
+        /// <returns>差值时间序列 / Diff time series.</returns>
+        /// <exception cref="ArgumentException">当参数无效时抛出 / Thrown when parameters are invalid.</exception>
+        /// <exception cref="FileNotFoundException">当文件不存在时抛出 / Thrown when files do not exist.</exception>
         public TimeSeries GetDiffTimeSeries(string fullPathFileName1, string fullPathFileName2, double slope, double intercept, DateTime startDt, DateTime endDt, ResolutionLevel resolution = ResolutionLevel.Hourly)
         {
             if (string.IsNullOrWhiteSpace(fullPathFileName1))
@@ -279,9 +297,13 @@ namespace Quant.Infra.Net.SourceData.Service
 
 
         /// <summary>
-        /// 使用 CsvHelper 将 Ohlcv 集合写入 CSV 文件。
-        /// Write Ohlcv collection to CSV using CsvHelper.
+        /// 使用CsvHelper将OHLCV集合写入CSV文件。
+        /// Write OHLCV collection to CSV using CsvHelper.
         /// </summary>
+        /// <param name="fullPathFileName">CSV文件完整路径 / Full path of the CSV file.</param>
+        /// <param name="ohlcvs">OHLCV数据集合 / OHLCV data collection.</param>
+        /// <exception cref="ArgumentException">当文件路径无效时抛出 / Thrown when file path is invalid.</exception>
+        /// <exception cref="ArgumentNullException">当ohlcvs为null时抛出 / Thrown when ohlcvs is null.</exception>
         public void WriteCsv(string fullPathFileName, IEnumerable<Ohlcv> ohlcvs)
         {
             if (string.IsNullOrWhiteSpace(fullPathFileName))
@@ -308,10 +330,13 @@ namespace Quant.Infra.Net.SourceData.Service
         }
 
         /// <summary>
-        /// 手动写入 Ohlcv 数据的 CSV 文件，允许自定义字段和标题。
+        /// 手动写入OHLCV数据的CSV文件，允许自定义字段和标题。
+        /// Manually write OHLCV data to CSV file with custom fields and headers.
         /// </summary>
-        /// <param name="fullPathFileName">CSV 文件的完整路径和名称。</param>
-        /// <param name="ohlcvs">要写入的 Ohlcv 记录集合。</param>
+        /// <param name="fullPathFileName">CSV文件的完整路径和名称 / Full path and name of the CSV file.</param>
+        /// <param name="ohlcvs">要写入的OHLCV记录集合 / Collection of OHLCV records to write.</param>
+        /// <exception cref="ArgumentException">当文件路径无效时抛出 / Thrown when file path is invalid.</exception>
+        /// <exception cref="ArgumentNullException">当ohlcvs为null时抛出 / Thrown when ohlcvs is null.</exception>
         public void WriteCsvManually(string fullPathFileName, IEnumerable<Ohlcv> ohlcvs)
         {
             // 检查参数有效性

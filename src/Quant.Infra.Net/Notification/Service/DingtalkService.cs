@@ -15,7 +15,7 @@ namespace Quant.Infra.Net.Notification.Service
             if (string.IsNullOrWhiteSpace(content)) throw new ArgumentException("content must not be null or empty.", nameof(content));
             if (string.IsNullOrWhiteSpace(accessToken)) throw new ArgumentException("accessToken must not be null or empty.", nameof(accessToken));
             // 时间戳精确到毫秒,这里需要注意下
-            var timestamp = ((DateTime.Now.Ticks - TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(1970, 1, 1)).Ticks) / 10000).ToString();
+            var timestamp = ((DateTime.UtcNow.Ticks - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks) / 10000).ToString();
             var stringToSign = timestamp + "\n" + (secret ?? "");
             var sign = EncryptWithSHA256(stringToSign, secret);
             var targetURL = new Uri($"https://oapi.dingtalk.com/robot/send?access_token={accessToken}&timestamp={timestamp}&sign={sign}");

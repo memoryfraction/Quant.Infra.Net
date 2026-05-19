@@ -48,7 +48,7 @@ namespace Quant.Infra.Net.Shared.Service
         /// </summary>
         private static string FormatMessage(string message, LogEventLevel level)
         {
-            var timestamp = DateTime.Now.ToString("HH:mm:ss");
+            var timestamp = DateTime.UtcNow.ToString("HH:mm:ss");
             var levelString = GetLevelString(level);
             var prefix = $"[{timestamp} {levelString}] ";
             var indent = new string(' ', prefix.Length);

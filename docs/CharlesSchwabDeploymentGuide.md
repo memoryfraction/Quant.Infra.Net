@@ -1,20 +1,17 @@
 # Quant.Infra.Net.Pro.Web — Charles Schwab Deployment Guide
 
 > CharlesSchwab.WebApi can be deployed locally, on a LAN, or on a private VPS. The Web API provides access to account info, US Equity data, and US Option data. For security reasons, trading is not supported in the current version.
->
-> CharlesSchwab.WebApi可以本地部署、局域网部署、VPS部署，WEBAPI开放， 基于Webapi您可以获取账户信息，获取US Equity信息，获取US Option信息。处于安全考虑，目前版本暂不支持交易。
+
 
 **Features: 100% Local, Self-Hosted, Physically Read-Only, Credentials Never Uploaded. "Your Privacy, Your Choice"**
-**特点：纯本地、自托管、物理只读、绝不上传凭证。"您的隐私，您的选择"**
+
 ---
 
 - **Applicable Version:** Quant.Infra.Net.Pro.Web
 - **Security Statement:** Local / Intranet / Private VPS deployment only. Public internet exposure is strictly prohibited.
-- **适用版本：** Quant.Infra.Net.Pro.Web
-- **安全声明：** 仅限本地 / 内网 / 私有 VPS 部署，严禁公网暴露
+
 > ⚠️ **Prerequisite:** Complete [CharlesSchwabDeveloperRegistryGuide.md](./CharlesSchwabDeveloperRegistryGuide.md) first to obtain your **App Key** and **App Secret** before purchasing a subscription.
->
-> ⚠️ **必读前提：** 请先完成 [CharlesSchwabDeveloperRegistryGuide.md](./CharlesSchwabDeveloperRegistryGuide.md)，拿到 **App Key**、**App Secret** 后再购买订阅。
+
 
 ---
 

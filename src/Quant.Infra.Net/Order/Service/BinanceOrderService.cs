@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
+using Binance.Net;
 using Binance.Net.Enums;
 using Binance.Net.Objects.Models;
 using Binance.Net.Objects.Models.Futures;
 using Binance.Net.Objects.Models.Spot;
 using CryptoExchange.Net.Authentication;
+using Microsoft.Extensions.Configuration;
 using Polly;
 using Quant.Infra.Net.Shared.Model;
 using System;
@@ -19,10 +21,38 @@ namespace Quant.Infra.Net
         private string _apiKey, _apiSecret;
         private readonly IMapper _mapper;
 
+        /// <summary>
+        /// 交易所环境：Testnet 或 Live
+        /// Exchange environment: Testnet or Live
+        /// </summary>
+        public ExchangeEnvironment ExchangeEnvironment { get; set; } = ExchangeEnvironment.Testnet;
+
         public BinanceOrderService(IMapper mapper)
         {
             if (mapper == null) throw new ArgumentNullException(nameof(mapper));
             _mapper = mapper;
+        }
+
+        public BinanceOrderService(IMapper mapper, IConfiguration configuration)
+        {
+            if (mapper == null) throw new ArgumentNullException(nameof(mapper));
+            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
+            _mapper = mapper;
+
+            _apiKey = configuration["Binance:ApiKey"];
+            _apiSecret = configuration["Binance:ApiSecret"];
+
+            var envStr = configuration["Binance:Environment"];
+            if (!string.IsNullOrEmpty(envStr) && Enum.TryParse<ExchangeEnvironment>(envStr, true, out var parsedEnv))
+            {
+                ExchangeEnvironment = parsedEnv;
+            }
+
+            // 如果配置中有密钥，自动初始化
+            if (!string.IsNullOrEmpty(_apiKey) && !string.IsNullOrEmpty(_apiSecret))
+            {
+                SetBinanceCredential(_apiKey, _apiSecret);
+            }
         }
 
         public async Task<BinanceOrderBase> CancelSpotOrderAsync(string symbol, long orderId, int retryAttempts = 3)
@@ -109,6 +139,10 @@ namespace Quant.Infra.Net
             Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
             {
                 options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+                options.Environment = ExchangeEnvironment == ExchangeEnvironment.Testnet
+                    ? BinanceEnvironment.Testnet
+                    : BinanceEnvironment.Live;
+                options.RequestTimeout = TimeSpan.FromSeconds(30);
             });
         }
 

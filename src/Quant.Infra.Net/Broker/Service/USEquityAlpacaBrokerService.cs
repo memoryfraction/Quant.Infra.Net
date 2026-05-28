@@ -50,13 +50,13 @@ namespace Quant.Infra.Net.Broker.Service
         {
                 if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
-                var apiKey = configuration["Exchange:ApiKey"];
-                var apiSecret = configuration["Exchange:ApiSecret"];
-                var envStr = configuration["Exchange:Environment"];
+                var apiKey = configuration["Alpaca:ApiKey"];
+                var apiSecret = configuration["Alpaca:ApiSecret"];
+                var envStr = configuration["Alpaca:Environment"];
 
-                if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("Exchange:ApiKey must be set in configuration.", nameof(configuration));
-                if (string.IsNullOrWhiteSpace(apiSecret)) throw new ArgumentException("Exchange:ApiSecret must be set in configuration.", nameof(configuration));
-                if (string.IsNullOrWhiteSpace(envStr)) throw new ArgumentException("Exchange:Environment must be set in configuration.", nameof(configuration));
+                if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("Alpaca:ApiKey must be set in configuration.", nameof(configuration));
+                if (string.IsNullOrWhiteSpace(apiSecret)) throw new ArgumentException("Alpaca:ApiSecret must be set in configuration.", nameof(configuration));
+                if (string.IsNullOrWhiteSpace(envStr)) throw new ArgumentException("Alpaca:Environment must be set in configuration.", nameof(configuration));
 
                 _apiKey = apiKey;
                 _apiSecret = apiSecret;

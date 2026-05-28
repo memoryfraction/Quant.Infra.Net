@@ -1,4 +1,5 @@
-﻿using Quant.Infra.Net.Broker.Model;
+﻿using Microsoft.Extensions.Configuration;
+using Quant.Infra.Net.Broker.Model;
 using Quant.Infra.Net.Broker.Service;
 using Quant.Infra.Net.Shared.Model;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -14,8 +15,15 @@ namespace Quant.Infra.Net.Tests
 
         public AlpacaClientStartUtcTests()
         {
-            // Credentials not used by CalculateUSEquityStartUtcAsync
-            var creds = new BrokerCredentials { ApiKey = "", Secret = "" };
+            // 从 appsettings.json + UserSecrets 加载 Alpaca 凭证
+            var configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: false)
+                .AddUserSecrets<AlpacaClientStartUtcTests>()
+                .Build();
+
+            var apiKey = configuration["Alpaca:ApiKey"] ?? string.Empty;
+            var apiSecret = configuration["Alpaca:ApiSecret"] ?? string.Empty;
+            var creds = new BrokerCredentials { ApiKey = apiKey, Secret = apiSecret };
             _client = new AlpacaClient(creds, ExchangeEnvironment.Paper);
         }
 

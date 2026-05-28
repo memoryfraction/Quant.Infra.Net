@@ -51,8 +51,8 @@ namespace Quant.Infra.Net.Tests
 			_serviceProvider = _services.BuildServiceProvider();
 
 			// 4. 获取 API 凭证
-			_apiKey = _configuration["Exchange:apiKey"];
-			_apiSecret = _configuration["Exchange:apiSecret"];
+			_apiKey = _configuration["Binance:ApiKey"];
+			_apiSecret = _configuration["Binance:ApiSecret"];
 		}
 
 		[TestMethod]

@@ -6,7 +6,7 @@
     <NoWarn>$(NoWarn);CS0579</NoWarn>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-	<Version>1.2.2</Version>   <!-- NuGet 包版本 -->
+	<Version>1.5.0</Version>   <!-- NuGet 包版本 -->
 	<UserSecretsId>8b042025-ae24-4b48-b89b-12b7001ca6e7</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
@@ -37,6 +37,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.10" />
     <PackageReference Include="MySql.Data" Version="9.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NodaTime" Version="3.1.11" />
     <PackageReference Include="Polly" Version="8.5.0" />
     <PackageReference Include="pythonnet" Version="3.0.5" />
@@ -50,7 +51,6 @@
     <PackageReference Include="Stringification" Version="3.2.5" />
     <PackageReference Include="System.Linq" Version="4.3.0" />
     <PackageReference Include="System.Reactive" Version="6.0.0" />
-    <PackageReference Include="YahooFinanceApi" Version="2.3.3" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Readme-Quant.Infra.Net..txt">

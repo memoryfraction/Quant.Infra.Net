@@ -1,11 +1,6 @@
-﻿using AutoMapper;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.SourceData.Service;
 using Quant.Infra.Net.SourceData.Service.Historical;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Tests
 {

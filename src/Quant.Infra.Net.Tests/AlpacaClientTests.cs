@@ -21,8 +21,8 @@ namespace Quant.Infra.Net.Tests
                 .AddUserSecrets<AlpacaClientStartUtcTests>()
                 .Build();
 
-            var apiKey = configuration["Exchange:ApiKey"] ?? string.Empty;
-            var apiSecret = configuration["Exchange:ApiSecret"] ?? string.Empty;
+            var apiKey = configuration["Alpaca:ApiKey"] ?? string.Empty;
+            var apiSecret = configuration["Alpaca:ApiSecret"] ?? string.Empty;
             var creds = new BrokerCredentials { ApiKey = apiKey, Secret = apiSecret };
             _client = new AlpacaClient(creds, ExchangeEnvironment.Paper);
         }

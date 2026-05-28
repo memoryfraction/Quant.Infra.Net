@@ -21,17 +21,18 @@ namespace Quant.Infra.Net.Tests
 
         public PortfolioTests()
         {
-            // 依赖注入
-            _services = new ServiceCollection();
-            _services.AddScoped<IRealtimeDataSourceService, BinanceService>();
-            _services.AddScoped<PortfolioBase, CryptoPortfolio>();
-            _services.AddScoped<StockPortfolio>();
-
-            // 读取配置文件
+            // 读取配置文件（必须在注册依赖配置的服务之前）
             _configuration = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                .AddJsonFile("appsettings.json")
                .Build();
+
+            // 依赖注入
+            _services = new ServiceCollection();
+            _services.AddSingleton<IConfiguration>(_configuration);
+            _services.AddScoped<IRealtimeDataSourceService, BinanceService>();
+            _services.AddScoped<PortfolioBase, CryptoPortfolio>();
+            _services.AddScoped<StockPortfolio>();
 
             // 构建ServiceProvider
             _serviceProvider = _services.BuildServiceProvider();

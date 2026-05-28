@@ -303,3 +303,7 @@ Quant.Infra.Net
 **提交**: `d079d48`  
 **日期**: 2026-04-19  
 **作者**: Kiro AI Assistant
+
+---
+
+> **Disclaimer**: See [DISCLAIMER.md](../DISCLAIMER.md) for full disclaimer and limitation of liability / 详见 [免责声明](../DISCLAIMER.md) 了解完整免责条款与责任限制。

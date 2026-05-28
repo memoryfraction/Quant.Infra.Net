@@ -1,7 +1,6 @@
-# Quant.Infra.Net.Pro.Web — Charles Schwab Deployment Guide
+# Quant.Infra.Net.Pro.Web — Charles Schwab Deployment Guide / Quant.Infra.Net.Pro.Web — Charles Schwab 部署指南
 
 > CharlesSchwab.WebApi can be deployed locally, on a LAN, or on a private VPS. The Web API provides access to account info, US Equity data, and US Option data. For security reasons, trading is not supported in the current version.
-
 
 **Features: 100% Local, Self-Hosted, Physically Read-Only, Credentials Never Uploaded. "Your Privacy, Your Choice"**
 
@@ -12,19 +11,24 @@
 
 > ⚠️ **Prerequisite:** Complete [CharlesSchwabDeveloperRegistryGuide.md](./CharlesSchwabDeveloperRegistryGuide.md) first to obtain your **App Key** and **App Secret** before purchasing a subscription.
 
+---
+
+## Version History / 版本历史
+
+| Version / 版本 | Date / 日期 | Description / 描述 |
+|------|------|-------------|
+| 1.0.0 | 2026-05-28 | Initial release: deployment guide for Quant.Infra.Net.Pro.Web / Quant.Infra.Net.Pro.Web 部署指南初版发布 |
 
 ---
 
-## Use Cases / 适用场景
+# English
+
+## Use Cases
 
 | Edition | Suitable For |
 |---------|-------------|
 | **Community Edition** (Open Source) | Developers who want to learn quantitative trading, run local backtests, have hands-on DIY skills, and have time to tinker with configurations |
 | **Pro Edition** (This Product) | Quantitative practitioners who want an out-of-the-box experience and have no time for tinkering |
-
----
-
-# English
 
 ## 1. System Requirements
 
@@ -221,7 +225,7 @@ Application started.
 | 版本 | 适用人群 |
 |------|---------|
 | **社区版**（开源） | 适合学习量化、本地回测，有一定动手能力，且有时间折腾的开发者 |
-| **Pro 版**（本产品） | 适合希望开箱即用，没有时间折腾的量化从业者，部署后webapi可用，支持多语言 |
+| **Pro 版**（本产品） | 适合希望开箱即用，没有时间折腾的量化从业者 |
 
 ## 一、系统环境要求
 
@@ -230,8 +234,6 @@ Application started.
 - **磁盘空间：** 500MB 以上空闲磁盘
 - **网络：** 可访问 Charles Schwab API
 - **部署限制：** 仅内网 / 本地运行，不开放公网端口
-
----
 
 ## 二、购买前必须完成
 
@@ -244,8 +246,6 @@ Application started.
 
 > ❗ **未完成以上步骤请勿购买，否则无法配置使用。**
 
----
-
 ## 三、购买与获取安装包
 
 1. **前往官网购买订阅：**
@@ -256,8 +256,6 @@ Application started.
    - 专属 **License Key**
    - **Pro 版本安装包** 下载链接
    - 本部署文档
-
----
 
 ## 四、版本更新说明（订阅期内免费更新）
 
@@ -272,8 +270,6 @@ Application started.
 4. 重新启动即可
 
 > License Key 不变，无需重新激活。
-
----
 
 ## 五、本地部署步骤
 
@@ -324,8 +320,6 @@ Now listening on: http://127.0.0.1:8443
 Application started.
 ```
 
----
-
 ## 六、连接 Charles Schwab 授权
 
 1. 打开浏览器访问：**http://127.0.0.1:8443/**
@@ -333,31 +327,33 @@ Application started.
 3. 输入 Schwab 投资账号并完成授权
 4. 自动跳转回本地系统，显示账户信息、持仓、行情数据
 
-> 当前版本为 **只读模式**，支持：账户资产、持仓、行情、历史数据查询，暂不支持下单交易。 根据客户反馈，可能增加下单功能。
-
----
+> 当前版本为 **只读模式**，支持：账户资产、持仓、行情、历史数据查询，暂不支持下单交易。根据客户反馈，可能增加下单功能。
 
 ## 七、功能界面预览
 
 ### 账户总览
+
 ![Account](https://github.com/memoryfraction/Quant.Infra.Net/blob/main/images/Charles%20Schwab/Account.jpg?raw=true)
 
 ### 持仓信息
+
 ![Positions](https://github.com/memoryfraction/Quant.Infra.Net/blob/main/images/Charles%20Schwab/Positions.jpg?raw=true)
 
 ### 行情查询
+
 ![Quote](https://github.com/memoryfraction/Quant.Infra.Net/blob/main/images/Charles%20Schwab/Quote.jpg?raw=true)
 
 ### 期权链
+
 ![Option Chain](https://github.com/memoryfraction/Quant.Infra.Net/blob/main/images/Charles%20Schwab/Option%20Chain.jpg?raw=true)
 
 ### 历史订单
+
 ![Order History](https://github.com/memoryfraction/Quant.Infra.Net/blob/main/images/Charles%20Schwab/Order%20History.jpg?raw=true)
 
 ### Web API Swagger
-![WebApi Swagger](https://github.com/memoryfraction/Quant.Infra.Net/blob/main/images/Charles%20Schwab/WebApi%20Swagger.jpg?raw=true)
 
----
+![WebApi Swagger](https://github.com/memoryfraction/Quant.Infra.Net/blob/main/images/Charles%20Schwab/WebApi%20Swagger.jpg?raw=true)
 
 ## 八、局域网部署（多设备访问）
 
@@ -367,9 +363,7 @@ Application started.
 4. **禁止** 端口映射到公网
 5. **禁止** 使用 0.0.0.0 监听
 
----
-
-## 九、授权规则（Enforced）
+## 九、授权规则（强制执行）
 
 | 规则 | 说明 |
 |------|------|
@@ -377,8 +371,6 @@ Application started.
 | 并发限制 | 同一时间 **仅允许 1 台设备在线** |
 | 续费机制 | 订阅到期未续费 → License 自动失效 → 功能停止 |
 | 设备更换 | 需联系支持解绑旧设备 |
-
----
 
 ## 十、安全部署规范（强制）
 
@@ -390,8 +382,6 @@ Application started.
 | ❌ | 不开放公网访问 |
 | ❌ | 不使用域名对外提供服务 |
 | ❌ | 不分享 License 给他人 |
-
----
 
 ## 十一、常见问题
 

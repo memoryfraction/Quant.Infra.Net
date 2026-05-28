@@ -31,7 +31,7 @@ namespace Quant.Infra.Net.Shared.Service
         /// </summary>
         public DateTime NextTriggerTime => _nextTriggerTime;
 
-        private Timer _timer;
+        private System.Timers.Timer _timer;
         private DateTime _nextTriggerTime;
         private readonly TimeSpan _triggerInterval;
         private readonly object _syncLock = new object();
@@ -70,7 +70,7 @@ namespace Quant.Infra.Net.Shared.Service
                 _nextTriggerTime = CalculateNextTriggerTime();
                 var timeUntilNext = _nextTriggerTime - DateTime.UtcNow;
 
-                _timer = new Timer(Math.Max(timeUntilNext.TotalMilliseconds, 100));
+                _timer = new System.Timers.Timer(Math.Max(timeUntilNext.TotalMilliseconds, 100));
                 _timer.Elapsed += OnTimerElapsed;
                 _timer.AutoReset = false; // 手动重置模式
                 _timer.Start();

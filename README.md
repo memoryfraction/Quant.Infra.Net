@@ -715,3 +715,5 @@ Quant.Infra.Net/
 ## License
 
 See [LICENSE](LICENSE) for details.
+
+See [DISCLAIMER](docs/DISCLAIMER.md) for full disclaimer and limitation of liability / 详见 [免责声明](docs/DISCLAIMER.md) 了解完整免责条款与责任限制。

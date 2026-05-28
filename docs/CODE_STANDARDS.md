@@ -420,3 +420,7 @@ If you have questions about these standards or need clarification:
 - Open an issue on GitHub
 - Contact: rex.fan18@gmail.com
 - Join Telegram group: https://t.me/+VPy-VLis8gVmYWM1
+
+---
+
+> **Disclaimer**: See [DISCLAIMER.md](DISCLAIMER.md) for full disclaimer and limitation of liability / 详见 [免责声明](DISCLAIMER.md) 了解完整免责条款与责任限制。

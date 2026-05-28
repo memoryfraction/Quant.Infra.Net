@@ -382,3 +382,7 @@ var result = await service.SendBulkEmailAsync(message, settings);
 **最后更新**: 2026-04-19  
 **版本**: 1.0.0  
 **维护者**: Quant.Infra.Net Team
+
+---
+
+> **Disclaimer**: See [DISCLAIMER.md](DISCLAIMER.md) for full disclaimer and limitation of liability / 详见 [免责声明](DISCLAIMER.md) 了解完整免责条款与责任限制。

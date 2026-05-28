@@ -197,7 +197,7 @@ namespace Quant.Infra.Net.Analysis.Service
             if (arrA.Length != arrB.Length) throw new ArgumentException("Input series must have the same length.");
 
             var regression = SimpleRegression.Fit(arrA, arrB);
-            return (Math.Round(regression.Item2, 6), Math.Round(regression.Item1, 6)); // Slope, Intercept
+            return (regression.Item2, regression.Item1); // Slope, Intercept
         }
 
         /// <summary>

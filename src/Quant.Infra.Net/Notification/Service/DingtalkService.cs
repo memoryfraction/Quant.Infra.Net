@@ -1,10 +1,8 @@
 ﻿using Newtonsoft.Json;
 using Quant.Infra.Net.Notification.Model;
 using RestSharp;
-using System;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Notification.Service
 {

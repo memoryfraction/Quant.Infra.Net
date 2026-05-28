@@ -41,8 +41,8 @@ namespace Quant.Infra.Net.Console
 
             var sp = serviceCollection.BuildServiceProvider();
             var _configuration = sp.GetService<IConfiguration>();
-            var _apiKey =  _configuration["Exchange:apiKey"];
-            var _apiSecret = _configuration["Exchange:apiSecret"];
+            var _apiKey =  _configuration["Binance:ApiKey"];
+            var _apiSecret = _configuration["Binance:ApiSecret"];
 
             Binance.Net.Clients.BinanceRestClient.SetDefaultOptions(options =>
             {

@@ -1,6 +1,4 @@
 ﻿using AutoMapper;
-using Quant.Infra.Net.SourceData.Model;
-using YahooFinanceApi;
 
 namespace Quant.Infra.Net
 {
@@ -18,8 +16,6 @@ namespace Quant.Infra.Net
         public MappingProfile()
         {
             // register mappings between internal models and external library models
-            CreateMap<Shared.Model.ResolutionLevel, YahooFinanceApi.Period>().ReverseMap();
-            CreateMap<Candle, Ohlcv>().ReverseMap();
         }
     }
 }

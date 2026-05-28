@@ -1,4 +1,5 @@
-﻿using Binance.Net.Clients;
+﻿using Binance.Net;
+using Binance.Net.Clients;
 using Binance.Net.Enums;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Data.Analysis;
@@ -23,7 +24,6 @@ namespace Quant.Infra.Net.Account.Service
     /// </summary>
     public class BinanceService : BrokerServiceBase, IHistoricalDataSourceServiceCryptoBinance, IRealtimeDataSourceServiceCrypto
     {
-        private BinanceRestClient _binanceRestClient;
         private readonly AsyncRetryPolicy _retryPolicy;
 
         /// <summary>
@@ -31,6 +31,12 @@ namespace Quant.Infra.Net.Account.Service
         /// Base currency, default is USD
         /// </summary>
         public override Currency BaseCurrency { get; set; } = Currency.USD;
+
+        /// <summary>
+        /// 交易所环境：Testnet 或 Live
+        /// Exchange environment: Testnet or Live
+        /// </summary>
+        public ExchangeEnvironment ExchangeEnvironment { get; set; } = ExchangeEnvironment.Testnet;
 
         private string _apiKey, _apiSecret;
 
@@ -40,14 +46,40 @@ namespace Quant.Infra.Net.Account.Service
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             _configuration = configuration;
-            _apiKey = _configuration["Exchange:ApiKey"];
-            _apiSecret = _configuration["Exchange:ApiSecret"];
+            _apiKey = _configuration["Binance:ApiKey"];
+            _apiSecret = _configuration["Binance:ApiSecret"];
 
-            _binanceRestClient = new Binance.Net.Clients.BinanceRestClient();
+            // 读取交易所环境配置，默认为 Testnet
+            var envStr = _configuration["Binance:Environment"];
+            if (!string.IsNullOrEmpty(envStr) && Enum.TryParse<ExchangeEnvironment>(envStr, true, out var parsedEnv))
+            {
+                ExchangeEnvironment = parsedEnv;
+            }
 
             _retryPolicy = Policy
             .Handle<Exception>() // 可以根据需要处理其他类型的错误
             .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))); // 指数退避
+        }
+
+        /// <summary>
+        /// 初始化 BinanceRestClient，根据环境配置设置 API 凭据和环境
+        /// </summary>
+        private BinanceRestClient InitializeBinanceClient()
+        {
+            BinanceRestClient.SetDefaultOptions(options =>
+            {
+                // 仅在密钥有效时设置 ApiCredentials
+                if (!string.IsNullOrEmpty(_apiKey) && !string.IsNullOrEmpty(_apiSecret))
+                    options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
+
+                // 设置测试网或实盘环境
+                options.Environment = ExchangeEnvironment == ExchangeEnvironment.Testnet
+                    ? BinanceEnvironment.Testnet
+                    : BinanceEnvironment.Live;
+
+                options.RequestTimeout = TimeSpan.FromSeconds(30);
+            });
+            return new BinanceRestClient();
         }
 
         /// <summary>
@@ -57,14 +89,12 @@ namespace Quant.Infra.Net.Account.Service
         /// <returns>返回所有现货交易对的列表 / Returns a list of all spot trading pairs</returns>
         public override async Task<IEnumerable<string>> GetSpotSymbolListAsync()
         {
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
-            {
-                var spotExchangeInfo = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
-                if (spotExchangeInfo.Success == true)
-                    return spotExchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
-                else
-                    return new List<string>();
-            }
+            using var client = InitializeBinanceClient();
+            var spotExchangeInfo = await client.SpotApi.ExchangeData.GetExchangeInfoAsync();
+            if (spotExchangeInfo.Success == true)
+                return spotExchangeInfo.Data.Symbols.Select(x => x.Name).ToList();
+            else
+                return new List<string>();
         }
 
         /// <summary>
@@ -74,14 +104,12 @@ namespace Quant.Infra.Net.Account.Service
         /// <returns>返回所有USD合约交易对的列表 / Returns a list of all USD futures trading pairs</returns>
         public override async Task<IEnumerable<string>> GetUsdFuturesSymbolListAsync()
         {
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
-            {
-                var symbolList = await client.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
-                if (symbolList.Success == true)
-                    return symbolList.Data.Symbols.Select(x => x.Name).ToList();
-                else
-                    return new List<string>();
-            }
+            using var client = InitializeBinanceClient();
+            var symbolList = await client.UsdFuturesApi.ExchangeData.GetExchangeInfoAsync();
+            if (symbolList.Success == true)
+                return symbolList.Data.Symbols.Select(x => x.Name).ToList();
+            else
+                return new List<string>();
         }
 
         /// <summary>
@@ -91,14 +119,12 @@ namespace Quant.Infra.Net.Account.Service
         /// <returns>返回所有币本位合约交易对的列表 / Returns a list of all coin-margined futures trading pairs</returns>
         public override async Task<IEnumerable<string>> GetCoinFuturesSymbolListAsync()
         {
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
-            {
-                var symbolList = await client.CoinFuturesApi.ExchangeData.GetExchangeInfoAsync();
-                if (symbolList.Success == true)
-                    return symbolList.Data.Symbols.Select(x => x.Name).ToList();
-                else
-                    return new List<string>();
-            }
+            using var client = InitializeBinanceClient();
+            var symbolList = await client.CoinFuturesApi.ExchangeData.GetExchangeInfoAsync();
+            if (symbolList.Success == true)
+                return symbolList.Data.Symbols.Select(x => x.Name).ToList();
+            else
+                return new List<string>();
         }
 
         public override async Task<decimal> GetLatestPriceAsync(Underlying underlying)
@@ -106,28 +132,26 @@ namespace Quant.Infra.Net.Account.Service
             if (underlying == null) throw new ArgumentNullException(nameof(underlying));
             if (string.IsNullOrWhiteSpace(underlying.Symbol)) throw new ArgumentException("Underlying.Symbol must not be null or empty.", nameof(underlying));
 
-            using (var client = new Binance.Net.Clients.BinanceRestClient())
+            using var client = InitializeBinanceClient();
+            if (underlying.AssetType == AssetType.CryptoSpot)
             {
-                if (underlying.AssetType == AssetType.CryptoSpot)
-                {
-                    var getPriceResponse = await client.SpotApi.ExchangeData.GetPriceAsync(underlying.Symbol);
-                    if (getPriceResponse.Success == true)
-                        return getPriceResponse.Data.Price;
-                    else
-                        throw new Exception("Failed to get spot price from Binance.");
-                }
-                else if (underlying.AssetType == AssetType.CryptoPerpetualContract)
-                {
-                    var getPriceResponse = await client.UsdFuturesApi.ExchangeData.GetPriceAsync(underlying.Symbol);
-                    if (getPriceResponse.Success == true)
-                        return getPriceResponse.Data.Price;
-                    else
-                        throw new Exception("Failed to get futures price from Binance.");
-                }
+                var getPriceResponse = await client.SpotApi.ExchangeData.GetPriceAsync(underlying.Symbol);
+                if (getPriceResponse.Success == true)
+                    return getPriceResponse.Data.Price;
                 else
-                {
-                    throw new ArgumentException($"Not supported AssetType:{underlying.AssetType}", nameof(underlying));
-                }
+                    throw new Exception("Failed to get spot price from Binance.");
+            }
+            else if (underlying.AssetType == AssetType.CryptoPerpetualContract)
+            {
+                var getPriceResponse = await client.UsdFuturesApi.ExchangeData.GetPriceAsync(underlying.Symbol);
+                if (getPriceResponse.Success == true)
+                    return getPriceResponse.Data.Price;
+                else
+                    throw new Exception("Failed to get futures price from Binance.");
+            }
+            else
+            {
+                throw new ArgumentException($"Not supported AssetType:{underlying.AssetType}", nameof(underlying));
             }
         }
 
@@ -145,10 +169,10 @@ namespace Quant.Infra.Net.Account.Service
             throw new NotImplementedException();
         }
 
-        public override void Liquidate(Underlying underlying)
+        public override async void Liquidate(Underlying underlying)
         {
             // 查看当前持仓; 
-            var quantity = GetHoldingAsync(underlying).Result;
+            var quantity = await GetHoldingAsync(underlying);
 
             // Todo: 做反向交易;
             throw new NotImplementedException();
@@ -172,23 +196,17 @@ namespace Quant.Infra.Net.Account.Service
         {
             if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentNullException(nameof(symbol));
             if (quantity <= 0) throw new ArgumentOutOfRangeException(nameof(quantity), "quantity must be positive.");
-            BinanceRestClient.SetDefaultOptions(options =>
-            {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
-            });
 
             // 创建 Binance 客户端            
-            using (var client = new BinanceRestClient())
-            {
-                // 永续合约，开空仓
-                var enterShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
-                    symbol: symbol,
-                    side: orderSide, // 开关仓此信号需要相反
-                    type: futuresOrderType,
-                    quantity: quantity, // 关仓数量需要与开仓数量一致， 总是正数; 最小交易数量5U
-                    positionSide: positionSide // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
-                );
-            }
+            using var client = InitializeBinanceClient();
+            // 永续合约，开空仓
+            var enterShortResponse = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
+                symbol: symbol,
+                side: orderSide, // 开关仓此信号需要相反
+                type: futuresOrderType,
+                quantity: quantity, // 关仓数量需要与开仓数量一致， 总是正数; 最小交易数量5U
+                positionSide: positionSide // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT
+            );
         }
 
         private async Task CreateSpotOrder(string symbol, decimal quantity, SpotOrderType spotOrderType = SpotOrderType.Market)
@@ -209,39 +227,33 @@ namespace Quant.Infra.Net.Account.Service
         {
             if (underlying == null) throw new ArgumentNullException(nameof(underlying));
             if (string.IsNullOrWhiteSpace(underlying.Symbol)) throw new ArgumentException("Underlying.Symbol must not be null or empty.", nameof(underlying));
-            BinanceRestClient.SetDefaultOptions(options =>
-            {
-                options.ApiCredentials = new ApiCredentials(_apiKey, _apiSecret);
-            });
-            // 创建 Binance 客户端            
-            using (var client = new BinanceRestClient())
-            {
-                if(underlying.AssetType == AssetType.CryptoPerpetualContract)
-                {
-                    // 获取当前持仓数量
-                    var accountInfo = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
-                    var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
-                    var holdingPositions = position.Data.Where(x => x.Quantity != 0)
-                        .Select(x => x);
-                    var underlyingPosition = holdingPositions
-                        .Where(x => x.Symbol == underlying.Symbol)
-                        .FirstOrDefault();
-                    return underlyingPosition.Quantity;
-                }
-                else if(underlying.AssetType == AssetType.CryptoSpot)
-                {
-                    // 获取当前持仓数量
-                    var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
-                    var holdingPosition = accountInfo.Data.Balances
-                        .Where(x => x.Asset.ToLower() == underlying.Symbol.ToLower())
-                        .FirstOrDefault();
-                    return holdingPosition.Total;
-                }
-                else
-                {
-                    throw new ArgumentException($"Not supported AssetType:{underlying.AssetType}", nameof(underlying));
-                }
 
+            // 创建 Binance 客户端            
+            using var client = InitializeBinanceClient();
+            if(underlying.AssetType == AssetType.CryptoPerpetualContract)
+            {
+                // 获取当前持仓数量
+                var accountInfo = await client.UsdFuturesApi.Account.GetAccountInfoV3Async();
+                var position = await client.UsdFuturesApi.Account.GetPositionInformationAsync();
+                var holdingPositions = position.Data.Where(x => x.Quantity != 0)
+                    .Select(x => x);
+                var underlyingPosition = holdingPositions
+                    .Where(x => x.Symbol == underlying.Symbol)
+                    .FirstOrDefault();
+                return underlyingPosition.Quantity;
+            }
+            else if(underlying.AssetType == AssetType.CryptoSpot)
+            {
+                // 获取当前持仓数量
+                var accountInfo = await client.SpotApi.Account.GetAccountInfoAsync();
+                var holdingPosition = accountInfo.Data.Balances
+                    .Where(x => x.Asset.ToLower() == underlying.Symbol.ToLower())
+                    .FirstOrDefault();
+                return holdingPosition.Total;
+            }
+            else
+            {
+                throw new ArgumentException($"Not supported AssetType:{underlying.AssetType}", nameof(underlying));
             }
         }
 
@@ -346,10 +358,9 @@ namespace Quant.Infra.Net.Account.Service
                 });
             try
             {
-                using (var client = new Binance.Net.Clients.BinanceRestClient())
-                {
-                    // 根据 resolutionLevel 映射到 KlineInterval
-                    var interval = GetKlineInterval(resolutionLevel);
+                using var client = InitializeBinanceClient();
+                // 根据 resolutionLevel 映射到 KlineInterval
+                var interval = GetKlineInterval(resolutionLevel);
 
                     return await retryPolicy.ExecuteAsync(async () =>
                     {
@@ -400,7 +411,6 @@ namespace Quant.Infra.Net.Account.Service
                                 throw new NotSupportedException($"Asset type {underlying.AssetType} is not supported.");
                         }
                     });
-                }
             }
             catch (Exception ex)
             {
@@ -504,12 +514,7 @@ namespace Quant.Infra.Net.Account.Service
             };
         }
 
-        public Task<IEnumerable<Ohlcv>> GetOhlcvListAsync(Underlying underlying, DateTime startDt, DateTime endDt, ResolutionLevel resolutionLevel = ResolutionLevel.Hourly)
-        {
-            throw new NotImplementedException();
-        }
-
-       
+        
 
         private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> apiCall)
         {

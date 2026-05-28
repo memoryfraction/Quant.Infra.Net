@@ -29,9 +29,9 @@ namespace Quant.Infra.Net.Broker.Service
         public BinanceUsdFutureService(IConfiguration configuration)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            _apiKey = configuration["Exchange:ApiKey"];
-            _apiSecret = configuration["Exchange:ApiSecret"];
-            ExchangeEnvironment = (ExchangeEnvironment)Enum.Parse(typeof(ExchangeEnvironment), configuration["Exchange:Environment"]?.ToString() ?? "Testnet");
+            _apiKey = configuration["Binance:ApiKey"];
+            _apiSecret = configuration["Binance:ApiSecret"];
+            ExchangeEnvironment = (ExchangeEnvironment)Enum.Parse(typeof(ExchangeEnvironment), configuration["Binance:Environment"]?.ToString() ?? "Testnet");
 
             _retryPolicy = Policy
                 .Handle<Exception>()

@@ -20,7 +20,7 @@ namespace Quant.Infra.Net.Tests
 		{
 			// 1. Load configuration.
 			_config = new ConfigurationBuilder()
-				.AddJsonFile("appsettings.test.json", optional: true)
+				.AddJsonFile("appsettings.json", optional: true)
 				.AddUserSecrets<EmailIntegrationTests>()
 				.Build();
 

@@ -47,11 +47,20 @@ namespace Quant.Infra.Net.Tests
         public void StationaryTest_Should_Work()
         {
             // Arrange
-            double[] stationarySeries = { 0.5, 0.6, 0.4, 0.7, 0.5, 0.3, 0.6, 0.4 };
+            // Generate a longer mean-reverting series around 0.5 for reliable ADF test
+            double[] stationarySeries = new double[50];
+            var rand = new Random(42);
+            double previous = 0.5;
+            for (int i = 0; i < 50; i++)
+            {
+                // AR(1) with phi=0.3: strongly mean-reverting (stationary)
+                previous = 0.5 + 0.3 * (previous - 0.5) + (rand.NextDouble() - 0.5) * 0.2;
+                stationarySeries[i] = previous;
+            }
 
             // Act
             var _analysisService = _serviceProvider.GetRequiredService<IAnalysisService>();
-            bool isStationary = _analysisService.AugmentedDickeyFullerTest(stationarySeries, adfTestStatisticThreshold:-2.846);
+            bool isStationary = _analysisService.AugmentedDickeyFullerTest(stationarySeries, adfTestStatisticThreshold:-2.86);
 
             var res = _analysisService.AugmentedDickeyFullerTest(stationarySeries);
             Console.WriteLine($"pvalue:{res.PValue}");
@@ -123,8 +132,8 @@ namespace Quant.Infra.Net.Tests
 
             // Assert
             // diff = B - 2 * A - 0
-            Assert.AreEqual(2.0, slope);
-            Assert.AreEqual(0.0, intercept);
+            Assert.AreEqual(2.0, slope, 1e-10);
+            Assert.AreEqual(0.0, intercept, 1e-10);
             // Console equation
             Console.WriteLine($"diff = B - ({slope} * A) - ({intercept})");
 
@@ -150,8 +159,8 @@ namespace Quant.Infra.Net.Tests
 
             // Assert
             // diff = B - 2.1237583090596757 * A - (-10.519829710956742)
-            Assert.AreEqual(2.1237583090596757, slope);
-            Assert.AreEqual(-10.519829710956742, intercept);
+            Assert.AreEqual(2.1237583090596757, slope, 1e-10);
+            Assert.AreEqual(-10.519829710956742, intercept, 1e-10);
             // Console equation
             Console.WriteLine($"diff = B - ({slope} * A) - ({intercept})");
         }
@@ -213,8 +222,8 @@ namespace Quant.Infra.Net.Tests
             Console.WriteLine($"diff Series average: {diffSeries.Average()}");
 
             // Assert
-            Assert.AreEqual(0.31196395040950814, slope);
-            Assert.AreEqual(12.221565751700417, intercept);
+            Assert.AreEqual(0.31196395040950814, slope, 1e-10);
+            Assert.AreEqual(12.221565751700417, intercept, 1e-10);
             Console.WriteLine($"diff = B - ({slope} * A) - ({intercept})");
 
             // Calculate diff
@@ -261,8 +270,8 @@ namespace Quant.Infra.Net.Tests
             var (slope, intercept) = _analysisService.PerformOLSRegression(pricesA, pricesB);
 
             // Assert
-            Assert.AreEqual(0.31196395040950814, slope);
-            Assert.AreEqual(12.221565751700417, intercept);
+            Assert.AreEqual(0.31196395040950814, slope, 1e-10);
+            Assert.AreEqual(12.221565751700417, intercept, 1e-10);
             Console.WriteLine($"diff = B - ({slope} * A) - ({intercept})");
 
             // Calculate diff
@@ -373,8 +382,8 @@ namespace Quant.Infra.Net.Tests
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
-        public void TestCalculateZScores_WithEmptyData_ThrowsInvalidOperationException()
+        [ExpectedException(typeof(ArgumentException))]
+        public void TestCalculateZScores_WithEmptyData_ThrowsArgumentException()
         {
             // Arrange
             var data = new List<double>();

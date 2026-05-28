@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.SourceData.Service
@@ -83,6 +84,15 @@ namespace Quant.Infra.Net.SourceData.Service
                 var result = await _historicalDataSourceService.GetOhlcvListAsync(new Underlying(symbol, AssetType.UsEquity), startDt, endDt, period);
                 ohlcvs.OhlcvSet = result != null ? result.ToHashSet() : new HashSet<Ohlcv>();
 
+                ohlcvs.Symbol = symbol;
+                ohlcvs.StartDateTimeUtc = startDt;
+                ohlcvs.EndDateTimeUtc = endDt;
+                ohlcvs.ResolutionLevel = period;
+            }
+            else if (dataSource == DataSource.YahooFinance)
+            {
+                var ohlcvList = await DownloadOhlcvListFromYahooFinanceAsync(symbol, startDt, endDt, period);
+                ohlcvs.OhlcvSet = ohlcvList.ToHashSet();
                 ohlcvs.Symbol = symbol;
                 ohlcvs.StartDateTimeUtc = startDt;
                 ohlcvs.EndDateTimeUtc = endDt;
@@ -187,6 +197,105 @@ namespace Quant.Infra.Net.SourceData.Service
             using var writer = new StreamWriter(fullPathFileName);
             using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
             await csv.WriteRecordsAsync(ohlcvList);
+        }
+
+        /// <summary>
+        /// 从Yahoo Finance Chart API下载OHLCV数据。
+        /// Download OHLCV data from Yahoo Finance Chart API.
+        /// </summary>
+        private async Task<List<Ohlcv>> DownloadOhlcvListFromYahooFinanceAsync(string symbol, DateTime startDt, DateTime endDt, ResolutionLevel period)
+        {
+            var interval = ConvertResolutionLevelToYahooInterval(period);
+            var period1 = new DateTimeOffset(startDt.ToUniversalTime()).ToUnixTimeSeconds();
+            var period2 = new DateTimeOffset(endDt.ToUniversalTime()).ToUnixTimeSeconds();
+
+            var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?period1={period1}&period2={period2}&interval={interval}&includePrePost=false";
+
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+
+            var json = await httpClient.GetStringAsync(url);
+            var doc = JsonDocument.Parse(json);
+
+            var root = doc.RootElement;
+            var chart = root.GetProperty("chart");
+
+            // 检查API是否返回错误
+            if (chart.TryGetProperty("error", out var error) && error.ValueKind != JsonValueKind.Null && error.ValueKind != JsonValueKind.Undefined)
+            {
+                return new List<Ohlcv>();
+            }
+
+            var result = chart.GetProperty("result")[0];
+            var timestamps = result.GetProperty("timestamp").EnumerateArray().Select(t => t.GetInt64()).ToArray();
+            var quote = result.GetProperty("indicators").GetProperty("quote")[0];
+
+            var opens = quote.GetProperty("open").EnumerateArray().Select(o => o.ValueKind == JsonValueKind.Null ? (decimal?)null : o.GetDecimal()).ToArray();
+            var highs = quote.GetProperty("high").EnumerateArray().Select(o => o.ValueKind == JsonValueKind.Null ? (decimal?)null : o.GetDecimal()).ToArray();
+            var lows = quote.GetProperty("low").EnumerateArray().Select(o => o.ValueKind == JsonValueKind.Null ? (decimal?)null : o.GetDecimal()).ToArray();
+            var closes = quote.GetProperty("close").EnumerateArray().Select(o => o.ValueKind == JsonValueKind.Null ? (decimal?)null : o.GetDecimal()).ToArray();
+            var volumes = quote.GetProperty("volume").EnumerateArray().Select(o => o.ValueKind == JsonValueKind.Null ? (decimal?)null : o.GetDecimal()).ToArray();
+
+            var ohlcvList = new List<Ohlcv>();
+            for (int i = 0; i < timestamps.Length; i++)
+            {
+                if (opens[i] == null || highs[i] == null || lows[i] == null || closes[i] == null || volumes[i] == null)
+                    continue;
+
+                var openDateTime = DateTimeOffset.FromUnixTimeSeconds(timestamps[i]).UtcDateTime;
+                DateTime closeDateTime;
+
+                switch (period)
+                {
+                    case ResolutionLevel.Hourly:
+                        closeDateTime = openDateTime.AddHours(1).AddSeconds(-1);
+                        break;
+                    case ResolutionLevel.Daily:
+                        closeDateTime = openDateTime.Date.AddDays(1).AddSeconds(-1);
+                        break;
+                    case ResolutionLevel.Weekly:
+                        closeDateTime = openDateTime.AddDays(7).AddSeconds(-1);
+                        break;
+                    case ResolutionLevel.Monthly:
+                        closeDateTime = openDateTime.AddMonths(1).AddSeconds(-1);
+                        break;
+                    default:
+                        closeDateTime = openDateTime;
+                        break;
+                }
+
+                ohlcvList.Add(new Ohlcv
+                {
+                    Symbol = symbol,
+                    OpenDateTime = openDateTime,
+                    CloseDateTime = closeDateTime,
+                    Open = opens[i].Value,
+                    High = highs[i].Value,
+                    Low = lows[i].Value,
+                    Close = closes[i].Value,
+                    Volume = volumes[i].Value,
+                    AdjustedClose = closes[i].Value
+                });
+            }
+
+            return ohlcvList;
+        }
+
+        /// <summary>
+        /// 将ResolutionLevel转换为Yahoo Finance API的interval参数。
+        /// Converts ResolutionLevel to Yahoo Finance API interval parameter.
+        /// </summary>
+        private static string ConvertResolutionLevelToYahooInterval(ResolutionLevel period)
+        {
+            return period switch
+            {
+                ResolutionLevel.Minute => "1m",
+                ResolutionLevel.Hourly => "1h",
+                ResolutionLevel.Daily => "1d",
+                ResolutionLevel.Weekly => "1wk",
+                ResolutionLevel.Monthly => "1mo",
+                _ => "1d"
+            };
         }
     }
 }

@@ -14,6 +14,7 @@
 | 1.2.0 | 2024-03-10 | Improved Python integration stability and added new statistical analysis methods |
 | 1.3.0 | 2024-04-05 | Enhanced notification services with email templates and improved error handling |
 | 1.4.0 | 2024-05-16 | Updated API integrations to handle recent broker changes, added comprehensive documentation |
+| 1.5.0 | 2026-05-28 | **Interactive Brokers (InterReact)** full integration — order, market data, account management via TWS/Gateway; **Charles Schwab** full broker service — quotes, option chains, orders, positions; license changed to MIT; enhanced analysis service unit tests |
 
 ---
 
@@ -38,7 +39,7 @@ In short: **stop reinventing the wheel — focus on your strategy.**
 
 1. **Data Acquisition** — Download stock daily bars from Yahoo Finance, batch-download crypto klines from Binance, read local data from CSV/MySQL/MongoDB.
 2. **Statistical Analysis** — Correlation, ADF stationarity test, OLS regression, Z-Score, Shapiro-Wilk normality test, pair-trading spread calculation.
-3. **Trade Execution** — Binance futures order/liquidate, Alpaca US equity order/liquidate, with Testnet/Paper/Live environment switching.
+3. **Trade Execution** — Binance futures spot/order/liquidate, Alpaca US equity order/liquidate, Charles Schwab US equity/options trading, Interactive Brokers via TWS/Gateway (InterReact), with Testnet/Paper/Live environment switching.
 4. **Notifications** — DingTalk bot, WeChat Work webhook, personal/commercial bulk email.
 5. **Portfolio & Performance** — Portfolio snapshots, equity curve charting, CAGR/Sharpe/Calmar/MaxDrawdown calculation.
 6. **Utilities** — Rolling window, interval trigger, resolution conversion, DataFrame I/O.
@@ -254,7 +255,33 @@ await broker.SetHoldingsAsync("AAPL", 0.05m);
 await broker.LiquidateAsync("AAPL");
 ```
 
-### Scenario 4: DingTalk / WeChat Notifications
+### Scenario 4: Charles Schwab US Equity Trading (API Key Required)
+
+```csharp
+var schwab = provider.GetRequiredService<ISchwabBrokerService>();
+
+// Account summary
+var account = await schwab.GetAccountAsync();
+Console.WriteLine($"Equity: {account.TotalEquity}");
+
+// Get stock quote
+var quote = await schwab.GetQuoteAsync("AAPL");
+Console.WriteLine($"AAPL: {quote.Last}");
+
+// Get option chain
+var chain = await schwab.GetOptionChainAsync("AAPL");
+
+// Place market order
+var orderId = await schwab.PlaceOrderAsync(new SchwabOrderRequest
+{
+    Symbol = "AAPL", Side = "BUY", Quantity = 10
+});
+
+// Check open/close status
+bool isOpen = await schwab.IsMarketOpenAsync();
+```
+
+### Scenario 5: DingTalk / WeChat Notifications
 
 ```csharp
 var dingtalk = provider.GetRequiredService<IDingtalkService>();
@@ -264,7 +291,7 @@ var wechat = provider.GetRequiredService<IWeChatService>();
 await wechat.SendTextNotificationAsync("Order filled", webHookUrl);
 ```
 
-### Scenario 5: Full Statistical Analysis Pipeline
+### Scenario 6: Full Statistical Analysis Pipeline
 
 ```csharp
 var analysis = provider.GetRequiredService<IAnalysisService>();
@@ -282,7 +309,7 @@ double z = analysis.CalculateZScores(spread, currentValue);
 bool isNormal = analysis.PerformShapiroWilkTest(spread);
 ```
 
-### Scenario 6: Rolling Window & Interval Trigger
+### Scenario 7: Rolling Window & Interval Trigger
 
 ```csharp
 var window = new RollingWindow<double>(20);
@@ -299,7 +326,7 @@ trigger.IntervalTriggered += (sender, e) =>
 trigger.Start();
 ```
 
-### Scenario 7: Portfolio Performance Analysis
+### Scenario 8: Portfolio Performance Analysis
 
 ```csharp
 double cagr   = StrategyPerformanceAnalyzer.CalculateCAGR(marketValueDict);
@@ -330,7 +357,7 @@ dotnet test --filter "FullyQualifiedName~AnalysisServiceTests"
 ```
 Quant.Infra.Net/
 ├── Analysis/           # Statistical analysis: ADF, OLS, correlation, Z-Score, pair trading
-├── Broker/             # Broker integration: Binance, Alpaca, InteractiveBrokers
+├── Broker/             # Broker integration: Binance, Alpaca, Schwab, InteractiveBrokers (InterReact)
 ├── Notification/       # Notifications: DingTalk, WeChat Work, Email
 ├── Order/              # Order models
 ├── Portfolio/          # Portfolio snapshots, performance analysis, equity curves
@@ -341,14 +368,15 @@ Quant.Infra.Net/
 ## Notes
 
 - **ADF Python mode**: `AugmentedDickeyFullerTestPython` requires a local Python environment with `numpy`, `pandas`, and `statsmodels`. If Python is not available, use `AugmentedDickeyFullerTest` (pure .NET implementation).
-- **API Key configuration**: Binance / Alpaca live trading requires API Key and Secret in `appsettings.json` or User Secrets.
+- **API Key configuration**: Binance / Alpaca / Schwab live trading requires API Key and Secret in `appsettings.json` or User Secrets.
+- **Interactive Brokers**: The InterReact integration connects to TWS or IB Gateway via local socket (port 7496 for TWS, 4001 for IB Gateway). Ensure TWS/Gateway is running with API enabled before using.
 - **ExchangeEnvironment**: Supports `Testnet`, `Paper`, and `Live`. Use Testnet or Paper during development.
 - **Binance IP Restrictions**: The Binance API restricts access from certain countries/regions. If you encounter connection errors when running Binance-related unit tests, this is not a code issue. Please refer to the [Binance official documentation](https://www.binance.com/en/support) for the list of restricted regions.
 - **Compliance Disclaimer**: This project provides quantitative trading infrastructure tools only and does not constitute investment advice. Users are solely responsible for ensuring compliance with all applicable laws, regulations, and exchange rules in their jurisdiction. The authors assume no liability for any legal or financial consequences arising from the use of this library.
 
 ## Roadmap Feedback Wanted: Should We Build a Pro Edition?
 
-> Quant.Infra.Net will continue to maintain this public repository as the **Community Edition**. Existing open-source features will remain available here. We are evaluating whether it is worth investing significant development effort into a separate **Pro Edition** for advanced broker integrations and production trading workflows, such as Charles Schwab, Interactive Brokers, multi-broker abstractions, risk controls, deployment templates, and priority support. This is not a pricing announcement. It is a roadmap validation request. If you need Schwab / IB integration, use this project in real trading workflows, or have concerns about the Community + Pro direction, please share your feedback in GitHub Discussions, join the community group below, or contact `rex.fan18@gmail.com`. **Your feedback will directly affect how much time we invest in this direction.**
+> Quant.Infra.Net will continue to maintain this public repository as the **Community Edition**. Existing open-source features will remain available here. 
 
 ---
 
@@ -591,7 +619,33 @@ await broker.SetHoldingsAsync("AAPL", 0.05m);  // 5% 仓位
 await broker.LiquidateAsync("AAPL");            // 清仓
 ```
 
-### 场景 4：钉钉 / 企业微信通知
+### 场景 4：Charles Schwab 美股交易（需要 API Key）
+
+```csharp
+var schwab = provider.GetRequiredService<ISchwabBrokerService>();
+
+// 账户摘要
+var account = await schwab.GetAccountAsync();
+Console.WriteLine($"账户权益: {account.TotalEquity}");
+
+// 获取报价
+var quote = await schwab.GetQuoteAsync("AAPL");
+Console.WriteLine($"AAPL: {quote.Last}");
+
+// 获取期权链
+var chain = await schwab.GetOptionChainAsync("AAPL");
+
+// 下单
+var orderId = await schwab.PlaceOrderAsync(new SchwabOrderRequest
+{
+    Symbol = "AAPL", Side = "BUY", Quantity = 10
+});
+
+// 检查市场是否开盘
+bool isOpen = await schwab.IsMarketOpenAsync();
+```
+
+### 场景 5：钉钉 / 企业微信通知
 
 ```csharp
 // 钉钉
@@ -603,7 +657,7 @@ var wechat = provider.GetRequiredService<IWeChatService>();
 await wechat.SendTextNotificationAsync("订单已成交", webHookUrl);
 ```
 
-### 场景 5：统计分析全流程
+### 场景 6：统计分析全流程
 
 ```csharp
 var analysis = provider.GetRequiredService<IAnalysisService>();
@@ -627,7 +681,7 @@ double z = analysis.CalculateZScores(spread, currentValue);
 bool isNormal = analysis.PerformShapiroWilkTest(spread);
 ```
 
-### 场景 6：滚动窗口与定时触发器
+### 场景 7：滚动窗口与定时触发器
 
 ```csharp
 // 滚动窗口：保持最近 20 根 K 线
@@ -649,7 +703,7 @@ trigger.IntervalTriggered += (sender, e) =>
 trigger.Start();
 ```
 
-### 场景 7：投资组合绩效分析
+### 场景 8：投资组合绩效分析
 
 ```csharp
 // marketValueDict: Dictionary<DateTime, decimal> — 每日净值
@@ -681,7 +735,7 @@ dotnet test --filter "FullyQualifiedName~AnalysisServiceTests"
 ```
 Quant.Infra.Net/
 ├── Analysis/           # 统计分析：ADF、OLS、相关性、Z-Score、配对交易
-├── Broker/             # 券商接入：Binance、Alpaca、InteractiveBrokers
+├── Broker/             # 券商接入：Binance、Alpaca、Schwab、InteractiveBrokers (InterReact)
 ├── Notification/       # 通知：钉钉、企业微信、邮件
 ├── Order/              # 订单模型
 ├── Portfolio/          # 投资组合快照、绩效分析、净值曲线
@@ -692,21 +746,20 @@ Quant.Infra.Net/
 ## 注意事项
 
 - **ADF Python 模式**：`AugmentedDickeyFullerTestPython` 方法依赖本机 Python 环境，需安装 `numpy`、`pandas`、`statsmodels`。如果没有 Python 环境，请使用 `AugmentedDickeyFullerTest`（纯 .NET 实现）。
-- **API Key 配置**：Binance / Alpaca 等实盘接口需要在 `appsettings.json` 或 User Secrets 中配置 API Key 和 Secret。
+- **API Key 配置**：Binance / Alpaca / Schwab 等实盘接口需要在 `appsettings.json` 或 User Secrets 中配置 API Key 和 Secret。
+- **Interactive Brokers**：InterReact 集成通过本地 Socket 连接 TWS 或 IB Gateway（TWS 端口 7496，IB Gateway 端口 4001）。使用前需确保 TWS/Gateway 已启动并启用 API 连接。
 - **ExchangeEnvironment**：支持 `Testnet`（测试网）、`Paper`（模拟盘）、`Live`（实盘）三种环境，建议开发阶段使用 Testnet 或 Paper。
 - **Binance IP 限制**：Binance API 对部分国家/地区的 IP 存在访问限制，如果你在运行 Binance 相关单元测试时遇到连接错误，这并非代码问题，请查阅 [Binance 官方文档](https://www.binance.com/en/support) 了解受限地区列表。
 - **合规免责声明**：本项目仅提供量化交易基础设施工具，不构成任何投资建议。用户需自行确保使用本库时符合所在国家/地区的法律法规及交易所合规要求，因使用本库产生的任何法律或财务后果由用户自行承担。
 
 ## 路线图反馈征集：是否值得开发 Pro Edition？
 
-> Quant.Infra.Net 会继续维护当前公开仓库作为 **Community Edition（免费版）**，现有开源功能会继续保留在这里。我们正在评估是否值得投入较多开发精力，建设一个独立的 **Pro Edition**，用于承载更高级的券商接入和生产级交易基础设施，例如 Charles Schwab、Interactive Brokers、多券商统一抽象、风控、部署模板和优先支持。这不是正式定价公告，而是一次路线图验证。如果你需要 Schwab / IB 接入，正在真实交易流程中使用本项目，或对 Community + Pro 双线路线有担忧和建议，欢迎在 GitHub Discussions 留言、加入下方技术交流群，或邮件联系 `rex.fan18@gmail.com`。 **你的反馈会直接影响我们是否投入、以及投入多少精力做这件事。**
+> Quant.Infra.Net 欢迎大家提交PR，共同维护当前公开仓库作为 **Community Edition（免费版）**，现有开源功能会继续保留在这里。**Charles Schwab 和 Interactive Brokers（InterReact）的集成现已在 Community Edition 中可用。** 我们正在评估是否值得继续投入开发精力，建设一个独立的 **Pro Edition**，用于承载更高级的功能，例如多券商统一抽象、生产级风控、部署模板和优先支持。这不是正式定价公告，而是一次路线图验证。如果你对 Community + Pro 双线路线有担忧和建议，欢迎在 GitHub Discussions 留言、加入下方技术交流群，或邮件联系 `rex.fan18@gmail.com`。 
 
 ## 社区与支持
 
-由于券商API变动频繁，欢迎加入 Quant.Infra.Net 技术交流群。
 
-- Telegram群组: [https://t.me/+VPy-VLis8gVmYWM1](https://t.me/+VPy-VLis8gVmYWM1)
-- 商业授权与定制开发咨询请联系: rex.fan18@gmail.com
+- 商业合作与定制开发咨询请联系: rex.fan18@gmail.com
 
 扫码加入Telegram群组：
 

@@ -24,7 +24,7 @@ namespace Quant.Infra.Net.Tests
         {
             // Load configuration.
             _config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.test.json", optional: true)
+                .AddJsonFile("appsettings.json", optional: true)
                 .AddUserSecrets<SchwabBrokerServiceTests>()
                 .Build();
 

@@ -2,7 +2,7 @@
 
 ## 📋 申请流程概览
 
-Charles Schwab 在 2023 年收购了 TD Ameritrade，目前正在整合两家公司的 API 服务。以下是详细的申请步骤。
+Charles Schwab 在 2023 年收购了 TD Ameritrade，目前正在整合两家公司的 API 服务。成功申请后，可以得到Secret和ApiKey。以下是详细的申请步骤。
 
 ## 🔍 重要说明
 
@@ -70,14 +70,19 @@ Charles Schwab 在 2023 年收购了 TD Ameritrade，目前正在整合两家公
 1. 应用创建成功后，系统会生成：
    - **App Key (Client ID)** - 应用密钥
    - **App Secret (Client Secret)** - 应用机密
-2. **重要**：立即保存这些凭据，Secret 只显示一次！
+2. **重要**：立即妥善保存这些凭据！
 
 #### 4.2 记录信息
 ```
 App Key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 App Secret: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
-Account Number: 12345678
+Account Number: 12345678(举例)
 ```
+
+如果您已经升级到Pro版本，得到Key, Secret, callBackUrl, 就可以进入下一步了;
+https://github.com/memoryfraction/Quant.Infra.Net/blob/main/docs/CharlesSchwabDeploymentGuide.md
+
+
 
 ### 步骤 5：配置 OAuth 2.0
 

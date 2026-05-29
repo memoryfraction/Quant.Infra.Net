@@ -53,7 +53,7 @@
     <PackageReference Include="System.Reactive" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="Readme-Quant.Infra.Net..txt">
+    <None Update="Readme-Quant.Infra.Net.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

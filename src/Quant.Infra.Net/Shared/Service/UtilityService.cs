@@ -4,19 +4,14 @@ using Binance.Net.Objects.Models.Futures;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.Data.Analysis;
-using Python.Runtime;
 using Quant.Infra.Net.Analysis.Models;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using Serilog;
 using Serilog.Events;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Shared.Service
 {

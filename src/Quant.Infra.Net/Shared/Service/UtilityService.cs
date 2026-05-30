@@ -1,4 +1,4 @@
-﻿using Binance.Net.Clients;
+using Binance.Net.Clients;
 using Binance.Net.Enums;
 using Binance.Net.Objects.Models.Futures;
 using CsvHelper;
@@ -129,22 +129,17 @@ namespace Quant.Infra.Net.Shared.Service
         }
 
 
-        /// <summary>
-        /// 增强的日志记录方法，同时输出到控制台和 Serilog。
-        /// Enhanced logging with structured output to both console and Serilog.
+                        /// <summary>
+        /// Logs a message via Serilog (Console sink + File sink).
+        /// All console output is handled by the Serilog Console sink configured in Program.cs.
         /// </summary>
-        /// <param name="message">日志消息内容 / The log message content.</param>
-        /// <param name="level">日志级别，默认为 Information / The log level, defaults to Information.</param>
+        /// <param name="message">The log message content.</param>
+        /// <param name="level">The log level, defaults to Information.</param>
         public static void LogAndWriteLine(string message, LogEventLevel level = LogEventLevel.Information)
         {
-            var formattedMessage = FormatMessage(message, level);
-
-            // Output to console with color
-            Console.ForegroundColor = GetConsoleColor(level);
-            Console.WriteLine(formattedMessage);
-            Console.ResetColor();
-
-            // Output to Serilog (remove formatting for log files)
+            // Output to Serilog only - the Console sink and File sink in Program.cs
+            // handle all console/file output. Writing directly to Console here would
+            // cause duplicate log lines (once via Console.WriteLine, once via Serilog Console sink).
             LogToSerilog(message, level);
         }
 

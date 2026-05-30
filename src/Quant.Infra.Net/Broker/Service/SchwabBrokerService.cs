@@ -162,7 +162,7 @@ namespace Quant.Infra.Net.Broker.Service
                     BuyingPower = GetJsonDecimal(currentBalances, "buyingPower", "cashAvailableForTrading")
                 };
 
-                UtilityService.LogAndWriteLine($"[Schwab] Account loaded: equity={account.TotalEquity:C}, marketValue={account.MarketValue:C}, cash={account.CashBalance:C}");
+                UtilityService.LogAndWriteLine($"[Schwab] Account loaded: equity=${account.TotalEquity:N2}, marketValue=${account.MarketValue:N2}, cash=${account.CashBalance:N2}");
                 return account;
             }
             catch (Exception ex)
@@ -655,6 +655,99 @@ namespace Quant.Infra.Net.Broker.Service
             {
                 UtilityService.LogAndWriteLine($"[Schwab] Failed to load market status: {ex.Message}");
                 return false;
+            }
+        }
+
+        #endregion
+
+        #region Price History
+
+        /// <inheritdoc />
+        public async Task<SchwabPriceHistory> GetPriceHistoryAsync(
+            string symbol,
+            DateTime startDate,
+            DateTime endDate,
+            string frequencyType,
+            int frequency = 1,
+            bool needExtendedHoursData = false)
+        {
+            try
+            {
+                await SetAuthHeaderAsync();
+
+                var startEpoch = new DateTimeOffset(startDate).ToUnixTimeMilliseconds();
+                var endEpoch = new DateTimeOffset(endDate).ToUnixTimeMilliseconds();
+
+                // Schwab requires periodType to be compatible with frequencyType:
+                //   minute  → periodType=day
+                //   daily / weekly / monthly → periodType=year
+                var periodType = frequencyType.ToLowerInvariant() switch
+                {
+                    "minute" => "day",
+                    _        => "year"   // daily, weekly, monthly
+                };
+
+                var queryParams = new List<string>
+                {
+                    $"symbol={Uri.EscapeDataString(symbol)}",
+                    $"periodType={periodType}",
+                    $"startDate={startEpoch}",
+                    $"endDate={endEpoch}",
+                    $"frequencyType={Uri.EscapeDataString(frequencyType)}",
+                    $"frequency={frequency}"
+                };
+
+                // needExtendedHoursData is only valid for minute frequencyType.
+                // Sending it with daily/weekly/monthly causes Schwab API to return 400.
+                if (frequencyType.Equals("minute", StringComparison.OrdinalIgnoreCase))
+                {
+                    queryParams.Add($"needExtendedHoursData={needExtendedHoursData.ToString().ToLower()}");
+                }
+
+                var queryString = string.Join("&", queryParams);
+                var response = await GetMarketDataAsync($"pricehistory?{queryString}");
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    UtilityService.LogAndWriteLine($"[Schwab] Price history API error for {symbol}: {response.StatusCode} - {responseContent}");
+                    response.EnsureSuccessStatusCode();
+                }
+                var historyData = JsonSerializer.Deserialize<JsonElement>(responseContent);
+
+                var priceHistory = new SchwabPriceHistory
+                {
+                    Symbol = symbol,
+                    Empty = historyData.TryGetProperty("empty", out var emptyProp) && emptyProp.GetBoolean()
+                };
+
+                if (historyData.TryGetProperty("candles", out var candlesArray))
+                {
+                    foreach (var candle in candlesArray.EnumerateArray())
+                    {
+                        var datetimeMs = candle.GetProperty("datetime").GetInt64();
+                        var datetimeUtc = DateTimeOffset.FromUnixTimeMilliseconds(datetimeMs).UtcDateTime;
+
+                        priceHistory.Candles.Add(new SchwabPriceBar
+                        {
+                            Open = candle.GetProperty("open").GetDecimal(),
+                            High = candle.GetProperty("high").GetDecimal(),
+                            Low = candle.GetProperty("low").GetDecimal(),
+                            Close = candle.GetProperty("close").GetDecimal(),
+                            Volume = candle.GetProperty("volume").GetInt64(),
+                            Datetime = datetimeUtc
+                        });
+                    }
+                }
+
+                UtilityService.LogAndWriteLine($"[Schwab] Price history loaded: {symbol} ({priceHistory.Candles.Count} candles, {frequencyType})");
+                return priceHistory;
+            }
+            catch (Exception ex)
+            {
+                UtilityService.LogAndWriteLine($"[Schwab] Failed to load price history ({symbol}): {ex.Message}");
+                throw;
             }
         }
 

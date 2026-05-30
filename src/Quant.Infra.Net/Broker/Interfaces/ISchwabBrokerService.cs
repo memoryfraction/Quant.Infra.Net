@@ -1,5 +1,6 @@
-using Quant.Infra.Net.Portfolio.Models;
+﻿using Quant.Infra.Net.Portfolio.Models;
 using System.Collections.Generic;
+using System;
 using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Broker.Interfaces
@@ -75,6 +76,25 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// 检查市场是否开盘。
         /// </summary>
         Task<bool> IsMarketOpenAsync();
+
+        /// <summary>
+        /// Gets price history (OHLCV candles) for a symbol.
+        /// 获取指定标的的历史行情数据（OHLCV K 线）。
+        /// </summary>
+        /// <param name="symbol">The symbol (e.g., AAPL for equity, AAPL_20260515_185C00 for option).</param>
+        /// <param name="startDate">Start date of the history range.</param>
+        /// <param name="endDate">End date of the history range.</param>
+        /// <param name="frequencyType">Frequency type: minute, daily, weekly, monthly.</param>
+        /// <param name="frequency">Frequency multiplier (1, 5, 10, 15, 30 for minute; 1 for others).</param>
+        /// <param name="needExtendedHoursData">Whether to include extended hours data.</param>
+        /// <returns>Price history with candles array.</returns>
+        Task<SchwabPriceHistory> GetPriceHistoryAsync(
+            string symbol,
+            DateTime startDate,
+            DateTime endDate,
+            string frequencyType,
+            int frequency = 1,
+            bool needExtendedHoursData = false);
     }
 
     #region Schwab Models
@@ -503,6 +523,103 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// 更新时间。
         /// </summary>
         public string UpdatedAt { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Single OHLCV price bar (candle) returned by price history API.
+    /// 单根 OHLCV K 线。
+    /// </summary>
+    public class SchwabPriceBar
+    {
+        /// <summary>
+        /// Open price.
+        /// 开盘价。
+        /// </summary>
+        public decimal Open { get; set; }
+
+        /// <summary>
+        /// High price.
+        /// 最高价。
+        /// </summary>
+        public decimal High { get; set; }
+
+        /// <summary>
+        /// Low price.
+        /// 最低价。
+        /// </summary>
+        public decimal Low { get; set; }
+
+        /// <summary>
+        /// Close price.
+        /// 收盘价。
+        /// </summary>
+        public decimal Close { get; set; }
+
+        /// <summary>
+        /// Volume.
+        /// 成交量。
+        /// </summary>
+        public long Volume { get; set; }
+
+        /// <summary>
+        /// Candle timestamp (UTC).
+        /// K 线时间戳（UTC）。
+        /// </summary>
+        public DateTime Datetime { get; set; }
+    }
+
+    /// <summary>
+    /// Schwab price history response containing a list of OHLCV candles.
+    /// Schwab 历史行情响应，包含 OHLCV K 线列表。
+    /// </summary>
+    public class SchwabPriceHistory
+    {
+        /// <summary>
+        /// The symbol queried.
+        /// </summary>
+        public string Symbol { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Whether the result is empty (no candles returned).
+        /// </summary>
+        public bool Empty { get; set; }
+
+        /// <summary>
+        /// List of OHLCV candles.
+        /// </summary>
+        public List<SchwabPriceBar> Candles { get; set; } = new();
+
+        /// <summary>
+        /// Pagination metadata. Null when no pagination is applied.
+        /// </summary>
+        public PriceHistoryPagination? Pagination { get; set; }
+    }
+
+    /// <summary>
+    /// Pagination metadata for price history responses.
+    /// Follows the same maxResults style used by Schwab orders endpoint.
+    /// </summary>
+    public class PriceHistoryPagination
+    {
+        /// <summary>
+        /// Total number of candles across all pages.
+        /// </summary>
+        public int TotalCandles { get; set; }
+
+        /// <summary>
+        /// Maximum number of candles returned per request.
+        /// </summary>
+        public int MaxResults { get; set; }
+
+        /// <summary>
+        /// Zero-based offset of the first candle in this page.
+        /// </summary>
+        public int Offset { get; set; }
+
+        /// <summary>
+        /// Whether more pages are available after this one.
+        /// </summary>
+        public bool HasMore { get; set; }
     }
 
     #endregion

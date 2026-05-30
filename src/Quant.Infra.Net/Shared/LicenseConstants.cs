@@ -68,7 +68,7 @@ public static class LicenseConstants
     /// 中文：默认产品代码。
     /// English: Default product code.
     /// </summary>
-    public const string DefaultProductCode = "quantinfra-pro";
+    public const string DefaultProductCode = "quant.infra.net.pro";
 
     /// <summary>
     /// 中文：默认心跳间隔（小时）。

@@ -20,6 +20,22 @@
 
 # English
 
+## Quant.Infra.Net.Pro — One-Stop Charles Schwab Integration
+
+> Website: **[https://www.alpha-wealth-lab.com/](https://www.alpha-wealth-lab.com/)**
+
+| Challenge | How Pro Edition Solves It |
+|-----------|--------------------------|
+| Complex OAuth 2.0 authentication, high developer registration barrier | ✅ **Full process guidance** — Detailed registration guide + one-click authorization, automatic token refresh |
+| Account, positions, quotes, option chains scattered across APIs | ✅ **Unified Web UI Dashboard** — All data in one place, no coding required |
+| High development cost, lots of boilerplate code | ✅ **Out-of-the-box** — Configure 3 settings and run |
+| Credential security concerns, no third-party trust | ✅ **100% self-hosted** — Credentials stored on your machine only |
+| Option data requires handling many technical details | ✅ **Full option chain with Greeks** — Delta, Gamma, Theta, Vega, Rho, IV, OI |
+
+**Try it now:** [https://www.alpha-wealth-lab.com/](https://www.alpha-wealth-lab.com/)
+
+---
+
 ## Why Use This Library
 
 When developing quantitative trading systems, you likely face these recurring problems:
@@ -374,13 +390,44 @@ Quant.Infra.Net/
 - **Binance IP Restrictions**: The Binance API restricts access from certain countries/regions. If you encounter connection errors when running Binance-related unit tests, this is not a code issue. Please refer to the [Binance official documentation](https://www.binance.com/en/support) for the list of restricted regions.
 - **Compliance Disclaimer**: This project provides quantitative trading infrastructure tools only and does not constitute investment advice. Users are solely responsible for ensuring compliance with all applicable laws, regulations, and exchange rules in their jurisdiction. The authors assume no liability for any legal or financial consequences arising from the use of this library.
 
-## Roadmap Feedback Wanted: Should We Build a Pro Edition?
+## Quant.Infra.Net.Pro — Now Available
 
-> Quant.Infra.Net will continue to maintain this public repository as the **Community Edition**. Existing open-source features will remain available here. 
+> Quant.Infra.Net will continue to maintain this public repository as the **Community Edition** (free / open-source). Existing open-source features will remain available here.
+
+The **Pro Edition** is now officially live at **[https://www.alpha-wealth-lab.com/](https://www.alpha-wealth-lab.com/)**. It provides an out-of-the-box Charles Schwab integration experience:
+
+- **Web UI Dashboard** — Account, positions, quotes, option chains in one place
+- **Web API (Swagger)** — Full RESTful API for programmatic access
+- **Self-Hosted** — 100% local, credentials never leave your machine
+- **Zero Configuration** — Download, configure 3 settings, run
+
+**Pricing:** Monthly $49.99 / Yearly $499.99
+
+**Note:** All existing Community Edition features remain free and will continue to be maintained. The Pro Edition is a separate product for those who need a ready-to-use Schwab integration.
+
+See the [Deployment Guide](docs/Charles%20Schwab/CharlesSchwabDeploymentGuide-02.md) for details.
 
 ---
 
 # 中文版
+
+## Quant.Infra.Net.Pro — 一站式 Charles Schwab 对接方案
+
+> 官网：**[https://www.alpha-wealth-lab.com/](https://www.alpha-wealth-lab.com/)**
+
+如果你是 Charles Schwab 用户，你可能正面临这些痛点：
+
+| 痛点 | Pro Edition 如何解决 |
+|------|---------------------|
+| OAuth 2.0 认证流程复杂，开发者注册门槛高 | ✅ **完整流程引导** — 详细注册指南 + 一键授权，自动处理 Token 刷新 |
+| 账户、持仓、行情、期权数据分散在不同 API 端点 | ✅ **统一 Web UI 仪表盘** — 所有数据在一个界面查看，无需编程 |
+| 自行开发成本高，需要大量胶水代码 | ✅ **开箱即用** — 配置 3 个参数即可运行 |
+| 担心凭证安全，不愿上传到第三方云服务 | ✅ **100% 本地自托管** — 凭证仅保存在你的机器上 |
+| 期权数据分析需要处理大量技术细节 | ✅ **完整期权链含希腊字母** — Delta、Gamma、Theta、Vega、Rho、IV、OI 一目了然 |
+
+**立即体验：** [https://www.alpha-wealth-lab.com/](https://www.alpha-wealth-lab.com/)
+
+---
 
 ## 为什么使用本库
 
@@ -752,9 +799,22 @@ Quant.Infra.Net/
 - **Binance IP 限制**：Binance API 对部分国家/地区的 IP 存在访问限制，如果你在运行 Binance 相关单元测试时遇到连接错误，这并非代码问题，请查阅 [Binance 官方文档](https://www.binance.com/en/support) 了解受限地区列表。
 - **合规免责声明**：本项目仅提供量化交易基础设施工具，不构成任何投资建议。用户需自行确保使用本库时符合所在国家/地区的法律法规及交易所合规要求，因使用本库产生的任何法律或财务后果由用户自行承担。
 
-## 路线图反馈征集：是否值得开发 Pro Edition？
+## Quant.Infra.Net.Pro — 现已上线
 
-> Quant.Infra.Net 欢迎大家提交PR，共同维护当前公开仓库作为 **Community Edition（免费版）**，现有开源功能会继续保留在这里。**Charles Schwab 和 Interactive Brokers（InterReact）的集成现已在 Community Edition 中可用。** 我们正在评估是否值得继续投入开发精力，建设一个独立的 **Pro Edition**，用于承载更高级的功能，例如多券商统一抽象、生产级风控、部署模板和优先支持。这不是正式定价公告，而是一次路线图验证。如果你对 Community + Pro 双线路线有担忧和建议，欢迎在 GitHub Discussions 留言、加入下方技术交流群，或邮件联系 `rex.fan18@gmail.com`。 
+> Quant.Infra.Net 将继续维护当前公开仓库作为 **Community Edition（免费版 / 开源版）**，现有开源功能会继续保留在这里。**Charles Schwab 和 Interactive Brokers（InterReact）的集成在 Community Edition 中仍然可用。**
+
+**Pro Edition** 现已正式上线，官网：**[https://www.alpha-wealth-lab.com/](https://www.alpha-wealth-lab.com/)**。它提供开箱即用的 Charles Schwab 集成体验：
+
+- **Web UI 仪表盘** — 账户总览、持仓列表、行情查询、期权链一站式查看
+- **Web API（Swagger）** — 完整的 RESTful API，方便编程集成
+- **100% 本地自托管** — 凭证仅保存在你的机器上，数据不上传任何第三方
+- **零配置** — 下载解压、配置 3 个核心参数、运行即可
+
+**定价：** 月度 $49.99 / 年度 $499.99
+
+**温馨提示：** 所有 Community Edition 功能保持免费，会继续维护和更新。Pro Edition 是独立产品，适合需要开箱即用 Schwab 对接的用户。
+
+查看[部署指南](docs/Charles%20Schwab/CharlesSchwabDeploymentGuide-02.md)了解详情。
 
 ## 社区与支持
 

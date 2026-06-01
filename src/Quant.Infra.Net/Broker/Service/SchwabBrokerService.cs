@@ -26,7 +26,9 @@ namespace Quant.Infra.Net.Broker.Service
         private readonly string _accountNumber;
         private readonly string _baseUrl;
         private const string MarketDataBaseUrl = "https://api.schwabapi.com/marketdata/v1/";
+        private const string TokenEndpointUrl = "https://api.schwabapi.com/v1/oauth/token";
         private string? _accessToken;
+        private string? _refreshToken;
         private string? _accountHash;
         private DateTime _tokenExpiry;
 
@@ -51,6 +53,13 @@ namespace Quant.Infra.Net.Broker.Service
         #region Authentication
 
         /// <summary>
+        /// Fires when access token or refresh token is renewed, allowing the web layer to persist new tokens.
+        /// 当 access token 或 refresh token 续期时触发，允许 Web 层持久化新 Token。
+        /// Parameters: (newAccessToken, newRefreshToken, expiresInSeconds).
+        /// </summary>
+        public Action<string, string, int>? OnTokenRefreshed { get; set; }
+
+        /// <summary>
         /// Injects an OAuth access token after authorization.
         /// 注入授权后的 OAuth access token。
         /// </summary>
@@ -61,16 +70,90 @@ namespace Quant.Infra.Net.Broker.Service
         }
 
         /// <summary>
-        /// Gets the injected access token.
-        /// 获取已注入的 access token。
+        /// Injects an OAuth refresh token for automatic token renewal.
+        /// 注入 OAuth refresh token，用于自动续期。
         /// </summary>
-        private Task<string> GetAccessTokenAsync()
+        public void SetRefreshToken(string refreshToken)
+        {
+            _refreshToken = refreshToken;
+        }
+
+        /// <summary>
+        /// Gets the access token, automatically refreshing via refresh_token if expired.
+        /// 获取 access token，过期时自动通过 refresh_token 续期。
+        /// </summary>
+        private async Task<string> GetAccessTokenAsync()
         {
             if (!string.IsNullOrEmpty(_accessToken) && DateTime.UtcNow < _tokenExpiry)
-                return Task.FromResult(_accessToken);
+                return _accessToken;
+
+            // Token expired - attempt refresh if refresh_token is available.
+            if (!string.IsNullOrEmpty(_refreshToken))
+            {
+                UtilityService.LogAndWriteLine("[SchwabBrokerService] Access token expired, attempting refresh via refresh_token...");
+                return await RefreshAccessTokenAsync();
+            }
 
             throw new InvalidOperationException(
                 "Access token is expired or missing. Please sign in again.");
+        }
+
+        /// <summary>
+        /// Uses the refresh_token to obtain a new access_token from Schwab.
+        /// 使用 refresh_token 从 Schwab 获取新的 access_token。
+        /// </summary>
+        private async Task<string> RefreshAccessTokenAsync()
+        {
+            var creds = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_apiKey}:{_apiSecret}"));
+
+            var body = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "refresh_token" },
+                { "refresh_token", _refreshToken! }
+            });
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, TokenEndpointUrl)
+            {
+                Content = body
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", creds);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            // Use a temporary HttpClient to avoid polluting the BaseAddress-relative client.
+            using var tempClient = new HttpClient();
+            var resp = await tempClient.SendAsync(request);
+            var content = await resp.Content.ReadAsStringAsync();
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                UtilityService.LogAndWriteLine("[SchwabBrokerService] Refresh token failed: HTTP " + ((int)resp.StatusCode).ToString() + ": " + content);
+                throw new InvalidOperationException(
+                    "Refresh token failed (HTTP " + ((int)resp.StatusCode).ToString() + "). Please sign in again.");
+            }
+
+            var json = JsonSerializer.Deserialize<JsonElement>(content);
+            var newAccessToken = json.GetProperty("access_token").GetString()
+                ?? throw new InvalidOperationException("Refresh response missing access_token.");
+
+            var newRefreshToken = json.TryGetProperty("refresh_token", out var rtProp)
+                ? rtProp.GetString() ?? _refreshToken!
+                : _refreshToken!;
+
+            var expiresIn = json.TryGetProperty("expires_in", out var expProp)
+                ? expProp.GetInt32()
+                : 1800;
+
+            // Update internal state.
+            _accessToken = newAccessToken;
+            _refreshToken = newRefreshToken;
+            _tokenExpiry = DateTime.UtcNow.AddSeconds(expiresIn - 60);
+
+            UtilityService.LogAndWriteLine("[SchwabBrokerService] Token refreshed successfully. Expires in " + expiresIn.ToString() + "s.");
+
+            // Notify the web layer to persist refreshed tokens to Session.
+            OnTokenRefreshed?.Invoke(newAccessToken, newRefreshToken, expiresIn);
+
+            return newAccessToken;
         }
 
         /// <summary>

@@ -57,9 +57,7 @@ After completing these steps, proceed with the purchase below.
 
 ## 2. Purchase & Installation Package
 
-1. **Purchase a subscription on the official website:**
-   - Monthly: **$49.99 / month**
-   - Annual: **$499.99 / year** ($41.67 / month — better value)
+1. **Purchase a subscription on the official website:** See [Pricing Page](https://www.alpha-wealth-lab.com/pricing) for current pricing.
 2. Payment is processed via **Lemon Squeezy** — secure and fraud-free.
 3. Within **1 minute** after successful payment, you will receive:
    - Your exclusive **License Key**
@@ -310,9 +308,7 @@ Application started.
 
 ## 二、购买与获取安装包
 
-1. **前往官网购买订阅：**
-   - 月度订阅：**$49.99 / 月**
-   - 年度订阅：**$499.99 / 年**（折合 $41.67 / 月，更划算）
+1. **前往官网购买订阅：** 详见[定价页面](https://www.alpha-wealth-lab.com/pricing)了解当前价格。
 2. 支付通过 **Lemon Squeezy** 完成，安全无盗刷
 3. 支付成功后 **1 分钟内**，您将收到以下信息：
    - 专属 **License Key**

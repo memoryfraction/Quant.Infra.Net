@@ -401,7 +401,7 @@ The **Pro Edition** is now officially live at **[https://www.alpha-wealth-lab.co
 - **Self-Hosted** — 100% local, credentials never leave your machine
 - **Zero Configuration** — Download, configure 3 settings, run
 
-**Pricing:** Monthly $99.99
+**Pricing:** See [Pricing Page](https://www.alpha-wealth-lab.com/pricing)
 
 **Note:** All existing Community Edition features remain free and will continue to be maintained. The Pro Edition is a separate product for those who need a ready-to-use Schwab integration.
 
@@ -810,7 +810,7 @@ Quant.Infra.Net/
 - **100% 本地自托管** — 凭证仅保存在你的机器上，数据不上传任何第三方
 - **零配置** — 下载解压、配置 3 个核心参数、运行即可
 
-**定价：** 月度 $99.99 
+**定价：** 详见[定价页面](https://www.alpha-wealth-lab.com/pricing)
 
 **温馨提示：** 所有 Community Edition 功能保持免费，会继续维护和更新。Pro Edition 是独立产品，适合需要开箱即用 Schwab 对接的用户。
 

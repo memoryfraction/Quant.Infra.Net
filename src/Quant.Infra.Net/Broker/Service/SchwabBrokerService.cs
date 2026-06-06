@@ -119,9 +119,12 @@ namespace Quant.Infra.Net.Broker.Service
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", creds);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            // Use a temporary HttpClient to avoid polluting the BaseAddress-relative client.
-            using var tempClient = new HttpClient();
-            var resp = await tempClient.SendAsync(request);
+            // Use the injected _httpClient (configured with Polly retry) instead of new HttpClient().
+            // 使用注入的 _httpClient（配置了 Polly 重试），而非 new HttpClient()。
+            // TokenEndpointUrl is absolute, so it overrides _httpClient.BaseAddress for this request.
+            // TokenEndpointUrl 是绝对 URL，会覆盖 _httpClient.BaseAddress。
+            request.RequestUri = new Uri(TokenEndpointUrl);
+            var resp = await _httpClient.SendAsync(request);
             var content = await resp.Content.ReadAsStringAsync();
 
             if (!resp.IsSuccessStatusCode)
@@ -157,8 +160,22 @@ namespace Quant.Infra.Net.Broker.Service
         }
 
         /// <summary>
-        /// Sets request headers.
-        /// 设置请求头。
+        /// Sends an authenticated request with per-request Authorization header to avoid race conditions.
+        /// 发送带认证的请求，每个请求独立设置 Authorization 头以避免竞态条件。
+        /// Replaces the shared SetAuthHeaderAsync() pattern which caused race conditions
+        /// when multiple API calls modified HttpClient.DefaultRequestHeaders concurrently.
+        /// 替代共享的 SetAuthHeaderAsync() 模式，该模式在并行 API 调用时导致竞态。
+        /// </summary>
+        private async Task<HttpResponseMessage> SendWithAuthAsync(HttpRequestMessage request)
+        {
+            var token = await GetAccessTokenAsync();
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            return await _httpClient.SendAsync(request);
+        }
+
+        /// <summary>
+        /// Sets request headers (kept for backward compatibility, prefer SendWithAuthAsync for new code).
+        /// 设置请求头（保留向后兼容，新代码推荐使用 SendWithAuthAsync）。
         /// </summary>
         private async Task SetAuthHeaderAsync()
         {
@@ -171,8 +188,8 @@ namespace Quant.Infra.Net.Broker.Service
             if (!string.IsNullOrEmpty(_accountHash))
                 return _accountHash;
 
-            await SetAuthHeaderAsync();
-            var response = await _httpClient.GetAsync("accounts/accountNumbers");
+            var accountHashRequest = new HttpRequestMessage(HttpMethod.Get, "accounts/accountNumbers");
+            var response = await SendWithAuthAsync(accountHashRequest);
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync();
@@ -224,9 +241,9 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
                 var accountHash = await GetAccountHashAsync();
-                var response = await _httpClient.GetAsync($"accounts/{accountHash}?fields=positions");
+                var accountRequest = new HttpRequestMessage(HttpMethod.Get, $"accounts/{accountHash}?fields=positions");
+                var response = await SendWithAuthAsync(accountRequest);
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -264,9 +281,9 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
                 var accountHash = await GetAccountHashAsync();
-                var response = await _httpClient.GetAsync($"accounts/{accountHash}?fields=positions");
+                var positionsRequest = new HttpRequestMessage(HttpMethod.Get, $"accounts/{accountHash}?fields=positions");
+                var response = await SendWithAuthAsync(positionsRequest);
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -325,7 +342,6 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
                 var response = await GetMarketDataAsync($"quotes?symbols={Uri.EscapeDataString(symbol)}");
                 response.EnsureSuccessStatusCode();
 
@@ -353,7 +369,6 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
                 var symbolsParam = string.Join(",", symbols.Select(Uri.EscapeDataString));
                 var response = await GetMarketDataAsync($"quotes?symbols={symbolsParam}");
                 response.EnsureSuccessStatusCode();
@@ -409,8 +424,6 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
-                
                 var queryParams = new List<string> { $"symbol={Uri.EscapeDataString(symbol)}" };
                 if (!string.IsNullOrEmpty(contractType))
                     queryParams.Add($"contractType={contractType}");
@@ -504,8 +517,6 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
-
                 var orderPayload = new
                 {
                     orderType = orderRequest.OrderType,
@@ -533,7 +544,11 @@ namespace Quant.Infra.Net.Broker.Service
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var accountHash = await GetAccountHashAsync();
-                var response = await _httpClient.PostAsync($"accounts/{accountHash}/orders", content);
+                var placeOrderRequest = new HttpRequestMessage(HttpMethod.Post, $"accounts/{accountHash}/orders")
+                {
+                    Content = content
+                };
+                var response = await SendWithAuthAsync(placeOrderRequest);
                 response.EnsureSuccessStatusCode();
 
                 // Schwab returns the order id in the Location header.
@@ -555,9 +570,9 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
                 var accountHash = await GetAccountHashAsync();
-                var response = await _httpClient.GetAsync($"accounts/{accountHash}/orders/{orderId}");
+                var orderRequest = new HttpRequestMessage(HttpMethod.Get, $"accounts/{accountHash}/orders/{orderId}");
+                var response = await SendWithAuthAsync(orderRequest);
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -577,9 +592,9 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
                 var accountHash = await GetAccountHashAsync();
-                var response = await _httpClient.DeleteAsync($"accounts/{accountHash}/orders/{orderId}");
+                var cancelRequest = new HttpRequestMessage(HttpMethod.Delete, $"accounts/{accountHash}/orders/{orderId}");
+                var response = await SendWithAuthAsync(cancelRequest);
                 response.EnsureSuccessStatusCode();
 
                 UtilityService.LogAndWriteLine($"[Schwab] Order canceled: {orderId}");
@@ -597,7 +612,6 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
                 var accountHash = await GetAccountHashAsync();
                 var toEnteredTime = DateTime.UtcNow;
                 var fromEnteredTime = toEnteredTime.AddDays(-60);
@@ -605,7 +619,8 @@ namespace Quant.Infra.Net.Broker.Service
                     $"&fromEnteredTime={Uri.EscapeDataString(fromEnteredTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))}" +
                     $"&toEnteredTime={Uri.EscapeDataString(toEnteredTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))}";
 
-                var response = await _httpClient.GetAsync($"accounts/{accountHash}/orders?{query}");
+                var ordersRequest = new HttpRequestMessage(HttpMethod.Get, $"accounts/{accountHash}/orders?{query}");
+                var response = await SendWithAuthAsync(ordersRequest);
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -717,7 +732,6 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
                 var response = await GetMarketDataAsync("markets?markets=equity");
                 response.EnsureSuccessStatusCode();
 
@@ -756,8 +770,6 @@ namespace Quant.Infra.Net.Broker.Service
         {
             try
             {
-                await SetAuthHeaderAsync();
-
                 var startEpoch = new DateTimeOffset(startDate).ToUnixTimeMilliseconds();
                 var endEpoch = new DateTimeOffset(endDate).ToUnixTimeMilliseconds();
 
@@ -852,9 +864,9 @@ namespace Quant.Infra.Net.Broker.Service
 
         private async Task<HttpResponseMessage> GetMarketDataAsync(string pathAndQuery)
         {
-            await SetAuthHeaderAsync();
             var uri = new Uri(new Uri(MarketDataBaseUrl), pathAndQuery);
-            return await _httpClient.GetAsync(uri);
+            var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            return await SendWithAuthAsync(request);
         }
 
         #endregion

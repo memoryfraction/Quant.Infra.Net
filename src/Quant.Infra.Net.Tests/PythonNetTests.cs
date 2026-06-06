@@ -1,4 +1,3 @@
-﻿using AutoMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Quant.Infra.Net.Shared.Service;
@@ -21,11 +20,6 @@ namespace Quant.Infra.Net.Tests
 			ServiceCollection _serviceCollection = new ServiceCollection();
 
 			// 1. 修复 MapperConfiguration 报错
-			// 标准写法是直接使用 AddAutoMapper 扩展方法，它能自动处理所有构造函数依赖
-			_serviceCollection.AddAutoMapper(cfg =>
-			{
-				cfg.AddProfile<MappingProfile>();
-			}, typeof(MappingProfile).Assembly);
 
 			_serviceCollection.AddScoped<ITraditionalFinanceSourceDataService, TraditionalFinanceSourceDataService>();
 			_serviceProvider = _serviceCollection.BuildServiceProvider();

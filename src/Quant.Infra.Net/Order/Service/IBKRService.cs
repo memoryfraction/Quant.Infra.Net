@@ -1,4 +1,3 @@
-﻿using AutoMapper;
 using InterReact;
 using Quant.Infra.Net.Exchange.Model.InteractiveBroker;
 using Quant.Infra.Net.Shared.Model;
@@ -10,13 +9,10 @@ namespace Quant.Infra.Net.Exchange.Service
     public class IBKRService : IIBKRService
     {
         private string _apiKey, _apiSecret;
-        private IMapper _mapper;
         private IInterReactClient? _client;
 
-        public IBKRService(IMapper mapper)
+        public IBKRService()
         {
-            if (mapper == null) throw new ArgumentNullException(nameof(mapper));
-            _mapper = mapper;
             if (_client == null)
                 _client = InterReactClient.ConnectAsync().Result;
         }
@@ -46,8 +42,6 @@ namespace Quant.Infra.Net.Exchange.Service
             if (string.IsNullOrWhiteSpace(order.Symbol)) throw new ArgumentException("order.Symbol must not be null or empty.", nameof(order));
 
             // Ensure mapper and client remain available
-            if (_mapper == null) throw new InvalidOperationException("IMapper is not initialized.");
-
             _client = await InterReactClient.ConnectAsync();
             InterReact.Contract interReactContract = new()
             {

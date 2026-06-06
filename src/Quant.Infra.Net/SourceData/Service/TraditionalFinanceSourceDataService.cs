@@ -1,4 +1,3 @@
-﻿using AutoMapper;
 using CsvHelper;
 using HtmlAgilityPack;
 using Quant.Infra.Net.Shared.Model;
@@ -22,22 +21,18 @@ namespace Quant.Infra.Net.SourceData.Service
     /// </summary>
     public class TraditionalFinanceSourceDataService : ITraditionalFinanceSourceDataService
     {
-        private readonly IMapper _mapper;
         private readonly IHistoricalDataSourceService _historicalDataSourceService;
 
         /// <summary>
         /// 初始化传统金融数据源服务。
         /// Initializes the traditional finance data source service.
         /// </summary>
-        /// <param name="mapper">AutoMapper实例 / AutoMapper instance.</param>
         /// <param name="historicalDataSourceService">历史数据源服务 / Historical data source service.</param>
         /// <exception cref="ArgumentNullException">当参数为null时抛出 / Thrown when parameters are null.</exception>
-        public TraditionalFinanceSourceDataService(IMapper mapper, IHistoricalDataSourceService historicalDataSourceService)
+        public TraditionalFinanceSourceDataService(IHistoricalDataSourceService historicalDataSourceService)
         {
-            if (mapper == null) throw new ArgumentNullException(nameof(mapper));
             if (historicalDataSourceService == null) throw new ArgumentNullException(nameof(historicalDataSourceService));
 
-            _mapper = mapper;
             _historicalDataSourceService = historicalDataSourceService;
         }
 

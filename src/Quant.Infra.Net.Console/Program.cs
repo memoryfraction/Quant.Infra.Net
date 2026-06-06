@@ -1,4 +1,3 @@
-﻿using AutoMapper;
 using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.CommonObjects;
 using Microsoft.Extensions.Configuration;
@@ -27,15 +26,6 @@ namespace Quant.Infra.Net.Console
             #region Singleton
             serviceCollection.AddSingleton<IConfiguration>(configuration);  // Injection IConfiguration to the container
 
-            // Register the Automapper to container
-            serviceCollection.AddSingleton<IMapper>(sp =>
-            {
-                var autoMapperConfiguration = new MapperConfiguration(cfg =>
-                {
-                    cfg.AddProfile<MappingProfile>();
-                });
-                return new Mapper(autoMapperConfiguration);
-            });
             #endregion
             #endregion
 

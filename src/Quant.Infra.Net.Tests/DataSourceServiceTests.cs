@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.SourceData.Service;
 using Quant.Infra.Net.SourceData.Service.Historical;
 
@@ -13,12 +13,6 @@ namespace Quant.Infra.Net.Tests
 		{
 			ServiceCollection _serviceCollection = new ServiceCollection();
 
-			// 1. 修复 AutoMapper 报错：使用扩展方法注入
-			// 这会自动配置并注册 IMapper 接口，适应 AutoMapper 的版本升级
-			_serviceCollection.AddAutoMapper(cfg =>
-			{
-				cfg.AddProfile<MappingProfile>();
-			}, typeof(MappingProfile).Assembly);
 
 			// 2. 注册业务逻辑服务
 			_serviceCollection.AddScoped<IHistoricalDataSourceService, HistoricalDataSourceServiceCsv>();

@@ -1,4 +1,3 @@
-using AutoMapper;
 using Binance.Net.Clients;
 using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
@@ -36,12 +35,6 @@ namespace Quant.Infra.Net.Tests
 
 			_services.AddSingleton<IConfiguration>(_configuration);
 
-			// 3. 修复 AutoMapper 报错：使用扩展方法注入
-			// 这会自动处理 MapperConfiguration 的创建并解决构造函数参数问题
-			_services.AddAutoMapper(cfg =>
-			{
-				cfg.AddProfile<MappingProfile>();
-			}, typeof(MappingProfile).Assembly);
 
 			_serviceProvider = _services.BuildServiceProvider();
 

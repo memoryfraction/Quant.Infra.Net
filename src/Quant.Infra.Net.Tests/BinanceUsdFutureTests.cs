@@ -1,4 +1,3 @@
-﻿using AutoMapper;
 using Binance.Net.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,12 +40,7 @@ namespace Quant.Infra.Net.Tests
 			_services.AddScoped<BrokerServiceBase, BinanceService>();
 			_services.AddScoped<IBinanceUsdFutureService, BinanceUsdFutureService>();
 
-			// 3. 修复 AutoMapper：使用标准扩展方法注入
 			// 这会自动扫描 MappingProfile 并处理其复杂的依赖关系
-			_services.AddAutoMapper(cfg =>
-			{
-				cfg.AddProfile<MappingProfile>();
-			}, typeof(MappingProfile).Assembly);
 
 			_serviceProvider = _services.BuildServiceProvider();
 

@@ -1,4 +1,3 @@
-﻿using AutoMapper;
 using Binance.Net.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,12 +23,7 @@ namespace Quant.Infra.Net.Tests
 		{
 			var serviceCollection = new ServiceCollection();
 
-			// 1. 修复 AutoMapper 注入：使用标准扩展方法
 			// 解决手动实例化时构造函数参数不匹配的问题
-			serviceCollection.AddAutoMapper(cfg =>
-			{
-				cfg.AddProfile<MappingProfile>();
-			}, typeof(MappingProfile).Assembly);
 
 			// 2. 注入业务服务
 			serviceCollection.AddScoped<ICryptoSourceDataService, CryptoSourceDataService>();

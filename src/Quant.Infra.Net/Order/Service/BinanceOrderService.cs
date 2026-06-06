@@ -1,4 +1,3 @@
-﻿using AutoMapper;
 using Binance.Net;
 using Binance.Net.Enums;
 using Binance.Net.Objects.Models;
@@ -8,6 +7,7 @@ using CryptoExchange.Net.Authentication;
 using Microsoft.Extensions.Configuration;
 using Polly;
 using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.Mapping;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,25 +19,20 @@ namespace Quant.Infra.Net
     public class BinanceOrderService : IBinanceOrderService
     {
         private string _apiKey, _apiSecret;
-        private readonly IMapper _mapper;
-
+        
         /// <summary>
         /// 交易所环境：Testnet 或 Live
         /// Exchange environment: Testnet or Live
         /// </summary>
         public ExchangeEnvironment ExchangeEnvironment { get; set; } = ExchangeEnvironment.Testnet;
 
-        public BinanceOrderService(IMapper mapper)
+        public BinanceOrderService()
         {
-            if (mapper == null) throw new ArgumentNullException(nameof(mapper));
-            _mapper = mapper;
         }
 
-        public BinanceOrderService(IMapper mapper, IConfiguration configuration)
+        public BinanceOrderService(IConfiguration configuration)
         {
-            if (mapper == null) throw new ArgumentNullException(nameof(mapper));
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            _mapper = mapper;
 
             _apiKey = configuration["Binance:ApiKey"];
             _apiSecret = configuration["Binance:ApiSecret"];
@@ -73,11 +68,11 @@ namespace Quant.Infra.Net
         {
             if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
             if (quantity == null && quoteQuantity == null) throw new ArgumentException("Either quantity or quoteQuantity must be provided.");
-            var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
-            var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(spotOrderType);
+                        // OrderSide is already Binance.Net.Enums.OrderSide - use directly
+            var binanceOrderType = BinanceEnumMapper.ToBinanceSpotOrderType(spotOrderType);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, binanceOrderSide, binanceOrderType, quantity: quantity, price: price, quoteQuantity: quoteQuantity), retryCount);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceOrderAsync(symbol, orderSide, binanceOrderType, quantity: quantity, price: price, quoteQuantity: quoteQuantity), retryCount);
                 return result.Data;
             }
         }
@@ -85,11 +80,11 @@ namespace Quant.Infra.Net
         public async Task<BinancePlacedOrder> PlaceMarginOrderAsync(string symbol, OrderSide orderSide, OrderActionType spotOrderType, decimal? quantity, decimal? quoteQuantity, decimal? price = null, int retryCount = 3)
         {
             if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
-            var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
-            var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(spotOrderType);
+                        // OrderSide is already Binance.Net.Enums.OrderSide - use directly
+            var binanceOrderType = BinanceEnumMapper.ToBinanceSpotOrderType(spotOrderType);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceMarginOrderAsync(symbol, binanceOrderSide, binanceOrderType, quantity: quantity, price: price, quoteQuantity: quoteQuantity), retryCount);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.PlaceMarginOrderAsync(symbol, orderSide, binanceOrderType, quantity: quantity, price: price, quoteQuantity: quoteQuantity), retryCount);
                 return result.Data;
             }
         }
@@ -118,12 +113,12 @@ namespace Quant.Infra.Net
         public async Task<BinanceReplaceOrderResult> ReplaceSpotOrderAsync(string symbol, OrderSide orderSide, OrderActionType orderType, CancelReplaceMode cancelReplaceMode, long? cancelOrderId = null, string? cancelClientOrderId = null, string? newCancelClientOrderId = null, string? newClientOrderId = null, decimal? quantity = null, decimal? quoteQuantity = null, decimal? price = null, TimeInForce? timeInForce = null, decimal? stopPrice = null, decimal? icebergQty = null, OrderResponseType? orderResponseType = null, int? trailingDelta = null, int? strategyId = null, int? strategyType = null, CancelRestriction? cancelRestriction = null, int? receiveWindow = null, CancellationToken ct = default(CancellationToken), int retryAttempts = 3)
         {
             if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
-            var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
-            var binanceOrderType = _mapper.Map<Binance.Net.Enums.SpotOrderType>(orderType);
-            var binanceCancelReplaceMode = _mapper.Map<Binance.Net.Enums.CancelReplaceMode>(cancelReplaceMode);
+                        // OrderSide is already Binance.Net.Enums.OrderSide - use directly
+            var binanceOrderType = BinanceEnumMapper.ToBinanceSpotOrderType(orderType);
+            var binanceCancelReplaceMode = BinanceEnumMapper.ToBinanceCancelReplaceMode(cancelReplaceMode);
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
-                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.ReplaceOrderAsync(symbol: symbol, side: binanceOrderSide, type: binanceOrderType, cancelOrderId: cancelOrderId, cancelReplaceMode: binanceCancelReplaceMode), retryAttempts);
+                var result = await ExecuteWithRetry(() => client.SpotApi.Trading.ReplaceOrderAsync(symbol: symbol, side: orderSide, type: binanceOrderType, cancelOrderId: cancelOrderId, cancelReplaceMode: binanceCancelReplaceMode), retryAttempts);
                 return result.Data;
             }
         }
@@ -208,12 +203,12 @@ namespace Quant.Infra.Net
         {
             if (string.IsNullOrWhiteSpace(symbol)) throw new ArgumentException("symbol must not be null or empty.", nameof(symbol));
             if (quantity == 0) throw new ArgumentException("quantity must not be zero.", nameof(quantity));
-            var binanceOrderSide = _mapper.Map<Binance.Net.Enums.OrderSide>(orderSide);
+                        // OrderSide is already Binance.Net.Enums.OrderSide - use directly
             using (var client = new Binance.Net.Clients.BinanceRestClient())
             {
                 var response = await client.UsdFuturesApi.Trading.PlaceOrderAsync(
                     symbol: symbol,
-                    side: binanceOrderSide, // 开关仓此信号需要相反
+                    side: orderSide, // 开关仓此信号需要相反
                     type: orderType,
                     quantity: Math.Abs(quantity), // 关仓数量需要与开仓数量一致， 总是正数
                     positionSide: positionSide    // LONG/SHORT是对冲模式， 多头开关都用LONG, 空头开关都用SHORT

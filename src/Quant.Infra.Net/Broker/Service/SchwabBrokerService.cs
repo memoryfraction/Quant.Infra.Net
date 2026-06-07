@@ -21,8 +21,8 @@ namespace Quant.Infra.Net.Broker.Service
     public class SchwabBrokerService : ISchwabBrokerService
     {
         private readonly HttpClient _httpClient;
-        private readonly string _apiKey;
-        private readonly string _apiSecret;
+        private string _apiKey;
+        private string _apiSecret;
         private readonly string _accountNumber;
         private readonly string _baseUrl;
         private const string MarketDataBaseUrl = "https://api.schwabapi.com/marketdata/v1/";
@@ -76,6 +76,20 @@ namespace Quant.Infra.Net.Broker.Service
         public void SetRefreshToken(string refreshToken)
         {
             _refreshToken = refreshToken;
+        }
+
+        /// <summary>
+        /// Updates the API credentials (AppKey/AppSecret) at runtime.
+        /// Required when credentials are entered manually via web UI rather than appsettings.json.
+        /// 运行时更新 API 凭据（AppKey/AppSecret）。
+        /// 当凭据通过 Web UI 手动输入而非 appsettings.json 配置时必需。
+        /// </summary>
+        /// <param name="apiKey">Schwab App Key / Client ID.</param>
+        /// <param name="apiSecret">Schwab App Secret / Client Secret.</param>
+        public void SetCredentials(string apiKey, string apiSecret)
+        {
+            _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+            _apiSecret = apiSecret ?? throw new ArgumentNullException(nameof(apiSecret));
         }
 
         /// <summary>

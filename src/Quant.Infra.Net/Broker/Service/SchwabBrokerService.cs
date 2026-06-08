@@ -3,6 +3,7 @@ using Quant.Infra.Net.Broker.Model;
 using Quant.Infra.Net.Portfolio.Models;
 using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.Shared.Service;
+using Quant.Infra.Net.Broker.CharlesSchwab;
 using System;
 using System.Collections.Generic;
 using System.Linq;

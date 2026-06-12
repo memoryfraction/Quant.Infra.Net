@@ -23,6 +23,7 @@
 ## Quant.Infra.Net.Pro — One-Stop Charles Schwab Integration
 
 > Website: **[https://www.alpha-wealth-lab.com/](https://www.alpha-wealth-lab.com/)**
+> Public repository: **[memoryfraction/Quant.Infra.Net.Pro-Public](https://github.com/memoryfraction/Quant.Infra.Net.Pro-Public)**
 
 | Challenge | How Pro Edition Solves It |
 |-----------|--------------------------|
@@ -405,7 +406,7 @@ The **Pro Edition** is now officially live at **[https://www.alpha-wealth-lab.co
 
 **Note:** All existing Community Edition features remain free and will continue to be maintained. The Pro Edition is a separate product for those who need a ready-to-use Schwab integration.
 
-See the [Deployment Guide](docs/Charles%20Schwab/CharlesSchwabDeploymentGuide-02.md) for details.
+See the [Quant.Infra.Net.Pro-Public repository](https://github.com/memoryfraction/Quant.Infra.Net.Pro-Public) and its [Quick Start Guide](https://github.com/memoryfraction/Quant.Infra.Net.Pro-Public/blob/main/Quick%20Start%20Guide.md) for details.
 
 ---
 
@@ -414,6 +415,7 @@ See the [Deployment Guide](docs/Charles%20Schwab/CharlesSchwabDeploymentGuide-02
 ## Quant.Infra.Net.Pro — 一站式 Charles Schwab 对接方案
 
 > 官网：**[https://www.alpha-wealth-lab.com/](https://www.alpha-wealth-lab.com/)**
+> 公开仓库：**[memoryfraction/Quant.Infra.Net.Pro-Public](https://github.com/memoryfraction/Quant.Infra.Net.Pro-Public)**
 
 如果你是 Charles Schwab 用户，你可能正面临这些痛点：
 
@@ -814,7 +816,7 @@ Quant.Infra.Net/
 
 **温馨提示：** 所有 Community Edition 功能保持免费，会继续维护和更新。Pro Edition 是独立产品，适合需要开箱即用 Schwab 对接的用户。
 
-查看[部署指南](docs/Charles%20Schwab/CharlesSchwabDeploymentGuide-02.md)了解详情。
+查看 [Quant.Infra.Net.Pro-Public 公开仓库](https://github.com/memoryfraction/Quant.Infra.Net.Pro-Public) 和其中的[快速使用指南](https://github.com/memoryfraction/Quant.Infra.Net.Pro-Public/blob/main/Quick%20Start%20Guide.md)了解详情。
 
 ## 社区与支持
 

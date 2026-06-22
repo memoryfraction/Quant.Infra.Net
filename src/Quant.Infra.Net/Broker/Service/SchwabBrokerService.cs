@@ -273,11 +273,11 @@ namespace Quant.Infra.Net.Broker.Service
                     AccountType = securitiesAccount.GetProperty("type").GetString() ?? "",
                     CashBalance = GetJsonDecimal(currentBalances, "cashBalance"),
                     MarketValue = GetJsonDecimal(currentBalances, "longMarketValue"),
-                    TotalEquity = GetJsonDecimal(currentBalances, "equity", "liquidationValue", "accountValue"),
+                    NetLiquidateValue = GetJsonDecimal(currentBalances, "equity", "liquidationValue", "accountValue"),
                     BuyingPower = GetJsonDecimal(currentBalances, "buyingPower", "cashAvailableForTrading")
                 };
 
-                UtilityService.LogAndWriteLine($"[Schwab] Account loaded: equity=${account.TotalEquity:N2}, marketValue=${account.MarketValue:N2}, cash=${account.CashBalance:N2}");
+                UtilityService.LogAndWriteLine($"[Schwab] Account loaded: NetLiquidateValue=${account.NetLiquidateValue:N2}, marketValue=${account.MarketValue:N2}, cash=${account.CashBalance:N2}");
                 return account;
             }
             catch (Exception ex)

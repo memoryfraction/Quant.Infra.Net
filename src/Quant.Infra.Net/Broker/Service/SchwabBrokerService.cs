@@ -435,11 +435,7 @@ namespace Quant.Infra.Net.Broker.Service
         #region Option Chain
 
         /// <inheritdoc />
-        public async Task<SchwabOptionChain> GetOptionChainAsync(
-            string symbol,
-            string? contractType = null,
-            int? strikeCount = null,
-            DateTime? date = null)
+        public async Task<SchwabOptionChain> GetOptionChainAsync(string symbol, string? contractType = null, int? strikeCount = null)
         {
             try
             {
@@ -448,8 +444,6 @@ namespace Quant.Infra.Net.Broker.Service
                     queryParams.Add($"contractType={contractType}");
                 if (strikeCount.HasValue)
                     queryParams.Add($"strikeCount={strikeCount.Value}");
-                if (date.HasValue)
-                    queryParams.Add($"date={Uri.EscapeDataString(date.Value.ToString("yyyy-MM-dd"))}");
 
                 var queryString = string.Join("&", queryParams);
                 var response = await GetMarketDataAsync($"chains?{queryString}");

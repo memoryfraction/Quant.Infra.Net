@@ -46,7 +46,11 @@ namespace Quant.Infra.Net.Broker.Interfaces
         /// Gets an option chain for a symbol.
         /// 获取指定标的的期权链。
         /// </summary>
-        Task<SchwabOptionChain> GetOptionChainAsync(string symbol, string? contractType = null, int? strikeCount = null);
+        Task<SchwabOptionChain> GetOptionChainAsync(
+            string symbol,
+            string? contractType = null,
+            int? strikeCount = null,
+            DateTime? date = null);
 
         /// <summary>
         /// Places an order.

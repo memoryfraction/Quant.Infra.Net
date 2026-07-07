@@ -271,11 +271,20 @@ namespace Quant.Infra.Net.Broker.Service
                 {
                     AccountNumber = _accountNumber,
                     AccountType = securitiesAccount.GetProperty("type").GetString() ?? "",
-                    CashBalance = GetJsonDecimal(currentBalances, "cashBalance"),
-                    MarketValue = GetJsonDecimal(currentBalances, "longMarketValue"),
-                    NetLiquidateValue = GetJsonDecimal(currentBalances, "equity", "liquidationValue", "accountValue"),
+                   CashBalance = GetJsonDecimal(currentBalances, "cashBalance"),
+                   MarketValue = GetJsonDecimal(currentBalances, "longMarketValue"),
+                    NetLiquidateValue = GetJsonDecimal(currentBalances, "liquidationValue", "equity", "accountValue"),
                     BuyingPower = GetJsonDecimal(currentBalances, "buyingPower", "cashAvailableForTrading")
                 };
+                // Extract account-level total unrealized P&L from currentBalances (authoritative)
+                var accountUnrealizedPnL = GetJsonDecimal(currentBalances, "totalUnrealizedGainsLosses");
+                if (accountUnrealizedPnL != 0m)
+                    account.UnrealizedPnL = accountUnrealizedPnL;
+
+                // Extract account-level total realized P&L from currentBalances
+                var accountRealizedPnL = GetJsonDecimal(currentBalances, "totalRealizedGainsLosses");
+                if (accountRealizedPnL != 0m)
+                    account.RealizedPnL = accountRealizedPnL;
 
                 UtilityService.LogAndWriteLine($"[Schwab] Account loaded: NetLiquidateValue=${account.NetLiquidateValue:N2}, marketValue=${account.MarketValue:N2}, cash=${account.CashBalance:N2}");
                 return account;

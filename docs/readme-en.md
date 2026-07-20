@@ -53,10 +53,10 @@ Quant.Infra.Net provides a unified C# API that abstracts away the complexity of 
 ```bash
 git clone https://github.com/memoryfraction/Quant.Infra.Net.git
 cd Quant.Infra.Net/src
-dotnet run --project Quant.Infra.Net.Orchestration.Console
+dotnet run --project Quant.Infra.Net.Runtime.Console
 ```
 
-You'll see the full event trail printed to the console: data ingest → signal → risk check → paper execution → portfolio snapshot. A single symbol means one signal / one target position / one execution report, so the whole run is easy to verify by eye. Switch strategies or symbols by editing `Quant.Infra.Net.Orchestration.Console/appsettings.json` and re-run.
+> Since R6 there is a single unified host: `Quant.Infra.Net.Runtime.Console` (the old standalone demo hosts are retired). One switch in `appsettings.json` — `Runtime:RunMode` — selects the mode: the default `Backtest` prints the performance report directly; set it to `Paper` to see the full event trail: data ingest → signal → risk check → paper execution → portfolio snapshot. A single symbol means one signal / one target position / one execution report, so the whole run is easy to verify by eye. Switch strategies or symbols by editing `Quant.Infra.Net.Runtime.Console/appsettings.json` and re-run.
 
 **What data source, symbol, and strategy does the demo actually use — and how do I swap in my own?** See the dedicated [Orchestration Quick Start Guide](OrchestrationQuickStart-en.md) for the full breakdown plus step-by-step instructions for plugging in a real data source, changing symbols, and writing a custom strategy.
 
@@ -83,20 +83,22 @@ Full contract (interfaces, milestones, risk-rule defaults, extension points) is 
 
 `Quant.Infra.Net.Backtest` replays historical data through that **same** pipeline: bar by bar, the same 8-stage `StrategyPipeline`, the same strategy code — with zero network, zero live broker, and no look-ahead bias by construction. A backtest is never a *separate strategy implementation*; it is the identical code path that runs under Paper, re-driven over history.
 
-**Try it in under a minute** — the demo runs `MaCross` over 120 synthetic daily bars (no network, no API keys; the series is synthetic, not real AAPL data):
+**Try it in under a minute** — the demo runs `MaCross` over 260 synthetic daily bars (no network, no API keys; the series is synthetic, not real AAPL data):
 
 ```bash
 git clone https://github.com/memoryfraction/Quant.Infra.Net.git
 cd Quant.Infra.Net
-dotnet run --project src/Quant.Infra.Net.Backtest.Console
+dotnet run --project src/Quant.Infra.Net.Runtime.Console
 ```
 
-Expected output (deterministic, abbreviated):
+(Same unified host; defaults to `Runtime:RunMode = "Backtest"`.)
+
+Expected output (deterministic):
 
 ```
-回测完成 / Backtest complete: 100 bars, 8 trades
-CAGR=16.56%   Sharpe=0.55   Calmar=45.19
-MaxDrawdown=-0.37%（9 天 / days）
+Backtest complete: 260 bars, 4 trades
+CAGR=13.56%   Sharpe=0.54   Calmar=0.00
+MaxDrawdown=0.00%   WinRate=100.0%   ProfitFactor=∞   Commission=0 USD
 WinRate=80.0%   ProfitFactor=23.12   Commission=0 USD
 ```
 

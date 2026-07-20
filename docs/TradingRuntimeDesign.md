@@ -479,7 +479,7 @@ src/
 ├── Quant.Infra.Net/                        # 现有核心库（不动）
 ├── Quant.Infra.Net.Orchestration/          # 现有编排层（不动，M0-M6 已完成）
 ├── Quant.Infra.Net.Orchestration.Tests/    # 现有（不动）
-├── Quant.Infra.Net.Orchestration.Console/  # 现有（不动）
+├── (R6 已退役：历史快照中的 Quant.Infra.Net.Orchestration.Console 独立宿主 → 功能并入 Quant.Infra.Net.Runtime.Console, RunMode=Paper)
 ├── Quant.Infra.Net.Tests/ Quant.Infra.Net.Console/ MyQuantApp/  # 现有（不动）
 │
 ├── Quant.Infra.Net.Backtest/               # ★ 阶段一新增：回测引擎类库
@@ -509,9 +509,7 @@ src/
 │   ├── TradeStatisticsTests.cs
 │   └── B5EndToEndTests.cs                   # 端到端：复用编排层 3 个内置策略跑一次完整回测
 │
-├── Quant.Infra.Net.Backtest.Console/       # ★ 阶段一新增：端到端回测 Demo 宿主
-│   ├── Program.cs                          # ≤50 行：跑一次 MaCross 回测，打印绩效报告
-│   └── appsettings.json
+└── (R6 已退役：历史快照中的 Quant.Infra.Net.Backtest.Console 独立宿主 → 功能并入 Quant.Infra.Net.Runtime.Console, RunMode=Backtest)
 │
 ├── Quant.Infra.Net.Runtime/                 # ★ 阶段二新增：统一运行时
 │   ├── Models/
@@ -960,9 +958,9 @@ switch (runtimeOptions.RunMode)
 
 **B5 — DI、Console Demo、端到端测试**
 - [x] `DependencyInjection.cs`（§7.7 前半段引用的 `AddQuantInfraNetBacktest` 全部契约，D1 机制）
-- [x] `Backtest.Console`：`Program.cs`（≤50 行，跑一次 `MaCross` 回测并打印绩效报告）
+- [x] 独立回测 Demo 宿主：`Program.cs`（≤50 行，跑一次 `MaCross` 回测并打印绩效报告）（R6 已退役，等价入口 = `Quant.Infra.Net.Runtime.Console`，`RunMode = "Backtest"`）
 - [x] 测试：`B5EndToEndTests` —— 对编排层 3 个内置策略各跑一次完整回测，断言 `Metrics` 非默认值、`Trades.Count > 0`、`EquityCurve` 长度与输入 bar 数一致
-- **验收**：`dotnet run --project src/Quant.Infra.Net.Backtest.Console` 完整跑通并打印出 CAGR/Sharpe/MaxDrawdown/总交易数/胜率；三个内置策略均有端到端测试覆盖
+- **验收**：`dotnet run --project src/Quant.Infra.Net.Runtime.Console`（默认 `RunMode = "Backtest"`；原独立宿主已于 R6 退役）完整跑通并打印出 CAGR/Sharpe/MaxDrawdown/总交易数/胜率；三个内置策略均有端到端测试覆盖
 
 **B6 — 阶段一文档**
 - [x] 新增 `docs/BacktestQuickStart-en.md` / `docs/BacktestQuickStart-ch.md`（跟随 `OrchestrationQuickStart-*.md` 既有体例）
@@ -1007,11 +1005,11 @@ switch (runtimeOptions.RunMode)
 
 > 背景：`Orchestration.Console`（M6 产物）与 `Backtest.Console`（B5 产物）各自的存在理由是"证明本层单独可跑"——在 `Runtime.Console` 出现之前，它们是唯一的端到端验收手段，不算重复建设。R5 完成后，`Runtime.Console` 用 `RunMode=Paper`/`RunMode=Backtest` 已经能覆盖两者原本证明的全部内容，此时继续维护三个 Demo（各自的 `appsettings.json`、各自要跟着契约变化同步的 `Program.cs`）就是纯维护负担，没有增量信息。本里程碑把解决方案收敛到"一个 Demo 入口 + 若干独立 Tests 项目"的稳态。
 
-- [ ] 确认 `Runtime.Console` 以 `RunMode=Paper` 跑出的事件流/输出，与 `Orchestration.Console` 原有输出在信息量上等价（不要求逐字节相同，要求同样能看到 DataIngest→...→Notification 全部阶段的事件）；以 `RunMode=Backtest` 跑出的绩效报告与 `Backtest.Console` 原有输出等价
-- [ ] 删除 `Quant.Infra.Net.Orchestration.Console` 项目源码与 `.sln` 条目（`Quant.Infra.Net.Orchestration.Tests` **不删**——测试隔离和 Demo 隔离是两回事，各层的 Tests 项目继续保留、不合并）
-- [ ] 删除 `Quant.Infra.Net.Backtest.Console` 项目源码与 `.sln` 条目（`Quant.Infra.Net.Backtest.Tests` 同样不删）
-- [ ] 更新 `docs/OrchestrationQuickStart-en.md`/`-ch.md`、`docs/BacktestQuickStart-en.md`/`-ch.md`（若 B6 已产出）里所有 `dotnet run --project Quant.Infra.Net.Orchestration.Console`/`...Backtest.Console` 的命令，改成 `dotnet run --project Quant.Infra.Net.Runtime.Console`（配 `appsettings.json` 里对应的 `RunMode` 取值）
-- [ ] 更新根 `README.md`/`docs/readme-en.md`/`docs/readme-ch.md` 里任何提到独立 Orchestration/Backtest Demo 命令的地方，统一指向 `Runtime.Console`
+- [x] 确认 `Runtime.Console` 以 `RunMode=Paper` 跑出的事件流/输出，与 `Orchestration.Console` 原有输出在信息量上等价（不要求逐字节相同，要求同样能看到 DataIngest→...→Notification 全部阶段的事件）；以 `RunMode=Backtest` 跑出的绩效报告与 `Backtest.Console` 原有输出等价
+- [x] 删除 `Quant.Infra.Net.Orchestration.Console` 项目源码与 `.sln` 条目（`Quant.Infra.Net.Orchestration.Tests` **不删**——测试隔离和 Demo 隔离是两回事，各层的 Tests 项目继续保留、不合并）
+- [x] 删除 `Quant.Infra.Net.Backtest.Console` 项目源码与 `.sln` 条目（`Quant.Infra.Net.Backtest.Tests` 同样不删）
+- [x] 更新 `docs/OrchestrationQuickStart-en.md`/`-ch.md`、`docs/BacktestQuickStart-en.md`/`-ch.md`（若 B6 已产出）里所有 `dotnet run --project Quant.Infra.Net.Orchestration.Console`/`...Backtest.Console` 的命令，改成 `dotnet run --project Quant.Infra.Net.Runtime.Console`（配 `appsettings.json` 里对应的 `RunMode` 取值）
+- [x] 更新根 `README.md`/`docs/readme-en.md`/`docs/readme-ch.md` 里任何提到独立 Orchestration/Backtest Demo 命令的地方，统一指向 `Runtime.Console`
 - **验收**：`dotnet sln list` 只剩 `MyQuantApp` 一个"外部用户示例"性质的可执行项目，加 `Quant.Infra.Net.Runtime.Console` 一个"内部端到端 Demo"性质的可执行项目；全部 `*.Tests` 项目数量不变、全绿；全仓库搜索确认没有文档还在引用已删除的两个 Console 项目
 
 ---

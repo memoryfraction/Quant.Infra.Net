@@ -9,16 +9,16 @@
 ```bash
 git clone https://github.com/memoryfraction/Quant.Infra.Net.git
 cd Quant.Infra.Net
-dotnet run --project src/Quant.Infra.Net.Backtest.Console
+dotnet run --project src/Quant.Infra.Net.Runtime.Console
 ```
 
 This does **not** touch the network, a real broker, or any market data feed. Concretely:
 
 | Question | Answer |
 |---|---|
-| **Data source** | Synthetic daily bars built **inside** [`Program.cs`](../src/Quant.Infra.Net.Backtest.Console/Program.cs) — a deterministic uptrend with a sinusoidal wobble (same numbers every run). No Yahoo/Binance/CSV at all. |
+| **Data source** | `DemoSyntheticSourceDataService` in [`Quant.Infra.Net.Runtime`](../src/Quant.Infra.Net.Runtime/DataSources/DemoSyntheticSourceDataService.cs) (instantiated by the `DataSourceFactory` when `Runtime:DataSource = "Demo"`) — deterministic synthetic bars, same numbers every run. No Yahoo/Binance/CSV at all. |
 | **Symbol** | A single symbol, `AAPL` — a familiar placeholder for the synthetic series. |
-| **Strategy** | `MaCross` with `FastPeriod=5`, `SlowPeriod=20` — the classic 2-period moving-average cross, set fast/slow so signals appear within 120 bars. |
+| **Strategy** | `MaCross` (defaults `FastPeriod=1`, `SlowPeriod=200`) — the classic moving-average trend; signals start around bar 200 of the 260-bar synthetic series. |
 | **Broker / execution** | `BacktestBrokerService` — a backtest-only `IBinanceUsdFutureService` accounting implementation. Pure in-memory; **the same accounting model as the Paper broker**, plus commission/slippage tracking and an append-only trade log. |
 | **Network** | Zero. Every bar is replayed through the real 8-stage `StrategyPipeline` (`DataIngest → Analysis → Signal → TargetPosition → Risk → Execution → PortfolioState → Notification`), but the data-ingest stage only ever reads from the in-memory `HistoricalDataSet`. |
 | **Metrics** | `BacktestResult.Metrics` — CAGR / Sharpe / Calmar / Max drawdown (via the existing `StrategyPerformanceAnalyzer`) plus trade-level win rate / profit factor / total commission (via `TradeStatistics`). |
@@ -26,13 +26,12 @@ This does **not** touch the network, a real broker, or any market data feed. Con
 Expected console output (abridged, deterministic):
 
 ```
-回测完成 / Backtest complete: 100 bars, 8 trades
-CAGR=16.56%   Sharpe=0.55   Calmar=45.19
-MaxDrawdown=-0.37%（9 天 / days）
-WinRate=80.0%   ProfitFactor=23.12   Commission=0 USD
+Backtest complete: 260 bars, 4 trades
+CAGR=13.56%   Sharpe=0.54   Calmar=0.00
+MaxDrawdown=0.00%   WinRate=100.0%   ProfitFactor=∞   Commission=0 USD
 ```
 
-> 120 input bars − 20 `WarmupBars` = 100 bars of trading. The demo prints all nine metrics from one `BacktestResult`.
+> 260 input bars, `WarmupBars=0` (default); `MaCross` (Slow=200) starts signalling around bar 200. The demo prints all nine metrics from one `BacktestResult` (profit factor prints ∞ on a zero-loss sample).
 
 ---
 

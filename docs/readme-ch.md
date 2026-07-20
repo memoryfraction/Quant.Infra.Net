@@ -53,10 +53,10 @@ Quant.Infra.Net 提供统一的 C# API，将连接多个金融数据源、券商
 ```bash
 git clone https://github.com/memoryfraction/Quant.Infra.Net.git
 cd Quant.Infra.Net/src
-dotnet run --project Quant.Infra.Net.Orchestration.Console
+dotnet run --project Quant.Infra.Net.Runtime.Console
 ```
 
-控制台会打印完整事件流：数据采集 → 信号生成 → 风控检查 → Paper 模拟执行 → 组合快照。单标的意味着一条信号 / 一条目标仓位 / 一条执行报告，整个运行过程肉眼就能核对。修改 `Quant.Infra.Net.Orchestration.Console/appsettings.json` 即可切换策略或标的。
+> R6 起统一宿主：`Quant.Infra.Net.Runtime.Console`（原独立 Demo 宿主已退役）。`appsettings.json` 的 `Runtime:RunMode` 一个开关切换四种模式——默认 `Backtest` 直接打印绩效报告；改成 `Paper` 即可看到完整事件流：数据采集 → 信号生成 → 风控检查 → Paper 模拟执行 → 组合快照。单标的意味着一条信号 / 一条目标仓位 / 一条执行报告，整个运行过程肉眼就能核对。修改 `Quant.Infra.Net.Runtime.Console/appsettings.json` 即可切换策略或标的。
 
 **Demo 具体用的什么数据源、什么标的、什么策略？怎么换成自己的？** 完整拆解 + 接入真实数据源/更换标的/自定义策略的分步说明，见 [编排层详细使用说明](OrchestrationQuickStart-ch.md)。
 
@@ -83,20 +83,22 @@ await host.RunAsync();
 
 `Quant.Infra.Net.Backtest` 把历史数据回放进**同一条**管道：逐 bar、同一套 8 阶段 `StrategyPipeline`、同一份策略代码——零网络、零实盘券商、结构性杜绝未来函数。回测永远是"同一份策略代码在历史上重放"，而不是另写一套"回测专用实现"。
 
-**一分钟内跑起来** —— Demo 用 120 根合成日线跑 `MaCross`（零网络、零 API Key；序列是合成的，不是真实 AAPL 数据）：
+**一分钟内跑起来** —— Demo 用 260 根合成日线跑 `MaCross`（零网络、零 API Key；序列是合成的，不是真实 AAPL 数据）：
 
 ```bash
 git clone https://github.com/memoryfraction/Quant.Infra.Net.git
 cd Quant.Infra.Net
-dotnet run --project src/Quant.Infra.Net.Backtest.Console
+dotnet run --project src/Quant.Infra.Net.Runtime.Console
 ```
 
-预期输出（确定性，节选）：
+（同一个统一宿主，默认 `Runtime:RunMode = "Backtest"`。）
+
+预期输出（确定性）：
 
 ```
-回测完成 / Backtest complete: 100 bars, 8 trades
-CAGR=16.56%   Sharpe=0.55   Calmar=45.19
-MaxDrawdown=-0.37%（9 天 / days）
+Backtest complete: 260 bars, 4 trades
+CAGR=13.56%   Sharpe=0.54   Calmar=0.00
+MaxDrawdown=0.00%   WinRate=100.0%   ProfitFactor=∞   Commission=0 USD
 WinRate=80.0%   ProfitFactor=23.12   Commission=0 USD
 ```
 

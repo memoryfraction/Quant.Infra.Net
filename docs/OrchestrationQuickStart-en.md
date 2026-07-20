@@ -1,6 +1,8 @@
 # Orchestration Layer — Quick Start Guide
 
 > Companion to [Orchestration Layer Design](OrchestrationLayerDesign.md) (full contract) and the [English](readme-en.md) / [中文](readme-ch.md) README's "Orchestration Layer (Beta)" section. This document answers the questions that section leaves open: what exactly runs when you `dotnet run` the demo, and how to point the pipeline at your own data, symbols, and strategy.
+>
+> ⚠️ **R6 convergence**: the demo below now runs inside the unified host [`Quant.Infra.Net.Runtime.Console`](../src/Quant.Infra.Net.Runtime.Console/) (the old standalone demo hosts are retired) — set `"Runtime": { "RunMode": "Paper" }` in that host's `appsettings.json` first (`Testnet`/`Live` require real credentials, see §5).
 
 ---
 
@@ -9,23 +11,24 @@
 ```bash
 git clone https://github.com/memoryfraction/Quant.Infra.Net.git
 cd Quant.Infra.Net/src
-dotnet run --project Quant.Infra.Net.Orchestration.Console
+# set appsettings.json first:  "Runtime" → "RunMode": "Paper"
+dotnet run --project Quant.Infra.Net.Runtime.Console
 ```
 
 This does **not** touch the network, a real broker, or a real market data feed. Concretely:
 
 | Question | Answer |
 |---|---|
-| **Data source** | `DemoTraditionalFinanceSourceDataService` — a demo-only, in-process fake registered in [`Program.cs`](../src/Quant.Infra.Net.Orchestration.Console/Program.cs). It generates a deterministic synthetic price series (same numbers every run); it never calls Yahoo Finance, Binance, or any external API. |
+| **Data source** | `DemoSyntheticSourceDataService` — a demo-only deterministic synthetic implementation in [`Quant.Infra.Net.Runtime`](../src/Quant.Infra.Net.Runtime/DataSources/DemoSyntheticSourceDataService.cs) (instantiated by the `DataSourceFactory` when `Runtime:DataSource = "Demo"`; the old per-host `DemoTraditionalFinanceSourceDataService` was folded into this one in R6). It generates a deterministic synthetic price series (same numbers every run); it never calls Yahoo Finance, Binance, or any external API. |
 | **Symbol** | A single symbol, `AAPL` — but the price series is **synthetic** (a steady uptrend with mild noise), not real Apple stock data. The ticker name is just a familiar placeholder. |
-| **Strategy** | `MaCross` (classic 200-day moving average trend following), configured in [`appsettings.json`](../src/Quant.Infra.Net.Orchestration.Console/appsettings.json). This is deliberately the **single-symbol** default (not the two-symbol `PairTradingZScore`) — one symbol means one signal, one target position, one execution report, so a first-time reader can verify the whole run by eye without cross-referencing two series. |
+| **Strategy** | `MaCross` (classic 200-day moving average trend following), configured in the unified host's [`appsettings.json`](../src/Quant.Infra.Net.Runtime.Console/appsettings.json) under the `Orchestration` section. This is deliberately the **single-symbol** default (not the two-symbol `PairTradingZScore`) — one symbol means one signal, one target position, one execution report, so a first-time reader can verify the whole run by eye without cross-referencing two series. |
 | **Broker / execution** | `PaperBinanceUsdFutureService` — pure in-memory paper trading, zero network requests. Registered automatically because `appsettings.json` sets `"Environment": "Paper"`. |
 | **Notifications** | Disabled by default (`"Notifications": { "Enabled": false }`) so the demo never needs DingTalk/WeChat Work/SMTP credentials. |
 
 One cycle's data flow:
 
 ```
-DemoTraditionalFinanceSourceDataService (260 synthetic daily bars for "AAPL")
+DemoSyntheticSourceDataService (260 synthetic daily bars for "AAPL")
         │
         ▼
 DataIngestStage  → loads and caches the OHLCV series in the pipeline context
@@ -59,7 +62,7 @@ Expected console output (abbreviated):
 
 ## 2. Switching to a real data source
 
-The demo swaps in `DemoTraditionalFinanceSourceDataService` purely so the demo runs offline and produces the same numbers every time. To use real market data, replace that one DI registration in your own `Program.cs`.
+The demo swaps in `DemoSyntheticSourceDataService` purely so the demo runs offline and produces the same numbers every time. To use real market data, replace that one DI registration in your own `Program.cs`.
 
 ### Option A — use the core library's real data source
 
@@ -71,7 +74,7 @@ using Quant.Infra.Net.SourceData.Service.Historical;
 
 builder.Services.AddSingleton<IHistoricalDataSourceService, HistoricalDataSourceServiceCsv>();
 builder.Services.AddSingleton<ITraditionalFinanceSourceDataService, TraditionalFinanceSourceDataService>();
-// Remove the AddSingleton<ITraditionalFinanceSourceDataService, DemoTraditionalFinanceSourceDataService>() line.
+// In a custom host, simply don't register the demo synthetic source (i.e. don't set Runtime:DataSource = "Demo").
 builder.Services.AddQuantInfraNetOrchestration();
 ```
 
@@ -135,7 +138,7 @@ For the two-symbol `PairTradingZScore` strategy, set `SymbolA`/`SymbolB` instead
 }
 ```
 
-(Using `DemoTraditionalFinanceSourceDataService`, only `"AAA"`/`"BBB"`/anything-else-defaulting-to-an-uptrend produce meaningful synthetic signals — see [`DemoTraditionalFinanceSourceDataService.cs`](../src/Quant.Infra.Net.Orchestration.Console/DemoTraditionalFinanceSourceDataService.cs). Once you switch to a real data source (§2), any real symbol works.)
+(Using `DemoSyntheticSourceDataService` (`Runtime:DataSource = "Demo"`), only `"AAA"`/`"BBB"`/anything-else-defaulting-to-an-uptrend produce meaningful synthetic signals — see [`DemoSyntheticSourceDataService.cs`](../src/Quant.Infra.Net.Runtime/DataSources/DemoSyntheticSourceDataService.cs). Once you switch to a real data source (§2), any real symbol works.)
 
 ---
 

@@ -9,16 +9,18 @@
 ```bash
 git clone https://github.com/memoryfraction/Quant.Infra.Net.git
 cd Quant.Infra.Net
-dotnet run --project src/Quant.Infra.Net.Backtest.Console
+dotnet run --project src/Quant.Infra.Net.Runtime.Console
 ```
+
+> R6 起统一宿主：`Quant.Infra.Net.Runtime.Console`（原独立回测 Demo 宿主已退役；本命令默认 `Runtime:RunMode = "Backtest"`，与本文档描述的回测路径等价）。
 
 这个命令**不会**联网、不会连真实券商、也不会拉真实行情。具体来说：
 
 | 问题 | 答案 |
 |---|---|
-| **数据源** | 直接在 [`Program.cs`](../src/Quant.Infra.Net.Backtest.Console/Program.cs) 里进程内生成的**合成日线**——稳定上升趋势 + 正弦摆动（每次运行数字完全一样），不经过 Yahoo/Binance/CSV 任何真实渠道。 |
-| **标的** | 单一标的 `AAPL`——只是给合成序列一个读者眼熟的代号。 |
-| **策略** | `MaCross`（`FastPeriod=5`, `SlowPeriod=20`）——经典双均线交叉，周期刻意取得短，让信号在 120 根 bar 内就出现。 |
+| **数据源** | [`Quant.Infra.Net.Runtime`](../src/Quant.Infra.Net.Runtime/DataSources/DemoSyntheticSourceDataService.cs) 里的 `DemoSyntheticSourceDataService`（`Runtime:DataSource = "Demo"` 时由 `DataSourceFactory` 实例化）——确定性**合成日线**，不经过 Yahoo/Binance/CSV 任何真实渠道。 |
+| **标的** | 单一标的 `AAPL`——只是给合成序列一个读者眼熟的代号（`AAA`/`BBB` 是合成配对腿）。 |
+| **策略** | `MaCross`（默认 `FastPeriod=1`, `SlowPeriod=200`）——经典均线趋势；260 根合成 bar 中约 200 根后开始出信号。 |
 | **券商 / 执行** | `BacktestBrokerService`——仅回测使用的 `IBinanceUsdFutureService` 记账实现。纯内存；**记账口径与 Paper 券商完全一致**，外加手续费/滑点记账与只增不减的成交日志。 |
 | **网络** | 零。每根 bar 都走真实的 8 阶段 `StrategyPipeline`（`数据采集 → 统计分析 → 信号生成 → 目标仓位 → 风控前置检查 → 执行调仓 → 组合状态更新 → 通知推送`），但数据采集阶段只从内存中的 `HistoricalDataSet` 读取。 |
 | **指标** | `BacktestResult.Metrics`——CAGR / 夏普 / 卡尔玛 / 最大回撤（复用既有 `StrategyPerformanceAnalyzer`）+ 交易层胜率 / 盈亏比 / 总手续费（`TradeStatistics`）。 |
@@ -26,13 +28,12 @@ dotnet run --project src/Quant.Infra.Net.Backtest.Console
 预期控制台输出（节选，确定性）：
 
 ```
-回测完成 / Backtest complete: 100 bars, 8 trades
-CAGR=16.56%   Sharpe=0.55   Calmar=45.19
-MaxDrawdown=-0.37%（9 天 / days）
-WinRate=80.0%   ProfitFactor=23.12   Commission=0 USD
+Backtest complete: 260 bars, 4 trades
+CAGR=13.56%   Sharpe=0.54   Calmar=0.00
+MaxDrawdown=0.00%   WinRate=100.0%   ProfitFactor=∞   Commission=0 USD
 ```
 
-> 120 根输入 bar − 20 根 `WarmupBars` = 100 根交易 bar。Demo 一次性打印 9 项指标。
+> 260 根输入 bar、`WarmupBars=0`（默认），`MaCross`（Slow=200）约 200 根后开始出信号；Demo 一次性打印 9 项指标（盈亏比在零亏损样本下输出 ∞）。
 
 ---
 

@@ -37,11 +37,19 @@ Quant.Infra.Net abstracts the complexity of connecting to financial data sources
 │                  (Write once, run anywhere)                       │
 └──────────────────────┬──────────────────────────────────────────┘
 ┌──────────────────────────────────────────────────────────────────┐
+│  UNIFIED RUNTIME / 统一运行时层 (Quant.Infra.Net.Runtime)          │
+│  One entry: AddQuantInfraNet + ONE switch: appsettings "RunMode"  │
+│  单入口 + 一个开关：Backtest / Paper / Testnet / Live              │
+│  ───────────────────────────────────────────────────────────────  │
 │  Orchestration Layer (Quant.Infra.Net.Orchestration) / 编排层     │
 │  DataIngest → Analysis → Signal → TargetPosition → Risk          │
 │  → Execution (Paper broker, zero network) → PortfolioState       │
 │  → Notification   PipelineRunner + AddQuantInfraNetOrchestration │
 │  数据采集→分析→信号→目标仓位→风控→执行(Paper零网络)→组合状态→通知  │
+│  ───────────────────────────────────────────────────────────────  │
+│  Backtest Layer (Quant.Infra.Net.Backtest) / 回测层                │
+│  Same 8 stages, replay clock: bar-by-bar, zero look-ahead by design│
+│  同样的八个阶段、逐 bar 回放时钟——架构级零前视                      │
 └───────────────────────────────┬──────────────────────────────────┘
                        │ IQuantInfraNet API
    ┌───────────────────┼──────────────────────────────────────────┐
@@ -107,6 +115,14 @@ await dingTalk.SendNotificationAsync("[Alert] BTC long position opened", token, 
 | [Code Standards / 代码规范](docs/CodeStandard.md) | SOLID principles, XML docs, naming conventions, checklist |
 | [Orchestration Layer Design / 编排层设计](docs/OrchestrationLayerDesign.md) | E2E orchestration: signal generation, risk gate, Paper execution, pipeline & DI |
 | [Orchestration Quick Start (EN)](docs/OrchestrationQuickStart-en.md) / [编排层使用说明 (中文)](docs/OrchestrationQuickStart-ch.md) | What the demo's data source/symbol/strategy actually are, and how to swap in your own data source, symbols, or strategy |
+| [Trading Runtime Design R0–R6 / 统一运行时设计](docs/TradingRuntimeDesign.md) | Phase-2 unified runtime: one entry, one switch, Backtest replay + live driving + parity regression |
+| [Unified Runtime Quick Start (EN)](docs/UnifiedRuntimeQuickStart-en.md) / [统一运行时使用说明 (中文)](docs/UnifiedRuntimeQuickStart-ch.md) | The single demo host: run Backtest/Paper with one config value, and how to swap data source, strategy, or credentials |
+
+## Changelog / 变更记录
+
+| Date | Change / 变更 |
+|---|---|
+| 2026-07-20 | Phase 2 unified runtime (feature/backtest-engine): `AddQuantInfraNet` one entry + `RunMode` one switch; Backtest↔Paper parity regression tests; demo hosts converged into `Quant.Infra.Net.Runtime.Console` |
 
 ---
 

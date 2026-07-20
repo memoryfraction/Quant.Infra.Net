@@ -930,77 +930,77 @@ switch (runtimeOptions.RunMode)
 ### 阶段一：回测引擎
 
 **B0 — 脚手架**
-- [ ] 创建 `src/Quant.Infra.Net.Backtest`（net8.0 类库）、`...Backtest.Tests`（MSTest）、`...Backtest.Console`
-- [ ] `dotnet sln add` 三个新项目；引用 `Quant.Infra.Net.Orchestration`（间接带入 `Quant.Infra.Net`）
+- [x] 创建 `src/Quant.Infra.Net.Backtest`（net8.0 类库）、`...Backtest.Tests`（MSTest）、`...Backtest.Console`
+- [x] `dotnet sln add` 三个新项目；引用 `Quant.Infra.Net.Orchestration`（间接带入 `Quant.Infra.Net`）
 - **验收**：解决方案编译通过
 
 **B1 — 历史数据集 + 防未来函数**
-- [ ] `Data/HistoricalDataSet.cs`：构造时按 symbol 排序去重、`Timeline` 求并集、`SliceUpTo`/`CloseAt` 实现
-- [ ] 测试：`HistoricalDataSetTests` —— 乱序输入排序正确；`SliceUpTo` 边界（恰好等于 asOfUtc 含入、之后一根不含入）；多 symbol 时间戳不对齐时 `Timeline` 并集正确
-- [ ] 测试：`LookAheadBiasTests` —— 关键专项用例：构造一段历史数据，在最后一根植入一个"极端异常值"（如断崖式暴涨），断言 `SliceUpTo` 在该 bar 之前的任意 asOfUtc 都取不到这根异常 bar；再接一次真实信号生成器调用，断言提前时刻的信号不受未来异常值影响
+- [x] `Data/HistoricalDataSet.cs`：构造时按 symbol 排序去重、`Timeline` 求并集、`SliceUpTo`/`CloseAt` 实现
+- [x] 测试：`HistoricalDataSetTests` —— 乱序输入排序正确；`SliceUpTo` 边界（恰好等于 asOfUtc 含入、之后一根不含入）；多 symbol 时间戳不对齐时 `Timeline` 并集正确
+- [x] 测试：`LookAheadBiasTests` —— 关键专项用例：构造一段历史数据，在最后一根植入一个"极端异常值"（如断崖式暴涨），断言 `SliceUpTo` 在该 bar 之前的任意 asOfUtc 都取不到这根异常 bar；再接一次真实信号生成器调用，断言提前时刻的信号不受未来异常值影响
 - **验收**：测试全绿，尤其 `LookAheadBiasTests` 必须显式覆盖"信号不受未来数据影响"这一属性，不能只测切片函数本身
 
 **B2 — 回测经纪商（记账 + 手续费 + 滑点）**
-- [ ] `Broker/BacktestBrokerService.cs`：记账算法照抄 `PaperBinanceUsdFutureService` 模式（§7.4），新增手续费/滑点/`Trades` 日志
-- [ ] 测试：`BacktestBrokerServiceTests` —— 开仓/平仓权益变化正确；`CommissionBps`/`SlippageBps` 为 0 时与 `PaperBinanceUsdFutureService` 同参数输入下的权益输出**完全一致**（回归对照测试）；非 0 时手续费/滑点方向与金额正确；`Trades` 记录正确
+- [x] `Broker/BacktestBrokerService.cs`：记账算法照抄 `PaperBinanceUsdFutureService` 模式（§7.4），新增手续费/滑点/`Trades` 日志
+- [x] 测试：`BacktestBrokerServiceTests` —— 开仓/平仓权益变化正确；`CommissionBps`/`SlippageBps` 为 0 时与 `PaperBinanceUsdFutureService` 同参数输入下的权益输出**完全一致**（回归对照测试）；非 0 时手续费/滑点方向与金额正确；`Trades` 记录正确
 - **验收**：测试全绿，且与 `PaperBinanceUsdFutureService` 的零成本对照测试必须存在并通过（保证"回测和 Paper 结果口径一致"的关键回归锚点）
 
 **B3 — 回测驱动器（事件驱动回放）**
-- [ ] `Runner/BacktestRunner.cs`：`RunAsync` 按 §5.5 流程图实现；`FillTiming.SameBarClose` 为 v1 唯一支持值，`NextBarOpen` 在本里程碑内一并实现
-- [ ] `Models/BacktestOptions.cs`、`FillTiming.cs`、`BacktestTrade.cs`、`BacktestResult.cs`、`BacktestMetrics.cs`
-- [ ] 测试：`BacktestRunnerTests` —— 用手工构造的确定性序列跑一次 `MaCrossSignalGenerator`，断言权益曲线长度、方向、`RiskStage` 拒单场景下曲线走平；`FillTiming.NextBarOpen` 场景断言成交价取自下一根 Open
+- [x] `Runner/BacktestRunner.cs`：`RunAsync` 按 §5.5 流程图实现；`FillTiming.SameBarClose` 为 v1 唯一支持值，`NextBarOpen` 在本里程碑内一并实现
+- [x] `Models/BacktestOptions.cs`、`FillTiming.cs`、`BacktestTrade.cs`、`BacktestResult.cs`、`BacktestMetrics.cs`
+- [x] 测试：`BacktestRunnerTests` —— 用手工构造的确定性序列跑一次 `MaCrossSignalGenerator`，断言权益曲线长度、方向、`RiskStage` 拒单场景下曲线走平；`FillTiming.NextBarOpen` 场景断言成交价取自下一根 Open
 - **验收**：测试全绿；一次跑通编排层 3 个内置策略中至少 1 个（`MaCross`）的完整回测无异常
 
 **B4 — 绩效指标 + 参数扫描**
-- [ ] `Reporting/TradeStatistics.cs`：从 `IReadOnlyList<BacktestTrade>` 计算胜率/盈亏比/总手续费
-- [ ] `BacktestResult.Metrics` 组装：`EquityCurve` 转 `Dictionary<DateTime, decimal>` 喂给 `StrategyPerformanceAnalyzer`
-- [ ] `Sweep/ParameterSweepRunner.cs`：接受参数网格，`Parallel.ForEach` 跑多次独立的 `BacktestRunner`（每个网格点全新 DI 容器/`BacktestBrokerService` 实例，不共享状态）
-- [ ] 测试：`TradeStatisticsTests`；`ParameterSweepRunnerTests`（3×3 网格返回 9 条互不干扰的结果）
+- [x] `Reporting/TradeStatistics.cs`：从 `IReadOnlyList<BacktestTrade>` 计算胜率/盈亏比/总手续费
+- [x] `BacktestResult.Metrics` 组装：`EquityCurve` 转 `Dictionary<DateTime, decimal>` 喂给 `StrategyPerformanceAnalyzer`
+- [x] `Sweep/ParameterSweepRunner.cs`：接受参数网格，`Parallel.ForEach` 跑多次独立的 `BacktestRunner`（每个网格点全新 DI 容器/`BacktestBrokerService` 实例，不共享状态）
+- [x] 测试：`TradeStatisticsTests`；`ParameterSweepRunnerTests`（3×3 网格返回 9 条互不干扰的结果）
 - **验收**：测试全绿；不允许重新实现 `StrategyPerformanceAnalyzer` 同名指标（护栏见 §11）
 
 **B5 — DI、Console Demo、端到端测试**
-- [ ] `DependencyInjection.cs`（§7.7 前半段引用的 `AddQuantInfraNetBacktest` 全部契约，D1 机制）
-- [ ] `Backtest.Console`：`Program.cs`（≤50 行，跑一次 `MaCross` 回测并打印绩效报告）
-- [ ] 测试：`B5EndToEndTests` —— 对编排层 3 个内置策略各跑一次完整回测，断言 `Metrics` 非默认值、`Trades.Count > 0`、`EquityCurve` 长度与输入 bar 数一致
+- [x] `DependencyInjection.cs`（§7.7 前半段引用的 `AddQuantInfraNetBacktest` 全部契约，D1 机制）
+- [x] `Backtest.Console`：`Program.cs`（≤50 行，跑一次 `MaCross` 回测并打印绩效报告）
+- [x] 测试：`B5EndToEndTests` —— 对编排层 3 个内置策略各跑一次完整回测，断言 `Metrics` 非默认值、`Trades.Count > 0`、`EquityCurve` 长度与输入 bar 数一致
 - **验收**：`dotnet run --project src/Quant.Infra.Net.Backtest.Console` 完整跑通并打印出 CAGR/Sharpe/MaxDrawdown/总交易数/胜率；三个内置策略均有端到端测试覆盖
 
 **B6 — 阶段一文档**
-- [ ] 新增 `docs/BacktestQuickStart-en.md` / `docs/BacktestQuickStart-ch.md`（跟随 `OrchestrationQuickStart-*.md` 既有体例）
-- [ ] 更新 `docs/readme-en.md`/`docs/readme-ch.md`：新增 "Backtest Engine (Beta)" 小节
+- [x] 新增 `docs/BacktestQuickStart-en.md` / `docs/BacktestQuickStart-ch.md`（跟随 `OrchestrationQuickStart-*.md` 既有体例）
+- [x] 更新 `docs/readme-en.md`/`docs/readme-ch.md`：新增 "Backtest Engine (Beta)" 小节
 - **验收**：一个从未接触过本仓库的读者，跟着 Quick Start 能在本机独立跑通一次回测并看懂输出
 
 ### 阶段二：统一运行时
 
 **R0 — 脚手架**
-- [ ] 创建 `Quant.Infra.Net.Runtime`（+ `.Tests`、`.Console`），引用 `Quant.Infra.Net.Backtest`
+- [x] 创建 `Quant.Infra.Net.Runtime`（+ `.Tests`、`.Console`），引用 `Quant.Infra.Net.Backtest`
 - **验收**：解决方案编译通过
 
 **R1 — 策略目录（策略即插件文件）**
-- [ ] `Strategies/IStrategyDescriptor.cs`、`StrategyCatalog.cs`（反射扫描 + 重名 fail-fast）
-- [ ] `Strategies/BuiltInStrategyDescriptors.cs`：3 个内置策略的描述符（U4）
-- [ ] 测试：`StrategyCatalogTests` —— 扫描到 3 个内置策略；按名解析大小写不敏感；未知名抛异常且消息列出可用策略名；两个程序集内出现同名策略时构造期抛异常
+- [x] `Strategies/IStrategyDescriptor.cs`、`StrategyCatalog.cs`（反射扫描 + 重名 fail-fast）
+- [x] `Strategies/BuiltInStrategyDescriptors.cs`：3 个内置策略的描述符（U4）
+- [x] 测试：`StrategyCatalogTests` —— 扫描到 3 个内置策略；按名解析大小写不敏感；未知名抛异常且消息列出可用策略名；两个程序集内出现同名策略时构造期抛异常
 - **验收**：测试全绿；新增一个自定义策略描述符类无需修改 `Quant.Infra.Net.Runtime` 任何现有文件即可被发现
 
 **R2 — 数据源工厂**
-- [ ] `Models/DataSourceKind.cs`、`DataSources/DataSourceFactory.cs`
-- [ ] 测试：`DataSourceFactoryTests` —— 4 个内置 Kind 各自解析出正确类型；`Custom` 无 `customDataSource` 时抛异常
+- [x] `Models/DataSourceKind.cs`、`DataSources/DataSourceFactory.cs`
+- [x] 测试：`DataSourceFactoryTests` —— 4 个内置 Kind 各自解析出正确类型；`Custom` 无 `customDataSource` 时抛异常
 - **验收**：测试全绿
 
 **R3 — 统一入口 + RunMode 分派**
-- [ ] `Models/RunMode.cs`、`RuntimeOptions.cs`、`DependencyInjection.cs`（§7.7 全部契约）
-- [ ] 测试：`RunModeDispatchTests` —— 四种 `RunMode` 分别断言 DI 容器里解析出的关键服务类型
+- [x] `Models/RunMode.cs`、`RuntimeOptions.cs`、`DependencyInjection.cs`（§7.7 全部契约）
+- [x] 测试：`RunModeDispatchTests` —— 四种 `RunMode` 分别断言 DI 容器里解析出的关键服务类型
 - **验收**：测试全绿
 
 **R4 — 一致性回归测试（本方案最关键的验收项）**
-- [ ] `ParityRegressionTests.cs`：用同一份 `OrchestrationOptions.Parameters` + 同一段历史数据，分别以 `RunMode.Backtest` 跑一次回放、以 `RunMode.Paper` 手动单步跑一次（复用 `StrategyPipeline.RunAsync`，注入同一批历史数据作为"当前"行情），断言两者在**同一个模拟/当前 bar** 上产出的 `Signal`/`TargetPosition`/`RiskAssessment` 完全相等
-- [ ] 额外用例：故意注入一个"有状态突变 bug"的假策略（内部用可变静态字段），断言测试能捕捉到 Backtest 多次调用与 Paper 单次调用之间的差异——验证这套回归测试本身有效
+- [x] `ParityRegressionTests.cs`：用同一份 `OrchestrationOptions.Parameters` + 同一段历史数据，分别以 `RunMode.Backtest` 跑一次回放、以 `RunMode.Paper` 手动单步跑一次（复用 `StrategyPipeline.RunAsync`，注入同一批历史数据作为"当前"行情），断言两者在**同一个模拟/当前 bar** 上产出的 `Signal`/`TargetPosition`/`RiskAssessment` 完全相等
+- [x] 额外用例：故意注入一个"有状态突变 bug"的假策略（内部用可变静态字段），断言测试能捕捉到 Backtest 多次调用与 Paper 单次调用之间的差异——验证这套回归测试本身有效
 - **验收**：核心断言测试全绿；用一个真正跑两种模式、逐字段比较输出的测试来验证，而不是停留在架构图上
 
 **R5 — 唯一 Demo 宿主 + 文档**
-- [ ] `Runtime.Console/Program.cs`（≤40 行，四模式共用；appsettings.json 默认 `RunMode: Backtest`）
-- [ ] `Runtime.Console/Strategies/ExampleCustomStrategy.cs`：单文件范例
-- [ ] 新增 `docs/UnifiedRuntimeQuickStart-en.md` / `-ch.md`
-- [ ] 更新根 `README.md` 架构图：在 Orchestration/Backtest 之上追加 Runtime 层，标注"一个开关"
+- [x] `Runtime.Console/Program.cs`（≤40 行，四模式共用；appsettings.json 默认 `RunMode: Backtest`）
+- [x] `Runtime.Console/Strategies/ExampleCustomStrategy.cs`：单文件范例
+- [x] 新增 `docs/UnifiedRuntimeQuickStart-en.md` / `-ch.md`
+- [x] 更新根 `README.md` 架构图：在 Orchestration/Backtest 之上追加 Runtime 层，标注"一个开关"
 - **验收**：改 `appsettings.json` 里的 `RunMode` 一个值，`dotnet run` 分别验证 Backtest/Paper 两种模式都能跑通（Testnet/Live 验收标准为"抛出预期的 fail-fast 异常"而非真的下单）
 
 **R6 — 收敛 Console 项目（唯一入口落地后，砍掉过渡期的脚手架）**

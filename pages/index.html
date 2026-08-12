@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quant.Infra.Net — .NET Quantitative Trading Infrastructure</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --muted: #64748b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+        .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+        header { text-align: center; padding: 3rem 0 2rem; }
+        h1 { font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #2563eb, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
+        .subtitle { font-size: 1.15rem; color: var(--muted); margin-bottom: 1.5rem; }
+        .badges { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; }
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; text-decoration: none; color: white; }
+        .badge-dotnet { background: #512bd4; }
+        .badge-version { background: var(--success); }
+        .badge-license { background: var(--primary); }
+        section { margin-bottom: 3rem; }
+        h2 { font-size: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; }
+        h3 { font-size: 1.15rem; margin: 1rem 0 0.5rem; }
+        .card { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 1rem; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .code-block { background: #1e293b; color: #e2e8f0; padding: 1.25rem; border-radius: 8px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 0.85rem; overflow-x: auto; line-height: 1.7; white-space: pre; }
+        .feature-list { list-style: none; padding: 0; }
+        .feature-list li { padding: 0.5rem 0; padding-left: 1.5rem; position: relative; }
+        .feature-list li::before { content: "✓"; position: absolute; left: 0; color: var(--success); font-weight: bold; }
+        .btn { display: inline-block; padding: 0.75rem 1.5rem; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .version-tag { display: inline-block; background: #ecfdf5; color: var(--success); padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.85rem; }
+        footer { text-align: center; padding: 2rem 0; color: var(--muted); font-size: 0.85rem; border-top: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Quant.Infra.Net</h1>
+        <p class="subtitle">.NET Quantitative Trading Infrastructure Library</p>
+        <div class="badges">
+            <a href="https://dotnet.microsoft.com/download/dotnet/8.0" class="badge badge-dotnet">.NET 8</a>
+            <span class="badge badge-version">v<span id="version">1.5.0</span></span>
+            <a href="https://github.com/memoryfraction/Quant.Infra.Net/blob/main/LICENSE" class="badge badge-license">MIT License</a>
+        </div>
+        <p style="margin-top:1rem;">
+            <a href="https://github.com/memoryfraction/Quant.Infra.Net" class="btn">View on GitHub</a>
+        </p>
+    </header>
+
+    <section>
+        <h2>About</h2>
+        <div class="card">
+            <p><strong>Quant.Infra.Net</strong> is a .NET quantitative trading infrastructure library that lets you fetch data, run statistical analysis, execute trades, and send notifications with minimal code.</p>
+            <p style="margin-top:1rem;">Stop reinventing the wheel — focus on your strategy. Unified broker integrations (Binance Futures, Alpaca US Equity, Charles Schwab, Interactive Brokers via InterReact), built-in statistical analysis tools, notification services, and more.</p>
+        </div>
+    </section>
+
+    <section>
+        <h2>Key Features</h2>
+        <ul class="feature-list">
+            <li><strong>Data Acquisition</strong> — Yahoo Finance, Binance crypto klines, CSV/MySQL/MongoDB local data sources</li>
+            <li><strong>Statistical Analysis</strong> — ADF stationarity test, OLS regression, Z-Score, Shapiro-Wilk normality test, pair-trading spread calculation</li>
+            <li><strong>Trade Execution</strong> — Binance Futures (spot/order/liquidate), Alpaca US Equity, Charles Schwab equity/options, Interactive Brokers via TWS/Gateway</li>
+            <li><strong>Notifications</strong> — DingTalk bot, WeChat Work webhook, personal/commercial bulk email</li>
+            <li><strong>Performance Analytics</strong> — CAGR, Sharpe ratio, Calmar ratio, max drawdown, strategy performance analyzer</li>
+            <li><strong>Utilities</strong> — IntervalTrigger, RollingWindow&lt;T&gt;, comprehensive unit test coverage</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>What It Solves</h2>
+        <table>
+            <thead>
+                <tr><th>Pain Point</th><th>Solution</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Stock / crypto data APIs are scattered with inconsistent formats</td><td>Unified <code>ITraditionalFinanceSourceDataService</code> and <code>ICryptoSourceDataService</code> with standardized OHLCV models</td></tr>
+                <tr><td>Pair trading requires ADF test, OLS regression, Z-Score, correlation</td><td><code>IAnalysisService</code> provides ready-to-use methods in one line</td></tr>
+                <tr><td>Integrating Binance, Alpaca means rewriting boilerplate</td><td><code>IBinanceUsdFutureService</code>, <code>IBrokerService</code> unified abstractions</td></tr>
+                <tr><td>No notification pipeline after strategy runs</td><td>DingTalk, WeChat Work, Email services built in</td></tr>
+                <tr><td>CAGR, Sharpe, Calmar, max drawdown must be coded from scratch</td><td><code>StrategyPerformanceAnalyzer</code> with all metrics built in</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Quick Start</h2>
+        <h3>1. Install Prerequisites</h3>
+        <div class="code-block">dotnet --version
+# Requires .NET 8 SDK or later</div>
+        <h3>2. Reference the Library</h3>
+        <div class="code-block"># Add via NuGet (coming soon)
+# Or reference the project directly:
+# dotnet add reference ../Quant.Infra.Net/Quant.Infra.Net.csproj</div>
+        <h3>3. Use in Your Strategy</h3>
+        <div class="code-block">// Statistical analysis — one-liner for pair trading
+var correlation = await analysisService.CalculateCorrelationAsync(symbolA, symbolB);
+
+// Execute trades across multiple brokers
+var orderResult = await brokerService.PlaceOrderAsync(new OrderRequest { /* ... */ });
+
+// Performance analytics
+var metrics = strategyAnalyzer.CalculatePerformance(portfolioHistory);</div>
+    </section>
+
+    <section>
+        <h2>Ecosystem</h2>
+        <table>
+            <thead><tr><th>Project</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Quant.Infra.Net</strong> (this repo)</td><td>Core quantitative trading library — data, analysis, execution, notifications</td></tr>
+                <tr><td><a href="https://github.com/memoryfraction/Quant.Infra.Net.Pro">Quant.Infra.Net.Pro</a></td><td>Production-grade Charles Schwab web application with unattended OAuth token management</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Version History</h2>
+        <table>
+            <thead>
+                <tr><th>Version</th><th>Date</th><th>Highlights</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><span class="version-tag">1.5.0</span></td><td>2026-05-28</td><td>Interactive Brokers (InterReact) full integration; Charles Schwab full broker service; MIT license; enhanced unit tests</td></tr>
+                <tr><td>1.4.0</td><td>2024-05-16</td><td>Updated broker API integrations, comprehensive documentation</td></tr>
+                <tr><td>1.3.0</td><td>2024-04-05</td><td>Enhanced notification services with email templates</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <footer>
+        &copy; 2024&ndash;2026 Rong (Rex) Fan. Licensed under the MIT License.<br>
+        Built with ❤ using .NET 8 — Data acquisition, statistical analysis, trade execution, and notifications in one library.
+    </footer>
+</div>
+</body>
+</html>

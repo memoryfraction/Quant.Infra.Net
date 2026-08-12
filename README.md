@@ -1,7 +1,9 @@
-﻿# Quant.Infra.Net
-[![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)
+# Quant.Infra.Net
+[![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Version](https://img.shields.io/badge/Version-1.5.0-blue.svg)](https://github.com/memoryfraction/Quant.Infra.Net/releases)
 
 > **Quant.Infra.Net** is a .NET quantitative trading infrastructure library that lets you fetch data, run statistical analysis, execute trades, and send notifications with minimal code.
+
+> 📖 [Documentation / GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/)
 
 ---
 
@@ -826,3 +828,4 @@ Quant.Infra.Net/
 See [LICENSE](LICENSE) for details.
 
 See [DISCLAIMER](docs/DISCLAIMER.md) for full disclaimer and limitation of liability / 详见 [免责声明](docs/DISCLAIMER.md) 了解完整免责条款与责任限制。
+

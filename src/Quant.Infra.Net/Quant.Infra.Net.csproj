@@ -6,7 +6,26 @@
     <NoWarn>$(NoWarn);CS0579</NoWarn>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-	<Version>1.5.0</Version>   <!-- NuGet 包版本 -->
+	<Version>1.5.0</Version>   <!-- NuGet package version -->
+
+  <!-- ==================== NuGet Package Metadata ==================== -->
+    <PackageId>Quant.Infra.Net</PackageId>
+    <Authors>Rong (Rex) Fan</Authors>
+    <Company>Rong (Rex) Fan</Company>
+    <Copyright>(c) 2024-2026 Rong (Rex) Fan. All rights reserved.</Copyright>
+    <Description>A .NET quantitative trading infrastructure library that lets you fetch data, run statistical analysis, execute trades, and send notifications with minimal code. Unified broker integrations (Binance Futures, Alpaca US Equity, Charles Schwab, Interactive Brokers via InterReact), built-in statistical analysis tools, notification services, and more.</Description>
+    <PackageTags>dotnet;csharp;quantitative;trading;finance;binance;alpaca;schwab;interactive-brokers;analysis;statistics;notification</PackageTags>
+    <PackageProjectUrl>https://memoryfraction.github.io/Quant.Infra.Net/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/memoryfraction/Quant.Infra.Net.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageReleaseNotes>v1.5.0 - Interactive Brokers (InterReact) full integration; Charles Schwab full broker service; MIT license; enhanced analysis service unit tests</PackageReleaseNotes>
+  <!-- =============================================================== -->
+
 	<UserSecretsId>8b042025-ae24-4b48-b89b-12b7001ca6e7</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
@@ -55,5 +74,6 @@
     <None Update="Readme-Quant.Infra.Net.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>

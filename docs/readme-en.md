@@ -162,7 +162,7 @@ This project follows the coding standards defined in [CodeStandard.md](CodeStand
 
 ## Notes on Testing
 
-> ⚠️ **Binance Unit Tests**: The Binance integration tests require a Singapore IP address to pass. They will fail when run from China or the United States due to regional access restrictions on Binance API endpoints. Run `dotnet test` excluding Binance tests for other modules:
+> ⚠️ **Cryptocurrency Exchange Region Notice**: Cryptocurrency exchange regulations vary by country/region. For example, Binance API may not be accessible from Mainland,China or the US but works in Singapore. This repository only provides technical solutions—comply with local laws and take full responsibility for your own actions.
 >
 > ```bash
 > dotnet test --filter "FullyQualifiedName!~Binance"

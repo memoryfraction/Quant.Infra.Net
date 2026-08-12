@@ -1,6 +1,6 @@
 # Quant.Infra.Net
 
-[![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Version](https://img.shields.io/badge/Version-1.5.0-blue.svg)](https://github.com/memoryfraction/Quant.Infra.Net/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Version](https://img.shields.io/badge/Version-1.6.0-blue.svg)](https://github.com/memoryfraction/Quant.Infra.Net/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Quant.Infra.Net** is a .NET quantitative trading infrastructure library — data acquisition, statistical analysis, broker integration, portfolio analytics, and notifications in one package.
 
@@ -59,7 +59,7 @@ dotnet new console -n MyQuantApp
 cd MyQuantApp
 
 # Add the library
-dotnet add package Quant.Infra.Net --version 1.5.0
+dotnet add package Quant.Infra.Net --version 1.6.0
 
 # Required for Python-based data sources (Yahoo Finance via yfinance)
 dotnet add package pythonnet
@@ -173,3 +173,4 @@ This project follows the coding standards defined in [docs/Code_Standards.md](do
 [MIT](LICENSE) — © 2024–2026 Rong (Rex) Fan
 
 > **Disclaimer**: See [DISCLAIMER.md](docs/DISCLAIMER.md) for full disclaimer and limitation of liability / 详见 [免责声明](docs/DISCLAIMER.md) 了解完整免责条款与责任限制。
+

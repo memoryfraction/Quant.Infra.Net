@@ -10,7 +10,14 @@
 
 ## What Is This?
 
-Quant.Infra.Net provides a unified C# API that abstracts away the complexity of connecting to multiple financial data sources, brokers, and notification channels. Instead of writing separate integrations for each platform, you get consistent interfaces and ready-to-use implementations.
+Quant.Infra.Net provides a unified C# API that abstracts away the complexity of connecting to multiple financial data sources, brokers, and notification channels. Instead of writing separate integrations for each platform, you write strategy logic once — the library handles the rest.
+
+**Currently includes (当前功能):**
+- **Data Source / 数据源**: Yahoo Finance (via yfinance/pythonnet), Binance Spot/Futures K-lines, CSV/MySQL/MongoDB readers
+- **Notification / 通知推送**: DingTalk bot, WeChat Work webhook, personal/commercial email (SMTP + Brevo)
+- **Broker & Orders / 订单执行**: Binance Futures (testnet/live switching), Alpaca US Equity, Charles Schwab, Interactive Brokers (via InterReact)
+
+> For full module details and usage examples, see [User Manual](Manual.md) and [Architecture Overview](Architect.md).
 
 ### Architecture Overview
 
@@ -142,7 +149,7 @@ await dingTalk.SendStrategyAlert("Mean reversion triggered for AAPL/MSFT spread"
 
 ## Code Standards
 
-This project follows the coding standards defined in [docs/CodeStandard.md](docs/CodeStandard.md):
+This project follows the coding standards defined in [CodeStandard.md](CodeStandard.md):
 - Bilingual (Chinese + English) XML documentation on all public members
 - SOLID principles for design
 - Parameter validation on all entry points
@@ -173,6 +180,6 @@ This project follows the coding standards defined in [docs/CodeStandard.md](docs
 
 [MIT](LICENSE) — © 2024–2026 Rong (Rex) Fan
 
-> **Disclaimer**: See [DISCLAIMER.md](docs/DISCLAIMER.md) for full disclaimer and limitation of liability / 详见 [免责声明](docs/DISCLAIMER.md) 了解完整免责条款与责任限制。
+> **Disclaimer**: See [DISCLAIMER.md](Disclaimer.md) for full disclaimer and limitation of liability / 详见 [免责声明](Disclaimer.md) 了解完整免责条款与责任限制。
 
 

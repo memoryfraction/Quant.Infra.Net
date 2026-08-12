@@ -6,7 +6,26 @@
     <NoWarn>$(NoWarn);CS0579</NoWarn>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-	<Version>1.5.0</Version>   <!-- NuGet 包版本 -->
+	<Version>1.5.1</Version>   <!-- NuGet package version -->
+
+  <!-- ==================== NuGet Package Metadata ==================== -->
+    <PackageId>Quant.Infra.Net</PackageId>
+    <Authors>Rong (Rex) Fan</Authors>
+    <Company>Rong (Rex) Fan</Company>
+    <Copyright>(c) 2024-2026 Rong (Rex) Fan. All rights reserved.</Copyright>
+    <Description>A .NET quantitative trading infrastructure library that lets you fetch data, run statistical analysis, execute trades, and send notifications with minimal code. Unified broker integrations (Binance Futures, Alpaca US Equity, Charles Schwab, Interactive Brokers via InterReact), built-in statistical analysis tools, notification services, and more.</Description>
+    <PackageTags>dotnet;csharp;quantitative;trading;finance;binance;alpaca;schwab;interactive-brokers;analysis;statistics;notification</PackageTags>
+    <PackageProjectUrl>https://memoryfraction.github.io/Quant.Infra.Net/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/memoryfraction/Quant.Infra.Net.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageReleaseNotes>v1.5.1 — Code_Standards.md compliance: added bilingual XML documentation to all public members, parameter validation audit, UTC time handling verified</PackageReleaseNotes>
+  <!-- =============================================================== -->
+
 	<UserSecretsId>8b042025-ae24-4b48-b89b-12b7001ca6e7</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
@@ -23,7 +42,7 @@
     <PackageReference Include="CsvHelper" Version="33.0.1" />
     <PackageReference Include="Deedle" Version="3.0.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.67" />
-    <PackageReference Include="MailKit" Version="4.14.1" />
+    <PackageReference Include="MailKit" Version="4.17.0" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="Microsoft.Data.Analysis" Version="0.21.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.10" />
@@ -55,5 +74,9 @@
     <None Update="Readme-Quant.Infra.Net.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>
+
+
+

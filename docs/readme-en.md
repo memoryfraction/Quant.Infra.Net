@@ -162,7 +162,7 @@ This project follows the coding standards defined in [CodeStandard.md](CodeStand
 
 ## Notes on Testing
 
-> ⚠️ **Cryptocurrency Exchange Region Notice**: Cryptocurrency exchange regulations vary by country/region. For example, Binance API may not be accessible from China or the US but works in Singapore. This repository only provides technical solutions—comply with local laws and take full responsibility for your own actions.
+> ⚠️ **Cryptocurrency Exchange Region Notice**: Cryptocurrency exchange regulations vary by country/region. For example, Binance API may not be accessible from Mainland,China or the US but works in Singapore. This repository only provides technical solutions—comply with local laws and take full responsibility for your own actions.
 >
 > ```bash
 > dotnet test --filter "FullyQualifiedName!~Binance"

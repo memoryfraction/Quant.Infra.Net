@@ -12,10 +12,13 @@
 
 Quant.Infra.Net 提供统一的 C# API，将连接多个金融数据源、券商和通知渠道的复杂性封装起来。你只需要写一次策略逻辑——剩下的交给库来处理。
 
-**当前功能模块 (Currently includes):**
-- **数据源 / Data Source**: Yahoo Finance (通过 yfinance/pythonnet)、Binance 现货/合约 K 线、CSV/MySQL/MongoDB 读取器
-- **通知推送 / Notification**: 钉钉机器人、企业微信 Webhook、个人/商业邮件 (SMTP + Brevo)
-- **订单执行 / Broker & Orders**: Binance Futures (测试网/实盘切换)、Alpaca 美股、Charles Schwab、Interactive Brokers (通过 InterReact)
+**Core Capabilities / 核心基础设施:**
+
+| Module | What It Does / 能力说明 |
+|--------|------------------------|
+| **Data Source / 数据源** | Unified market data ingestion from Yahoo Finance & Binance (Spot/Futures), with local CSV/SQL persistence. <br>聚合多源行情（Yahoo/Binance），并支持本地持久化。 |
+| **Broker & Orders / 订单执行** | Standardized trading interfaces for Binance Futures, seamlessly switching between testnet simulation and live execution. <br>币安合约标准化交易接口，无缝切换测试网模拟与实盘下单。 |
+| **Notification / 通知推送** | Real-time strategy alerts via DingTalk bots, WeChat Work webhooks, and SMTP/Brevo email pipelines. <br>内置钉钉、企业微信及邮件通道，实现策略信号的即时触达。 |
 
 > 完整模块详情和使用示例，请参阅 [使用手册](Manual.md) 和 [架构概览](Architect.md)。
 

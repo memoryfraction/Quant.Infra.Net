@@ -162,7 +162,7 @@ await dingTalk.SendStrategyAlert("AAPL/MSFT 价差均值回归触发");
 
 ## 测试注意事项
 
-> ⚠️ **Binance 单元测试**：Binance 集成测试需要新加坡 IP 地址才能通过。从中国或美国运行时，由于 Binance API 端口的地区访问限制，这些测试会失败。运行以下命令排除 Binance 测试以测试其他模块：
+> ⚠️ **Crypto 交易所地区合规说明**：不同国家和地区对 Crypto 交易所的监管要求各不相同。例如中国、美国 IP 不能访问 Binance API，但新加坡可以。请遵守当地法律法规，本 Repo 仅提供技术方案，您为自己的行为负有全部责任。
 >
 > ```bash
 > dotnet test --filter "FullyQualifiedName!~Binance"

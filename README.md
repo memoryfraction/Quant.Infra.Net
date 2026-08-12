@@ -1,6 +1,6 @@
 # Quant.Infra.Net
 
-[![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Version](https://img.shields.io/badge/Version-1.6.0-blue.svg)](https://github.com/memoryfraction/Quant.Infra.Net/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Version](https://img.shields.io/badge/Version-1.5.1-blue.svg)](https://github.com/memoryfraction/Quant.Infra.Net/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Quant.Infra.Net** is a .NET quantitative trading infrastructure library — data acquisition, statistical analysis, broker integration, portfolio analytics, and notifications in one package.
 
@@ -59,7 +59,7 @@ dotnet new console -n MyQuantApp
 cd MyQuantApp
 
 # Add the library
-dotnet add package Quant.Infra.Net --version 1.6.0
+dotnet add package Quant.Infra.Net --version 1.5.1
 
 # Required for Python-based data sources (Yahoo Finance via yfinance)
 dotnet add package pythonnet
@@ -130,7 +130,8 @@ await dingTalk.SendStrategyAlert("Mean reversion triggered for AAPL/MSFT spread"
 
 | Version | Date | Description |
 |---------|------|-------------|
-| **1.5.0** *(current)* | 2026-05-28 | **Interactive Brokers (InterReact)** full integration — order, market data, account management via TWS/Gateway; **Charles Schwab** full broker service — quotes, option chains, orders, positions; license changed to MIT; enhanced analysis service unit tests |
+| **1.5.1** *(current)* | 2026-08-12 | Code_Standards.md compliance — bilingual XML documentation on all public members, parameter validation audit, version alignment |
+| 1.5.0 | 2026-05-28 | **Interactive Brokers (InterReact)** full integration — order, market data, account management via TWS/Gateway; **Charles Schwab** full broker service — quotes, option chains, orders, positions; license changed to MIT; enhanced analysis service unit tests |
 | 1.4.0 | 2024-05-16 | Updated API integrations to handle recent broker changes, added comprehensive documentation |
 | 1.3.0 | 2024-04-05 | Enhanced notification services with email templates and improved error handling |
 | 1.2.0 | 2024-03-10 | Improved Python integration stability and added new statistical analysis methods |
@@ -173,4 +174,5 @@ This project follows the coding standards defined in [docs/Code_Standards.md](do
 [MIT](LICENSE) — © 2024–2026 Rong (Rex) Fan
 
 > **Disclaimer**: See [DISCLAIMER.md](docs/DISCLAIMER.md) for full disclaimer and limitation of liability / 详见 [免责声明](docs/DISCLAIMER.md) 了解完整免责条款与责任限制。
+
 

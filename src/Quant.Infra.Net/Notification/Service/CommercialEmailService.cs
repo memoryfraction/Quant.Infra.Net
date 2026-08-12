@@ -1,4 +1,4 @@
-using Quant.Infra.Net.Notification.Model;
+﻿using Quant.Infra.Net.Notification.Model;
 using Quant.Infra.Net.Shared.Service;
 using System;
 using System.Threading.Tasks;
@@ -7,18 +7,14 @@ using MimeKit;
 
 namespace Quant.Infra.Net.Notification.Service
 {
-    /// <summary>
-    /// 商业邮件服务（基于 Brevo API），支持批量发送。
-    /// Commercial email service (Brevo-based) supporting bulk delivery.
-    /// </summary>
-    /// <summary>`n        /// 商业邮件服务（基于 Brevo API），支持批量发送。`n        /// Commercial email service backed by the Brevo SMTP relay, with bulk-send capability.`n        /// </summary>`n    /// public class CommercialEmailService : IEmailService
+    public class CommercialEmailService : IEmailService
     {
 		private readonly Microsoft.Extensions.Hosting.IHostEnvironment _env;
         public CommercialEmailService(Microsoft.Extensions.Hosting.IHostEnvironment env)
         {
             _env = env;
 		}
-		/// <summary>`n        /// 异步批量发送邮件。`n        /// Asynchronously send an email to multiple recipients.`n        /// </summary>`n        /// <param name="message">邮件消息体 / Email message payload.</param>`n        /// <param name="setting">邮件设置（SMTP/Brevo凭据）/ Email settings (SMTP or Brevo credentials).</param>`n        /// <returns>发送成功返回 true / Returns true if the email was sent successfully.</returns>`n        public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
+		public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
         {
             if (setting == null) throw new ArgumentNullException(nameof(setting));
             if (message == null) throw new ArgumentNullException(nameof(message));
@@ -174,4 +170,3 @@ namespace Quant.Infra.Net.Notification.Service
         }
     }
 }
-

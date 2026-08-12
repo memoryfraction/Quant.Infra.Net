@@ -6,7 +6,7 @@
     <NoWarn>$(NoWarn);CS0579</NoWarn>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-	<Version>1.6.0</Version>   <!-- NuGet package version -->
+	<Version>1.5.1</Version>   <!-- NuGet package version -->
 
   <!-- ==================== NuGet Package Metadata ==================== -->
     <PackageId>Quant.Infra.Net</PackageId>
@@ -23,7 +23,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <PackageReleaseNotes>v1.6.0 — Code_Standards.md compliance: added bilingual XML documentation to all public members, parameter validation audit, UTC time handling verified</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.5.1 — Code_Standards.md compliance: added bilingual XML documentation to all public members, parameter validation audit, UTC time handling verified</PackageReleaseNotes>
   <!-- =============================================================== -->
 
 	<UserSecretsId>8b042025-ae24-4b48-b89b-12b7001ca6e7</UserSecretsId>
@@ -77,4 +77,5 @@
     <None Include="..\..\README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>
+
 

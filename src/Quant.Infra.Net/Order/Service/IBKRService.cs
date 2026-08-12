@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Quant.Infra.Net.Exchange.Service
 {
-    /// <summary>`n    /// Interactive Brokers 服务实现，通过 InterReact 库连接 TWS/Gateway。`n    /// Interactive Brokers service implementation connecting to TWS/Gateway via the InterReact library.`n    /// </summary>`n    public class IBKRService : IIBKRService
+    public class IBKRService : IIBKRService
     {
         private string _apiKey, _apiSecret;
         private IInterReactClient? _client;
@@ -17,13 +17,13 @@ namespace Quant.Infra.Net.Exchange.Service
                 _client = InterReactClient.ConnectAsync().Result;
         }
 
-        /// <summary>`n        /// 获取 Interactive Brokers 账户摘要（保证金、资金、持仓概览）。`n        /// Retrieve the IBKR account summary (margin, funds, position overview).`n        /// </summary>`n        /// <returns>账户摘要数据 / Account summary data.</returns>`n        public Task<AccountSummaryIBKR> GetAccountSummaryAsync()
+        public Task<AccountSummaryIBKR> GetAccountSummaryAsync()
         {
             // Todo GetAccountSummaryAsync
             throw new NotImplementedException();
         }
 
-        /// <summary>`n        /// 获取 Interactive Brokers 当前持仓信息。`n        /// Retrieve the current IBKR position information.`n        /// </summary>`n        /// <returns>持仓数据 / Position data.</returns>`n        public Task<PositionIBKR> GetPositionAsync()
+        public Task<PositionIBKR> GetPositionAsync()
         {
             // Todo GetPositionAsync
             throw new NotImplementedException();
@@ -89,4 +89,3 @@ namespace Quant.Infra.Net.Exchange.Service
         }
     }
 }
-

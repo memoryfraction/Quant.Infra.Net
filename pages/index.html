@@ -1,0 +1,168 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quant.Infra.Net â€” .NET Quantitative Trading Infrastructure</title>
+    <style>
+        :root { --primary:#2563eb; --success:#16a34a; --bg:#f8fafc; --card:#fff; --text:#1e293b; --muted:#64748b; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+        .container { max-width:960px; margin:0 auto; padding:2rem 1.5rem; }
+        header { text-align:center; padding:3rem 0 2rem; }
+        h1 { font-size:2.5rem; font-weight:800; background:linear-gradient(135deg,#2563eb,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:.5rem; }
+        .subtitle { font-size:1.15rem; color:var(--muted); margin-bottom:1.5rem; }
+        .badges { display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap; margin-bottom:2rem; }
+        .badge { display:inline-block; padding:.25rem .75rem; border-radius:999px; font-size:.8rem; font-weight:600; text-decoration:none; color:white; }
+        .badge-dotnet { background:#512bd4; }
+        .badge-version { background:var(--success); }
+        .badge-license { background:var(--primary); }
+        section { margin-bottom:3rem; }
+        h2 { font-size:1.5rem; margin-bottom:1rem; padding-bottom:.5rem; border-bottom:2px solid #e2e8f0; }
+        h3 { font-size:1.15rem; margin:1rem 0 .5rem; }
+        .card { background:var(--card); border-radius:12px; padding:1.5rem; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:1rem; }
+        table { width:100%; border-collapse:collapse; margin:1rem 0; }
+        th, td { padding:.75rem 1rem; text-align:left; border-bottom:1px solid #e2e8f0; }
+        th { background:#f1f5f9; font-weight:600; font-size:.9rem; text-transform:uppercase; letter-spacing:.03em; }
+        .code-block { background:#1e293b; color:#e2e8f0; padding:1.25rem; border-radius:8px; font-family:'Cascadia Code','Fira Code',monospace; font-size:.85rem; overflow-x:auto; line-height:1.7; white-space:pre; }
+        .feature-list { list-style:none; padding:0; }
+        .feature-list li { padding:.5rem 0; padding-left:1.5rem; position:relative; }
+        .feature-list li::before { content:"âœ“"; position:absolute; left:0; color:var(--success); font-weight:bold; }
+        .btn { display:inline-block; padding:.75rem 1.5rem; background:var(--primary); color:white; text-decoration:none; border-radius:8px; font-weight:600; transition:opacity .2s; }
+        .btn:hover { opacity:.9; }
+        .version-tag { display:inline-block; background:#ecfdf5; color:var(--success); padding:.15rem .5rem; border-radius:4px; font-weight:600; font-size:.85rem; }
+        .note-box { background:#fffbeb; border-left:4px solid #f59e0b; padding:1rem 1.25rem; border-radius:0 8px 8px 0; margin:1rem 0; }
+        footer { text-align:center; padding:2rem 0; color:var(--muted); font-size:.85rem; border-top:1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Quant.Infra.Net</h1>
+        <p class="subtitle">Data Acquisition, Statistical Analysis, Broker Integration, Portfolio Analytics &amp; Notifications â€” One NuGet Package</p>
+        <div class="badges">
+            <a href="https://dotnet.microsoft.com/download/dotnet/8.0" class="badge badge-dotnet">.NET 8</a>
+            <span class="badge badge-version">v1.5.1</span>
+            <a href="https://github.com/memoryfraction/Quant.Infra.Net/blob/main/LICENSE" class="badge badge-license">MIT License</a>
+        </div>
+        <p style="margin-top:1rem;">
+            <a href="https://github.com/memoryfraction/Quant.Infra.Net" class="btn">View on GitHub</a>
+        </p>
+    </header>
+
+    <section>
+        <h2>Why Use This Library?</h2>
+        <div class="card">
+            <p style="margin-bottom:1rem;">Building quantitative trading systems requires connecting to multiple data sources, brokers, and notification channels â€” each with their own API quirks. Instead of writing separate integrations for every platform, Quant.Infra.Net gives you a single unified C# API.</p>
+        </div>
+        <table>
+            <thead><tr><th>Pain Point</th><th>Solution</th></tr></thead>
+            <tbody>
+                <tr><td>Data APIs return inconsistent formats â€” you write converters for every provider</td><td>Unified <code>ITraditionalFinanceSourceDataService</code> and <code>ICryptoSourceDataService</code> with standardized OHLCV models</td></tr>
+                <tr><td>Binance needs API keys + rate limiting; Schwab needs OAuth; IB needs TWS/Gateway IPC</td><td>Single <code>IBrokerService</code> abstraction â€” swap brokers by changing configuration, not code</td></tr>
+                <tr><td>Pair trading requires ADF tests, regressions, Z-Score from scratch</td><td><code>IAnalysisService</code> provides 10+ statistical methods ready to call</td></tr>
+                <tr><td>Strategies run silently â€” you discover results after hours of waiting</td><td>Built-in DingTalk, WeChat Work, and email notifications fire on strategy events</td></tr>
+                <tr><td>CAGR, Sharpe, max drawdown formulas are error-prone to implement</td><td><code>StrategyPerformanceAnalyzer</code> implements standard metrics with unit tests</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Architecture</h2>
+        <table>
+            <thead><tr><th>Module</th><th>Responsibility</th><th>Key Interfaces</th></tr></thead>
+            <tbody>
+                <tr><td><strong>SourceData</strong></td><td>Multi-source market data ingestion</td><td>Yahoo Finance (via yfinance/pythonnet), Binance klines, Alpaca equity, CSV/MySQL/MongoDB</td></tr>
+                <tr><td><strong>Broker</strong></td><td>Unified broker execution layer</td><td>Binance Futures (Testnet/Paper/Live), Alpaca US Equity, Charles Schwab, Interactive Brokers via InterReact</td></tr>
+                <tr><td><strong>Analysis</strong></td><td>Quantitative/statistical tooling</td><td>ADF test, OLS regression, Z-Score, Shapiro-Wilk, pair-trading spread</td></tr>
+                <tr><td><strong>Portfolio</strong></td><td>Position tracking and performance</td><td>CAGR, Sharpe, Calmar, Max Drawdown, equity curve charting (ScottPlot)</td></tr>
+                <tr><td><strong>Notification</strong></td><td>Strategy alert dispatch</td><td>DingTalk bot, WeChat Work webhook, bulk email</td></tr>
+                <tr><td><strong>Shared</strong></td><td>Cross-cutting utilities</td><td><code>IntervalTrigger</code>, <code>RollingWindow&lt;T&gt;</code>, resolution helpers</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Quick Start</h2>
+        <h3>1. Install via NuGet</h3>
+        <div class="code-block"># Add the library (v1.5.1)
+dotnet add package Quant.Infra.Net --version 1.5.1
+
+# Required for Python-based data sources (Yahoo Finance via yfinance)
+dotnet add package pythonnet
+
+# Recommended for dependency injection
+dotnet add package Microsoft.Extensions.DependencyInjection</div>
+        <h3>2. Use in Code</h3>
+        <div class="code-block">using Quant.Infra.Net.SourceData.Service;
+using Quant.Infra.Net.Analysis.Service;
+using Quant.Infra.Net.Broker.Service;
+using Microsoft.Extensions.DependencyInjection;
+
+// Register services via DI
+var services = new ServiceCollection();
+services.AddQuantInfraNet();
+
+// --- Fetch OHLCV data ---
+var dataService = services.BuildServiceProvider()
+    .GetService&lt;ITraditionalFinanceService&gt;();
+var bars = await dataService.GetOhlcvListAsync("AAPL", DateTime.Now.AddDays(-30), DateTime.Now);
+
+// --- Statistical analysis (pair trading) ---
+var analysis = services.BuildServiceProvider()
+    .GetService&lt;IAnalysisService&gt;();
+var correlation = await analysis.CalculateCorrelationAsync(aaplPrices, msftPrices);
+
+// --- Place orders across broker platforms ---
+var broker = services.BuildServiceProvider()
+    .GetService&lt;IBrokerService&gt;();
+var result = await broker.PlaceOrderAsync(new OrderRequest { Symbol="AAPL", Side=Side.Buy, Quantity=10 });
+
+// --- Portfolio performance analytics ---
+var portfolio = services.BuildServiceProvider()
+    .GetService&lt;IPortfolioSnapshotService&gt;();
+var snapshot = await portfolio.GetSnapshotAsync(accountId);</div>
+        <h3>3. Configuration</h3>
+        <div class="code-block">// appsettings.json
+{
+  "BinanceApi": {
+    "ApiKey": "your-api-key",
+    "SecretKey": "your-secret-key",
+    "Environment": "testnet"   // testnet | paper | live
+  }
+}</div>
+    </section>
+
+    <section>
+        <h2>Version History</h2>
+        <table>
+            <thead><tr><th>Version</th><th>Date</th><th>Highlights</th></tr></thead>
+            <tbody>
+                <tr><td><span class="version-tag">1.5.1</span></td><td>2026-08-12</td><td>Code_Standards.md compliance â€” bilingual XML docs on all public members, parameter validation audit</td></tr>
+                <tr><td>1.5.0</td><td>2026-05-28</td><td>Interactive Brokers (InterReact) full integration; Charles Schwab broker service; MIT license; enhanced unit tests</td></tr>
+                <tr><td>1.4.0</td><td>2024-05-16</td><td>Updated broker API integrations, comprehensive documentation</td></tr>
+                <tr><td>1.3.0</td><td>2024-04-05</td><td>Enhanced notification services with email templates</td></tr>
+                <tr><td>1.0.0</td><td>2024-01-15</td><td>Initial release â€” data, analysis, execution, notifications</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Testing Notes</h2>
+        <div class="note-box">
+            âš ï¸ <strong>Binance Unit Tests</strong>: The Binance integration tests require a Singapore IP address to pass. They will fail when run from China or the United States due to regional access restrictions on Binance API endpoints.<br>
+            Run other test modules with: <code>dotnet test --filter "FullyQualifiedName!~Binance"</code>
+        </div>
+    </section>
+
+    <footer>
+        &copy; 2024&ndash;2026 Rong (Rex) Fan. Licensed under the MIT License.<br>
+        Built with â¤ using .NET 8 â€” Data acquisition, statistical analysis, trade execution, and notifications in one library.
+    </footer>
+</div>
+</body>
+</html>
+
+
+
+

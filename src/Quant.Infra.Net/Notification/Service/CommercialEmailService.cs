@@ -3,17 +3,49 @@ using Quant.Infra.Net.Shared.Service;
 using System;
 using System.Threading.Tasks;
 using MimeKit;
+using Polly;
+using Polly.Retry;
 
 
 namespace Quant.Infra.Net.Notification.Service
 {
+    /// <summary>
+    /// 商业邮件服务（基于 Brevo SMTP），支持批量发送。
+    /// Commercial email service backed by the Brevo SMTP relay, with bulk-send capability.
+    /// </summary>
     public class CommercialEmailService : IEmailService
     {
 		private readonly Microsoft.Extensions.Hosting.IHostEnvironment _env;
+
+        /// <summary>
+        /// 网络请求重试策略，应对暂时性失败和 SMTP 连接超时。
+        /// Network request retry policy to handle transient failures and SMTP connection timeouts.
+        /// </summary>
+        private readonly AsyncRetryPolicy _retryPolicy;
+
         public CommercialEmailService(Microsoft.Extensions.Hosting.IHostEnvironment env)
         {
             _env = env;
+            _retryPolicy = Policy
+                .Handle<Exception>()
+                .WaitAndRetryAsync(
+                    retryCount: 3,
+                    sleepDurationProvider: retries => System.TimeSpan.FromSeconds(System.Math.Pow(2, retries)),
+                    onRetry: (response, span, retry, context) =>
+                    {
+                        UtilityService.LogAndWriteLine(
+                            $"[Brevo Retry] Attempt {{retry}}/3 after {{span.TotalSeconds}}s - Error: {{response.Exception?.Message}}");
+                    }
+                );
 		}
+
+        /// <summary>
+        /// 异步批量发送邮件。
+        /// Asynchronously send an email to multiple recipients.
+        /// </summary>
+        /// <param name="message">邮件消息体 / Email message payload.</param>
+        /// <param name="setting">邮件设置（SMTP/Brevo凭据）/ Email settings (SMTP or Brevo credentials).</param>
+        /// <returns>发送成功返回 true / Returns true if the email was sent successfully.</returns>
 		public async Task<bool> SendBulkEmailAsync(EmailMessage message, EmailSettingBase setting)
         {
             if (setting == null) throw new ArgumentNullException(nameof(setting));
@@ -37,6 +69,13 @@ namespace Quant.Infra.Net.Notification.Service
             }
         }
 
+        /// <summary>
+        /// 实际通过 Brevo SMTP 发送邮件（含重试逻辑）。
+        /// Actually send emails via Brevo SMTP (with retry logic).
+        /// </summary>
+        /// <param name="message">邮件消息体 / Email message payload.</param>
+        /// <param name="setting">SMTP 设置 / SMTP settings.</param>
+        /// <returns>发送成功返回 true / Returns true if the email was sent successfully.</returns>
         private async Task<bool> SendRealBrevoEmail(EmailMessage message, EmailSettingBase setting)
         {
             UtilityService.LogAndWriteLine($"[CommercialService - Brevo] Starting real email sending");

@@ -12,9 +12,10 @@ This document defines the mandatory coding standards for the Quant.Infra.Net pro
 4. [Coding Language Standards](#coding-language-standards)
 5. [Time Handling Standards](#time-handling-standards)
 6. [Enum Management](#enum-management)
-7. [README Maintenance](#readme-maintenance)
-8. [Sensitive Data Protection](#sensitive-data-protection)
-9. [Code Review Checklist](#code-review-checklist)
+7. [Network Resilience (Polly Retry)](#network-resilience-polly-retry)
+8. [README Maintenance](#readme-maintenance)
+9. [Sensitive Data Protection](#sensitive-data-protection)
+10. [Code Review Checklist](#code-review-checklist)
 
 ---
 
@@ -271,6 +272,75 @@ public enum ExchangeEnvironment
 
 ---
 
+## Network Resilience (Polly Retry)
+
+### Rule: All network operations MUST have retry logic via Polly
+
+Network calls are inherently unreliable -- timeouts, rate limits, and transient failures happen regularly in production. Quantitative trading requires high certainty, so every network operation must be wrapped with a retry policy.
+
+#### Why?
+- Network latency spikes can cause false-negative results
+- API rate limits require exponential backoff
+- Broker data feeds can temporarily become unavailable
+- A single missed order or stale market data point can cost real money
+
+#### Required Template
+
+Every service that makes network calls MUST define a Polly retry policy and wrap all outbound calls:
+
+```csharp
+using Polly;
+using Polly.Retry;
+
+/// <summary>
+/// Network request retry policy to handle transient failures and API rate limiting.
+/// 网络请求重试策略，应对暂时性失败和 API 限流。
+/// </summary>
+private readonly AsyncRetryPolicy _retryPolicy;
+
+// In constructor:
+_retryPolicy = Policy
+    .Handle<HttpRequestException>()
+    .OrResult<HttpStatusCode>(
+        code => code == HttpStatusCode.TooManyRequests
+            || code == HttpStatusCode.BadGateway
+            || code >= 500 && code < 600
+    )
+    .WaitAndRetryAsync(
+        retryCount: 3,
+        sleepDurationProvider: retries => TimeSpan.FromSeconds(Math.Pow(2, retries)),
+        onRetry: (response, span, retry, context) =>
+        {
+            UtilityService.LogAndWriteLine(
+                $"[Retry] Attempt {{retry}}/{{retryCount}} after {{span.TotalSeconds}}s");
+        }
+    );
+
+// Usage example:
+public async Task<ResultType> SomeNetworkCallAsync(params)
+{
+    // Parameter validation first
+    return await _retryPolicy.ExecuteAsync(async () => {
+        // Actual network call here
+    });
+}
+```
+
+#### Checklist Items
+- [ ] Every service with network calls defines a `_retryPolicy` or equivalent Polly policy
+- [ ] The retry policy handles HTTP 429 (Too Many Requests), 5xx errors, and `HttpRequestException`
+- [ ] Exponential backoff is used (not fixed delay) to avoid overwhelming the remote server
+- [ ] Retry logs are written via `UtilityService.LogAndWriteLine` with attempt number, delay, and error info
+- [ ] After all retries are exhausted, a meaningful error message and log entry are produced
+
+#### Services Requiring Polly Retry
+- All broker services (Binance, Alpaca, Schwab, Interactive Brokers)
+- Data source services (Yahoo Finance, Binance kline fetchers, CSV/MySQL/MongoDB readers)
+- Notification services (DingTalk, WeChat, Email) when sending via external APIs
+- Any service that uses `HttpClient`, `RestSharp`, or similar HTTP clients
+
+---
+
 ## README Maintenance
 
 ### Rule: README.md must be updated synchronously with code changes
@@ -377,6 +447,12 @@ Use this checklist when reviewing pull requests or your own code:
 - [ ] All enums are in `Shared/Model/Enums.cs`
 - [ ] Enums have bilingual XML documentation
 - [ ] Enum values have explicit integer assignments
+
+### Network Resilience
+- [ ] Every network call is wrapped with Polly retry policy
+- [ ] Retry handles HTTP 429, 5xx errors, and HttpRequestException
+- [ ] Exponential backoff is used
+- [ ] Retry logs include attempt number and error details
 
 ### Security
 - [ ] No sensitive data in code

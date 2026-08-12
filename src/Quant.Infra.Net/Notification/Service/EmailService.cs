@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using Quant.Infra.Net.Notification.Model;
 using MimeKit;
 using Quant.Infra.Net.Shared.Service;
+using Polly;
+using Polly.Retry;
 
 namespace Quant.Infra.Net.Notification.Service
 {
@@ -12,6 +14,27 @@ namespace Quant.Infra.Net.Notification.Service
 	/// </summary>
 	public class PersonalEmailService : IEmailService
 	{
+		/// <summary>
+		/// Network request retry policy to handle transient failures and SMTP connection timeouts.
+		/// 网络请求重试策略，应对暂时性失败和 SMTP 连接超时。
+		/// </summary>
+		private readonly AsyncRetryPolicy _retryPolicy;
+
+		public PersonalEmailService()
+		{
+			_retryPolicy = Policy
+				.Handle<Exception>()
+				.WaitAndRetryAsync(
+					retryCount: 3,
+					sleepDurationProvider: retries => System.TimeSpan.FromSeconds(System.Math.Pow(2, retries)),
+					onRetry: (response, span, retry, context) =>
+					{
+						UtilityService.LogAndWriteLine(
+							$"[PersonalEmail Retry] Attempt {{retry}}/3 after {{span.TotalSeconds}}s - Error: {{response.Exception?.Message}}");
+					}
+				);
+		}
+
 		/// <summary>
 		/// 异步批量发送邮件。
 		/// Sends bulk emails asynchronously.
@@ -29,10 +52,12 @@ namespace Quant.Infra.Net.Notification.Service
 			// 明确指定使用 MailKit 的 SmtpClient，防止和 System.Net.Mail 冲突
 			using var client = new MailKit.Net.Smtp.SmtpClient();
 
-			try
-			{
-				// 解决 465 端口报错：第三个参数设为 true
-				bool useSsl = setting.Port == 465;
+			return await _retryPolicy.ExecuteAsync(async () => {
+				using var client = new MailKit.Net.Smtp.SmtpClient();
+				try
+				{
+					// 解决 465 端口报错：第三个参数设为 true
+					bool useSsl = setting.Port == 465;
 				await client.ConnectAsync(setting.SmtpServer, setting.Port, useSsl);
 
 				// 身份验证
@@ -61,14 +86,15 @@ namespace Quant.Infra.Net.Notification.Service
 					}
 				}
 
-				await client.DisconnectAsync(true);
-				return true;
-			}
-			catch (Exception ex)
-			{
-				UtilityService.LogAndWriteLine($"[PersonalEmailService] Error: {ex.Message}", Serilog.Events.LogEventLevel.Error);
-				return false;
-			}
+					await client.DisconnectAsync(true);
+					return true;
+				}
+				catch (Exception ex)
+				{
+					UtilityService.LogAndWriteLine($"[PersonalEmailService] Error: {{ex.Message}}", Serilog.Events.LogEventLevel.Error);
+					return false;
+				}
+			});
 		}
 	}
 }

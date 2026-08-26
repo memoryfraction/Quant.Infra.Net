@@ -103,4 +103,15 @@ await dingTalk.SendNotificationAsync("[Alert] BTC long position opened", token, 
 
 > 📖 [GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/) — full documentation site
 
+## Related Projects / 相关项目
+
+| Project | Description |
+|---|---|
+| [LLSDA](https://github.com/memoryfraction/LLSDA-Lightning-Location-System-Data-Analyzer) | Open-source lightning location system (LLS) data analysis library — published on NuGet, cited in a TechRxiv preprint. 开源闪电定位系统数据分析类库 —— 已发布 NuGet 包，并被 TechRxiv 预印本引用。 |
+| [HealthData-Interoperability-Csharp](https://github.com/memoryfraction/HealthData-Interoperability-Csharp) | AI-driven FHIR R4/R5 healthcare interoperability engine for .NET — HIPAA compliance helpers, US Core conformance, local AI semantic validation. 基于 .NET 的 AI 驱动 FHIR R4/R5 医疗数据互操作引擎 —— HIPAA 合规辅助、US Core 一致性校验、本地 AI 语义验证。 |
+
+> More projects by the same author: [github.com/memoryfraction](https://github.com/memoryfraction) / 同一作者的更多项目
+
+---
+
 > **Disclaimer**: See [DISCLAIMER](docs/Disclaimer.md) for full disclaimer and limitation of liability / 详见免责声明了解完整免责条款与责任限制。

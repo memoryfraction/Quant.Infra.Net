@@ -56,7 +56,7 @@ public class PipelineContextTests
         var ctx = new PipelineContext(runId: 3);
 
         object? value = null;
-        Assert.ThrowsException<ArgumentNullException>(() => ctx.Set(value));
+        Assert.ThrowsException<ArgumentNullException>(() => ctx.Set<object>(value!));
         Assert.ThrowsException<ArgumentNullException>(() => ctx.AddEvent(null!));
         Assert.ThrowsException<ArgumentNullException>(() => ctx.AddError(null!));
     }

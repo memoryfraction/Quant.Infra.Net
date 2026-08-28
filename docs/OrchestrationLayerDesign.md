@@ -10,6 +10,7 @@
 
 | 版本 | 日期 | 更新内容 | 更新人 |
 |------|------|---------|--------|
+| 1.4.0 | 2026-08-28 | **M0–M6 全部实施完成**：新增 `Quant.Infra.Net.Orchestration{,.Tests,.Console}` 三个项目（§6 全里程碑落地：契约/信号/风控/Paper执行/管道/DI与Runner/Demo）；Orchestration.Tests 93/93 全绿；Console Demo 三策略（PairTradingZScore/MaCross/MeanReversion）Paper 单周期实测通过；根 README 架构图与文档表已追加编排层 | agent(qwen3.8:27b) |
 | 1.3.0 | 2026-08-27 | **审阅修正（关键）**：`InMemoryBinanceBrokerService` 核实为 `BrokerServiceBase` 的空壳实现（非 `IBinanceUsdFutureService`，方法体全部 `throw NotImplementedException`），且现有唯一的 `IBinanceUsdFutureService` 实现（`BinanceUsdFutureService`）只支持 Testnet/Live、会打真实 Binance API——**编排层必须新建纸上交易实现 `PaperBinanceUsdFutureService`**（新增 §3.5 D3 重写 + §5.4.1 + M3 任务）；修正 `ITraditionalFinanceSourceDataService` 的数据拉取方法名（`DownloadOhlcvListAsync` 而非 `GetOhlcvListAsync`）；补充 `Ohlcvs.OhlcvSet` 为 `HashSet<Ohlcv>`（无序）必须按时间戳排序的规则；补充 `PipelineRunner` 的事件→异步循环桥接与 `IntervalTrigger.Start()` 调用说明；修正 §2 表格对 `PortfolioCalculationService` 的错误归因 | rex |
 | 1.2.0 | 2026-08-27 | 内置范例策略扩充为 3 个：新增 MaCross（含经典 200MA 均线）与 MeanReversion 两个生成器，§9 重写为三策略 Demo | rex |
 | 1.2.1 | 2026-08-27 | ADF 平稳性门限改为可选（仅 C# 实现，D9）：编排层禁用 Python 互操作，M2 增加 `UseAdfFilter` 参数与专用测试 | rex |

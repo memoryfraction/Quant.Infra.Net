@@ -36,6 +36,12 @@ Quant.Infra.Net abstracts the complexity of connecting to financial data sources
 │                     Your Strategy Logic                          │
 │                  (Write once, run anywhere)                       │
 └──────────────────────┬──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  Orchestration Layer (Quant.Infra.Net.Orchestration)             │
+│  DataIngest → Analysis → Signal → TargetPosition → Risk          │
+│  → Execution (Paper broker, zero network) → PortfolioState       │
+│  → Notification   PipelineRunner + AddQuantInfraNetOrchestration │
+└───────────────────────────────┬──────────────────────────────────┘
                        │ IQuantInfraNet API
    ┌───────────────────┼──────────────────────────────────────────┐
    │                   │                                          │
@@ -98,6 +104,7 @@ await dingTalk.SendNotificationAsync("[Alert] BTC long position opened", token, 
 | [User Manual / 使用手册](docs/Manual.md) | Installation, module usage guide, API examples |
 | [Architecture Overview / 架构概览](docs/Architect.md) | System design, module relationships, data flow |
 | [Code Standards / 代码规范](docs/CodeStandard.md) | SOLID principles, XML docs, naming conventions, checklist |
+| [Orchestration Layer Design / 编排层设计](docs/OrchestrationLayerDesign.md) | E2E orchestration: signal generation, risk gate, Paper execution, pipeline & DI |
 
 ---
 

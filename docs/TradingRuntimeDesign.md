@@ -6,7 +6,7 @@
 >
 > 更根本的问题是量化圈的经典事故：**回测用一套策略实现，上线时因为各种原因（重写、抄漏一行、参数改了忘记同步）变成了另一套逻辑，回测的历史表现和实盘完全对不上**。单纯"加一个回测模块"不能防住这件事——如果回测和 Paper/实盘是两个互不相干的入口，用户依然要自己保证传给两边的策略参数一致，这个"自己保证"正是事故的根源。
 >
-> 本方案分两个阶段一次性解决这两个问题：**阶段一（B0-B6）**建一个事件驱动回测引擎，与编排层零侵入集成；**阶段二（R0-R5）**在两者之上加一层唯一入口，用一个 `RunMode` 开关自动切 Backtest/Paper/Testnet/Live，并把"策略即插件文件"变成正式约定，从架构上让"两套实现"这件事物理上不可能发生。
+> 本方案分两个阶段一次性解决这两个问题：**阶段一（B0-B6）**建一个事件驱动回测引擎，与编排层零侵入集成；**阶段二（R0-R6）**在两者之上加一层唯一入口，用一个 `RunMode` 开关自动切 Backtest/Paper/Testnet/Live，把"策略即插件文件"变成正式约定，并在唯一入口落地后收敛掉过渡期的两个独立 Demo 项目（R6），从架构上让"两套实现"这件事物理上不可能发生。
 >
 > 本文档沿用 [编排层设计文档](OrchestrationLayerDesign.md) 的写法：既是可自主执行的规格说明书，也是供人类评审的架构设计文档，接口签名、目录结构、里程碑验收标准均已定死，实现时**不得擅自更改公共契约**。
 
@@ -16,6 +16,7 @@
 
 | 版本 | 日期 | 更新内容 | 更新人 |
 |------|------|---------|--------|
+| 1.1.1 | 2026-08-28 | 新增 R6「收敛 Console 项目」里程碑：`Runtime.Console` 落地（R5）后，`Orchestration.Console`/`Backtest.Console` 两个过渡期 Demo 项目不再提供增量信息，改为删除，最终稳态收敛为 `MyQuantApp`（外部用户示例）+ `Runtime.Console`（唯一内部端到端 Demo）+ 各层独立 `.Tests` 项目（不合并）；起因：人工审阅 Solution Explorer 发现 3 个 Console 项目并存有维护负担 | agent(claude-sonnet-5) |
 | 1.1.0 | 2026-08-28 | 合并原 `BacktestEngineDesign.md`（回测引擎，B0-B6）与 `UnifiedRuntimeDesign.md`（统一运行时，R0-R5）为单一实施文档；新增 §3「仓库与发布策略」正面回答：继续在本仓库改还是另起仓库、要不要现在发 NuGet、老用户升级影响多大 | agent(claude-sonnet-5) |
 | 1.0.0 | 2026-08-28 | （已废弃，内容并入本文档）初版分拆为两份文档：事件驱动回测引擎设计 + 统一运行时设计 | agent(claude-sonnet-5) |
 
@@ -31,7 +32,7 @@
 6. [目录结构](#6-目录结构)
 7. [核心契约](#7-核心契约)
 8. [一致性保证矩阵：三种模式到底哪里允许不一样](#8-一致性保证矩阵三种模式到底哪里允许不一样)
-9. [里程碑与验收标准（阶段一 B0-B6 + 阶段二 R0-R5）](#9-里程碑与验收标准)
+9. [里程碑与验收标准（阶段一 B0-B6 + 阶段二 R0-R6）](#9-里程碑与验收标准)
 10. [测试策略](#10-测试策略)
 11. [实现护栏](#11-实现护栏)
 12. [范例：一个策略文件，四种模式全打通](#12-范例一个策略文件四种模式全打通)
@@ -924,7 +925,7 @@ switch (runtimeOptions.RunMode)
 
 ## 9. 里程碑与验收标准
 
-> **执行协议**：阶段一（B0-B6）在阶段二（R0-R5）之前完成——`RunMode.Backtest` 分支直接调用 `AddQuantInfraNetBacktest()`，该方法不存在时 R3/R4 无法验收。每个里程碑完成后：①`dotnet build` 零 warning 零 error；②`dotnet test` 全绿（含新增测试）；③git commit（阶段一格式 `backtest(B{n}): ...`，阶段二格式 `runtime(R{n}): ...`）。任一验收不过则修复后再进入下一里程碑，禁止跳过。
+> **执行协议**：阶段一（B0-B6）在阶段二（R0-R6）之前完成——`RunMode.Backtest` 分支直接调用 `AddQuantInfraNetBacktest()`，该方法不存在时 R3/R4 无法验收。每个里程碑完成后：①`dotnet build` 零 warning 零 error；②`dotnet test` 全绿（含新增测试）；③git commit（阶段一格式 `backtest(B{n}): ...`，阶段二格式 `runtime(R{n}): ...`）。任一验收不过则修复后再进入下一里程碑，禁止跳过。R6 是唯一允许删除既有源码文件的里程碑（删除对象限定为 `Orchestration.Console`/`Backtest.Console` 两个 Demo 项目本身，不涉及它们之外的任何文件），其余全部里程碑仍遵守 §11 护栏第 1 条"现有项目只读"。
 
 ### 阶段一：回测引擎
 
@@ -1001,6 +1002,17 @@ switch (runtimeOptions.RunMode)
 - [ ] 新增 `docs/UnifiedRuntimeQuickStart-en.md` / `-ch.md`
 - [ ] 更新根 `README.md` 架构图：在 Orchestration/Backtest 之上追加 Runtime 层，标注"一个开关"
 - **验收**：改 `appsettings.json` 里的 `RunMode` 一个值，`dotnet run` 分别验证 Backtest/Paper 两种模式都能跑通（Testnet/Live 验收标准为"抛出预期的 fail-fast 异常"而非真的下单）
+
+**R6 — 收敛 Console 项目（唯一入口落地后，砍掉过渡期的脚手架）**
+
+> 背景：`Orchestration.Console`（M6 产物）与 `Backtest.Console`（B5 产物）各自的存在理由是"证明本层单独可跑"——在 `Runtime.Console` 出现之前，它们是唯一的端到端验收手段，不算重复建设。R5 完成后，`Runtime.Console` 用 `RunMode=Paper`/`RunMode=Backtest` 已经能覆盖两者原本证明的全部内容，此时继续维护三个 Demo（各自的 `appsettings.json`、各自要跟着契约变化同步的 `Program.cs`）就是纯维护负担，没有增量信息。本里程碑把解决方案收敛到"一个 Demo 入口 + 若干独立 Tests 项目"的稳态。
+
+- [ ] 确认 `Runtime.Console` 以 `RunMode=Paper` 跑出的事件流/输出，与 `Orchestration.Console` 原有输出在信息量上等价（不要求逐字节相同，要求同样能看到 DataIngest→...→Notification 全部阶段的事件）；以 `RunMode=Backtest` 跑出的绩效报告与 `Backtest.Console` 原有输出等价
+- [ ] 删除 `Quant.Infra.Net.Orchestration.Console` 项目源码与 `.sln` 条目（`Quant.Infra.Net.Orchestration.Tests` **不删**——测试隔离和 Demo 隔离是两回事，各层的 Tests 项目继续保留、不合并）
+- [ ] 删除 `Quant.Infra.Net.Backtest.Console` 项目源码与 `.sln` 条目（`Quant.Infra.Net.Backtest.Tests` 同样不删）
+- [ ] 更新 `docs/OrchestrationQuickStart-en.md`/`-ch.md`、`docs/BacktestQuickStart-en.md`/`-ch.md`（若 B6 已产出）里所有 `dotnet run --project Quant.Infra.Net.Orchestration.Console`/`...Backtest.Console` 的命令，改成 `dotnet run --project Quant.Infra.Net.Runtime.Console`（配 `appsettings.json` 里对应的 `RunMode` 取值）
+- [ ] 更新根 `README.md`/`docs/readme-en.md`/`docs/readme-ch.md` 里任何提到独立 Orchestration/Backtest Demo 命令的地方，统一指向 `Runtime.Console`
+- **验收**：`dotnet sln list` 只剩 `MyQuantApp` 一个"外部用户示例"性质的可执行项目，加 `Quant.Infra.Net.Runtime.Console` 一个"内部端到端 Demo"性质的可执行项目；全部 `*.Tests` 项目数量不变、全绿；全仓库搜索确认没有文档还在引用已删除的两个 Console 项目
 
 ---
 
@@ -1118,7 +1130,7 @@ await host.RunAsync();
 
 ## 14. 后续演进
 
-**依赖顺序**：`OrchestrationLayerDesign.md`（已实现 M0-M6）→ 本文档阶段一 B0-B6 → 本文档阶段二 R0-R5。
+**依赖顺序**：`OrchestrationLayerDesign.md`（已实现 M0-M6）→ 本文档阶段一 B0-B6 → 本文档阶段二 R0-R6。
 
 **后续演进方向**（不在本方案范围，供未来参考）：
 - 多经纪商切换（不止 Binance）：扩展到 Alpaca/Schwab 需要在 §7.7 的分派逻辑里增加对应分支，`IStrategyDescriptor`/`StrategyCatalog` 机制本身与具体经纪商无关，不需要改动

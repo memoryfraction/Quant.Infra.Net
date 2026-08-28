@@ -79,6 +79,63 @@ Full contract (interfaces, milestones, risk-rule defaults, extension points) is 
 
 ---
 
+## Backtest Engine (Beta)
+
+`Quant.Infra.Net.Backtest` replays historical data through that **same** pipeline: bar by bar, the same 8-stage `StrategyPipeline`, the same strategy code — with zero network, zero live broker, and no look-ahead bias by construction. A backtest is never a *separate strategy implementation*; it is the identical code path that runs under Paper, re-driven over history.
+
+**Try it in under a minute** — the demo runs `MaCross` over 120 synthetic daily bars (no network, no API keys; the series is synthetic, not real AAPL data):
+
+```bash
+git clone https://github.com/memoryfraction/Quant.Infra.Net.git
+cd Quant.Infra.Net
+dotnet run --project src/Quant.Infra.Net.Backtest.Console
+```
+
+Expected output (deterministic, abbreviated):
+
+```
+回测完成 / Backtest complete: 100 bars, 8 trades
+CAGR=16.56%   Sharpe=0.55   Calmar=45.19
+MaxDrawdown=-0.37%（9 天 / days）
+WinRate=80.0%   ProfitFactor=23.12   Commission=0 USD
+```
+
+**What's inside:**
+
+| Capability | Detail |
+|---|---|
+| **Event-driven replay** | One `StrategyPipeline.RunAsync` per bar — the exact code path of a Paper session, re-driven over history |
+| **No look-ahead bias** | `HistoricalDataSet.SliceUpTo(symbol, asOfUtc)` caps visible history at the bar being replayed (pinned by `LookAheadBiasTests`) |
+| **Backtest broker** | `BacktestBrokerService` (an `IBinanceUsdFutureService`): accounting identical to the Paper broker, plus commission/slippage and an append-only trade log |
+| **Fill timing** | `SameBarClose` (default) or `NextBarOpen` (fill at the next bar's open — causally honest for close-based signals) |
+| **Costs** | `CommissionBps` + `SlippageBps`, recorded per trade and summing into `Metrics.TotalCommissionUsd` |
+| **Metrics** | `BacktestResult.Metrics` — CAGR / Sharpe / Calmar / max drawdown (reusing `StrategyPerformanceAnalyzer`) + win rate / profit factor / total commission (trade-level), from `EquityCurve` + `Trades` |
+| **Parameter sweeps** | `ParameterSweepRunner` — each grid point gets its own broker + its own DI container under `Parallel.ForEachAsync`; results indexed back into grid order |
+| **Warm-up** | `WarmupBars` suppresses trading on the first N bars for indicator warm-up |
+
+**Use it in your own host** (offline by design — `Environment` is forced to `Paper`, so no live broker can be wired in):
+
+```csharp
+var services = new ServiceCollection();
+services.AddQuantInfraNetBacktest(
+    configureBacktest: b => { b.InitialEquityUsd = 10000m; b.WarmupBars = 20; },
+    configureOrchestration: o =>
+    {
+        o.Parameters["Symbol"] = "AAPL";
+        o.Parameters["Strategy"] = "MaCross";
+    });
+
+using var provider = services.BuildServiceProvider();
+var result = await provider.GetRequiredService<BacktestRunner>().RunAsync(myHistoricalDataSet, new[] { "AAPL" });
+// result.EquityCurve, result.Trades, result.Metrics
+```
+
+Custom or the 3 built-in strategies: set `Parameters.Strategy` (`MaCross` / `MeanReversion` / `PairTradingZScore`) or pass `customSignalGenerator` — the **same class** then serves both backtest and Paper. Feed real data by building `HistoricalDataSet` from any `Ohlcv` series (fetched once, up-front — never inside the loop).
+
+Full contract and guardrails (fill-timing matrix, milestones B0–B6, dependency white-list) are documented in [Trading Runtime Design](TradingRuntimeDesign.md); step-by-step usage is in the [Backtest Quick Start Guide](BacktestQuickStart-en.md).
+
+---
+
 ## Why Use This Library?
 
 ### Pain Points in Quant Development

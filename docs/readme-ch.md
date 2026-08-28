@@ -79,6 +79,63 @@ await host.RunAsync();
 
 ---
 
+## 回测引擎 Backtest Engine（Beta）
+
+`Quant.Infra.Net.Backtest` 把历史数据回放进**同一条**管道：逐 bar、同一套 8 阶段 `StrategyPipeline`、同一份策略代码——零网络、零实盘券商、结构性杜绝未来函数。回测永远是"同一份策略代码在历史上重放"，而不是另写一套"回测专用实现"。
+
+**一分钟内跑起来** —— Demo 用 120 根合成日线跑 `MaCross`（零网络、零 API Key；序列是合成的，不是真实 AAPL 数据）：
+
+```bash
+git clone https://github.com/memoryfraction/Quant.Infra.Net.git
+cd Quant.Infra.Net
+dotnet run --project src/Quant.Infra.Net.Backtest.Console
+```
+
+预期输出（确定性，节选）：
+
+```
+回测完成 / Backtest complete: 100 bars, 8 trades
+CAGR=16.56%   Sharpe=0.55   Calmar=45.19
+MaxDrawdown=-0.37%（9 天 / days）
+WinRate=80.0%   ProfitFactor=23.12   Commission=0 USD
+```
+
+**能力一览：**
+
+| 能力 | 说明 |
+|---|---|
+| **事件驱动回放** | 每根 bar 一次 `StrategyPipeline.RunAsync`——与 Paper 完全相同的代码路径，在历史上重放 |
+| **无未来函数** | `HistoricalDataSet.SliceUpTo(symbol, asOfUtc)` 保证可见历史最多到当前 bar（`LookAheadBiasTests` 钉死） |
+| **回测经纪商** | `BacktestBrokerService`（实现 `IBinanceUsdFutureService`）：记账口径与 Paper 券商一致，外加手续费/滑点记账与只增不减的成交日志 |
+| **成交时机** | `SameBarClose`（默认，信号 bar 收盘价）或 `NextBarOpen`（下一 bar 开盘价——对"收盘价算信号"的因果诚实模式） |
+| **成本** | `CommissionBps` + `SlippageBps`，逐条计入 `Trades[].CommissionUsd` 并汇总进 `Metrics.TotalCommissionUsd` |
+| **指标** | `BacktestResult.Metrics`——CAGR / 夏普 / 卡尔玛 / 最大回撤（复用 `StrategyPerformanceAnalyzer`）+ 胜率 / 盈亏比 / 总手续费（交易层），由 `EquityCurve` + `Trades` 装配 |
+| **参数扫描** | `ParameterSweepRunner`——每个网格点独立的 broker + 独立 DI 容器，`Parallel.ForEachAsync` 并行，结果按网格顺序落位 |
+| **预热** | `WarmupBars` 前 N 根 bar 不交易，用于指标预热 |
+
+**接入自己的宿主**（设计上离线——`Environment` 被强制为 `Paper`，无法误接实盘券商）：
+
+```csharp
+var services = new ServiceCollection();
+services.AddQuantInfraNetBacktest(
+    configureBacktest: b => { b.InitialEquityUsd = 10000m; b.WarmupBars = 20; },
+    configureOrchestration: o =>
+    {
+        o.Parameters["Symbol"] = "AAPL";
+        o.Parameters["Strategy"] = "MaCross";
+    });
+
+using var provider = services.BuildServiceProvider();
+var result = await provider.GetRequiredService<BacktestRunner>().RunAsync(myHistoricalDataSet, new[] { "AAPL" });
+// result.EquityCurve、result.Trades、result.Metrics
+```
+
+内置 3 策略任选（`MaCross` / `MeanReversion` / `PairTradingZScore`，改一个 `Parameters.Strategy` 值），或传 `customSignalGenerator` 用自己的策略类——**同一个类**既跑回测也跑 Paper。真实数据只需把任意 `Ohlcv` 序列（一次性预取，绝不放在回放循环内）构建为 `HistoricalDataSet`。
+
+完整契约与护栏（成交时机矩阵、里程碑 B0–B6、依赖白名单）见 [Trading Runtime Design](TradingRuntimeDesign.md)；分步使用说明见 [回测引擎详细使用说明](BacktestQuickStart-ch.md)。
+
+---
+
 ## 为什么要用这个库？
 
 ### 量化开发中的痛点

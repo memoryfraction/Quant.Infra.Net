@@ -31,5 +31,11 @@ public enum DataSourceKind
     /// 用户自定义实现（由调用方传入的 customDataSource 提供）。
     /// User-supplied implementation (provided by the caller's customDataSource instance).
     /// </summary>
-    Custom = 4
+    Custom = 4,
+
+    /// <summary>
+    /// stooq.com 免费日线 CSV，无需 API Key，社区数据源非 SLA 保证 /
+    /// Free daily CSV from stooq.com, no API key, community data source with no SLA guarantee.
+    /// </summary>
+    Stooq = 5
 }

@@ -52,6 +52,8 @@ public static class DataSourceFactory
             Models.DataSourceKind.Binance => new BinanceKlineSourceDataService(
                 serviceProvider.GetRequiredService<IBinanceUsdFutureService>()),
 
+            Models.DataSourceKind.Stooq => new StooqTraditionalFinanceSourceDataService(),
+
             Models.DataSourceKind.Custom => customDataSource ?? throw new ArgumentException(
                 "DataSourceKind.Custom requires a custom ITraditionalFinanceSourceDataService instance " +
                 "(pass it via AddQuantInfraNet / Create's customDataSource parameter).",

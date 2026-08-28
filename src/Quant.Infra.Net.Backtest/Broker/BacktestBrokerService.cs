@@ -40,6 +40,8 @@ public sealed class BacktestBrokerService : IBinanceUsdFutureService
     private readonly Dictionary<string, double?> _entryPrice = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, double> _markPrice = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<BacktestTrade> _trades = new();
+    private readonly List<Action> _pendingOrders = new();
+    private bool _deferFills;
 
     /// <summary>
     /// 创建回测经纪商。
@@ -283,6 +285,43 @@ public sealed class BacktestBrokerService : IBinanceUsdFutureService
         return Task.FromResult((double)(totalUnrealized / (double)baseEquity));
     }
 
+    /// <summary>
+    /// 延迟成交模式（NextBarOpen 语义）：开启后开/平仓只入队，<see cref="FlushPendingOrders"/> 时按
+    /// 当时的标记价成交（调用方在 flush 前把下一根 bar 的开盘价设为标记价）。
+    /// Deferred-fill mode (NextBarOpen semantics): when enabled, orders only enqueue and fill at
+    /// FlushPendingOrders time against the current marks (the caller sets the next bar's open as the marks).
+    /// </summary>
+    public bool DeferFills
+    {
+        get { lock (_gate) { return _deferFills; } }
+        set
+        {
+            lock (_gate)
+            {
+                _deferFills = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 按当前标记价成交全部挂起订单（NextBarOpen 填充点）。
+    /// Fills all pending orders against the current marks (the NextBarOpen fill point).
+    /// </summary>
+    public void FlushPendingOrders()
+    {
+        List<Action> pending;
+        lock (_gate)
+        {
+            pending = _pendingOrders.ToList();
+            _pendingOrders.Clear();
+        }
+
+        foreach (var action in pending)
+        {
+            action(); // 每个动作自行持有 _gate，避免锁重入 / each action acquires _gate itself; no lock re-entrancy
+        }
+    }
+
     /// <inheritdoc />
     public Task LiquidateUsdFutureAsync(string symbol)
     {
@@ -293,9 +332,24 @@ public sealed class BacktestBrokerService : IBinanceUsdFutureService
 
         lock (_gate)
         {
+            if (_deferFills)
+            {
+                _pendingOrders.Add(() => LiquidateCore(symbol));
+                return Task.CompletedTask;
+            }
+        }
+
+        LiquidateCore(symbol);
+        return Task.CompletedTask;
+    }
+
+    private void LiquidateCore(string symbol)
+    {
+        lock (_gate)
+        {
             if (!_notionalUsd.TryGetValue(symbol, out var oldNotional) || Math.Abs(oldNotional) <= PositionEpsilon)
             {
-                return Task.CompletedTask; // 无持仓：无操作（与 Paper 一致）/ no position: no-op (mirrors Paper)
+                return; // 无持仓：无操作（与 Paper 一致）/ no position: no-op (mirrors Paper)
             }
 
             // 平仓方向与旧持仓相反：多头平仓=卖出，空头平仓=买入（不利方向偏移）。
@@ -316,8 +370,6 @@ public sealed class BacktestBrokerService : IBinanceUsdFutureService
                 CommissionUsd = commission,
             });
         }
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -333,6 +385,21 @@ public sealed class BacktestBrokerService : IBinanceUsdFutureService
             throw new ArgumentException("rate must be within [0, 1].", nameof(rate));
         }
 
+        lock (_gate)
+        {
+            if (_deferFills)
+            {
+                _pendingOrders.Add(() => SetUsdFutureHoldingsCore(symbol, rate, positionSide));
+                return Task.CompletedTask;
+            }
+        }
+
+        SetUsdFutureHoldingsCore(symbol, rate, positionSide);
+        return Task.CompletedTask;
+    }
+
+    private void SetUsdFutureHoldingsCore(string symbol, double rate, PositionSide positionSide)
+    {
         lock (_gate)
         {
             // 与 Paper 同序：先按旧持仓仍打开时的权益计算目标，再平掉旧仓。
@@ -386,8 +453,6 @@ public sealed class BacktestBrokerService : IBinanceUsdFutureService
                 });
             }
         }
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />

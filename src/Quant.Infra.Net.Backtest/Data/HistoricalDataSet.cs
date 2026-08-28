@@ -138,4 +138,35 @@ public sealed class HistoricalDataSet
 
         return lastClose;
     }
+
+    /// <summary>
+    /// 该 symbol 在 asOfUtc 之后第一根 bar（严格 &gt; asOfUtc）的开盘价（NextBarOpen 成交锚点；无后续 bar 返回 null）。
+    /// The open price of the first bar strictly after asOfUtc for one symbol (the NextBarOpen fill anchor; null when there is no later bar).
+    /// </summary>
+    /// <param name="symbol">标的代码（大小写不敏感）/ Trading symbol (case-insensitive).</param>
+    /// <param name="afterUtc">模拟时刻（UTC），严格之后 / The simulated instant in UTC; strictly after it.</param>
+    /// <returns>开盘价；无后续 bar 时 null / The open price, or null when no later bar exists.</returns>
+    /// <exception cref="ArgumentException">symbol 为空白时抛出 / Thrown when the symbol is blank.</exception>
+    public double? OpenAtNextAfter(string symbol, DateTime afterUtc)
+    {
+        if (string.IsNullOrWhiteSpace(symbol))
+        {
+            throw new ArgumentException("Symbol must not be blank.", nameof(symbol));
+        }
+
+        if (!_seriesBySymbol.TryGetValue(symbol, out var series))
+        {
+            return null;
+        }
+
+        foreach (var bar in series)
+        {
+            if (bar.OpenDateTime > afterUtc)
+            {
+                return (double)bar.Open;
+            }
+        }
+
+        return null;
+    }
 }

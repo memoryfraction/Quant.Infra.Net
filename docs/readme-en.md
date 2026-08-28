@@ -36,6 +36,49 @@ Quant.Infra.Net provides a unified C# API that abstracts away the complexity of 
 
 ---
 
+## Orchestration Layer (Beta)
+
+`Quant.Infra.Net.Orchestration` turns the modules above into a single, runnable pipeline: `DataIngest → Analysis → Signal → TargetPosition → Risk → Execution → PortfolioState → Notification`. Instead of writing glue code, you register one extension method and pick a built-in strategy.
+
+**3 built-in strategies** (switch by changing one config value, no code changes):
+
+| Strategy | `Parameters.Strategy` | Style |
+|----------|------------------------|-------|
+| Pair trading z-score | `PairTradingZScore` | Statistical arbitrage (OLS spread + z-score) |
+| Classic 200-day MA | `MaCross` | Trend following |
+| Mean reversion z-score | `MeanReversion` | Oscillation / mean reversion |
+
+**Try it in under a minute** — the demo defaults to the single-symbol `MaCross` strategy on a synthetic `AAPL` series generated in-process (no network, no API keys, no real market data — see below for exactly what runs):
+
+```bash
+git clone https://github.com/memoryfraction/Quant.Infra.Net.git
+cd Quant.Infra.Net/src
+dotnet run --project Quant.Infra.Net.Orchestration.Console
+```
+
+You'll see the full event trail printed to the console: data ingest → signal → risk check → paper execution → portfolio snapshot. A single symbol means one signal / one target position / one execution report, so the whole run is easy to verify by eye. Switch strategies or symbols by editing `Quant.Infra.Net.Orchestration.Console/appsettings.json` and re-run.
+
+**What data source, symbol, and strategy does the demo actually use — and how do I swap in my own?** See the dedicated [Orchestration Quick Start Guide](OrchestrationQuickStart-en.md) for the full breakdown plus step-by-step instructions for plugging in a real data source, changing symbols, and writing a custom strategy.
+
+**Use it in your own host** (`Environment` defaults to `Paper` — pure in-memory, zero network calls, safe by default):
+
+```csharp
+var builder = Host.CreateApplicationBuilder(args);
+builder.Services.Configure<OrchestrationOptions>(builder.Configuration.GetSection("Orchestration"));
+builder.Services.AddQuantInfraNetOrchestration();   // Paper environment + pipeline assembled from "Strategy"
+
+var host = builder.Build();
+await host.RunAsync();
+```
+
+Extension points: pass `customStages`, `customSignalGenerator`, or `customExecutionModel` to `AddQuantInfraNetOrchestration(...)` to replace any part of the default pipeline with your own implementation.
+
+Going live requires two explicit steps — nothing defaults to real trading: set `"Environment": "Testnet"` or `"Live"` in configuration, and register a live `IBinanceUsdFutureService` yourself before calling `AddQuantInfraNetOrchestration()` (it only auto-registers the Paper broker).
+
+Full contract (interfaces, milestones, risk-rule defaults, extension points) is documented in [Orchestration Layer Design](OrchestrationLayerDesign.md).
+
+---
+
 ## Why Use This Library?
 
 ### Pain Points in Quant Development
@@ -140,7 +183,8 @@ await dingTalk.SendStrategyAlert("Mean reversion triggered for AAPL/MSFT spread"
 
 | Version | Date | Description |
 |---------|------|-------------|
-| **1.5.1** *(current)* | 2026-08-12 | Code_Standards.md compliance — bilingual XML documentation on all public members, parameter validation audit, version alignment |
+| **1.5.2** *(current)* | 2026-08-28 | **Orchestration Layer (Beta)** — new `Quant.Infra.Net.Orchestration` package: `AddQuantInfraNetOrchestration()` DI entry point, 8-stage pipeline, 3 built-in strategies (PairTradingZScore/MaCross/MeanReversion), Paper (in-memory, zero-network) execution by default, risk gate with kill-switch, severity-routed notifications, and a runnable console demo. See [Orchestration Layer Design](OrchestrationLayerDesign.md) |
+| 1.5.1 | 2026-08-12 | Code_Standards.md compliance — bilingual XML documentation on all public members, parameter validation audit, version alignment |
 | 1.5.0 | 2026-05-28 | **Interactive Brokers (InterReact)** full integration — order, market data, account management via TWS/Gateway; **Charles Schwab** full broker service — quotes, option chains, orders, positions; license changed to MIT; enhanced analysis service unit tests |
 | 1.4.0 | 2024-05-16 | Updated API integrations to handle recent broker changes, added comprehensive documentation |
 | 1.3.0 | 2024-04-05 | Enhanced notification services with email templates and improved error handling |

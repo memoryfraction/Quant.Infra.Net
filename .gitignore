@@ -410,3 +410,4 @@ tools
 /src/Quant.Infra.Net.Web
 /src/Quant.Infra.Net.Web/Quant.Infra.Net.Web.csproj.lscache
 /test-results.txt
+/.workbuddy/memory

@@ -36,6 +36,13 @@ Quant.Infra.Net abstracts the complexity of connecting to financial data sources
 │                     Your Strategy Logic                          │
 │                  (Write once, run anywhere)                       │
 └──────────────────────┬──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  Orchestration Layer (Quant.Infra.Net.Orchestration) / 编排层     │
+│  DataIngest → Analysis → Signal → TargetPosition → Risk          │
+│  → Execution (Paper broker, zero network) → PortfolioState       │
+│  → Notification   PipelineRunner + AddQuantInfraNetOrchestration │
+│  数据采集→分析→信号→目标仓位→风控→执行(Paper零网络)→组合状态→通知  │
+└───────────────────────────────┬──────────────────────────────────┘
                        │ IQuantInfraNet API
    ┌───────────────────┼──────────────────────────────────────────┐
    │                   │                                          │
@@ -98,6 +105,8 @@ await dingTalk.SendNotificationAsync("[Alert] BTC long position opened", token, 
 | [User Manual / 使用手册](docs/Manual.md) | Installation, module usage guide, API examples |
 | [Architecture Overview / 架构概览](docs/Architect.md) | System design, module relationships, data flow |
 | [Code Standards / 代码规范](docs/CodeStandard.md) | SOLID principles, XML docs, naming conventions, checklist |
+| [Orchestration Layer Design / 编排层设计](docs/OrchestrationLayerDesign.md) | E2E orchestration: signal generation, risk gate, Paper execution, pipeline & DI |
+| [Orchestration Quick Start (EN)](docs/OrchestrationQuickStart-en.md) / [编排层使用说明 (中文)](docs/OrchestrationQuickStart-ch.md) | What the demo's data source/symbol/strategy actually are, and how to swap in your own data source, symbols, or strategy |
 
 ---
 

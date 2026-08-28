@@ -10,6 +10,7 @@ using Quant.Infra.Net.Orchestration.Notifications;
 using Quant.Infra.Net.Orchestration.Pipeline;
 using Quant.Infra.Net.Orchestration.Signals;
 using Quant.Infra.Net.Orchestration.Stages;
+using Quant.Infra.Net.Orchestration.Strategies;
 using Quant.Infra.Net.Runtime.Models;
 using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service;
@@ -17,8 +18,8 @@ using Quant.Infra.Net.SourceData.Service;
 namespace Quant.Infra.Net.Runtime.Console.Strategies;
 
 /// <summary>
-/// R9 范例策略：QQQM 逆向 MA200 定投（用 R7 的 customStages 自定义一个 IPipelineStage）。
-/// 职责：读取 QQQM 收盘价（复用 SignalDataLoader 装载规则）→ 算 SMA200 →
+/// R9 范例策略：QQQM 逆向 MA200 定投（用 R7 的 customStages 自定义一个继承自 <see cref="Strategy"/> 的阶段）。
+/// 职责：读取 QQQM 收盘价（复用基类的 SignalDataLoader 装载规则）→ 算 SMA200 →
 /// 按下式算 targetWeight → 产出一条 Signal 与一条 TargetPosition 写入 context，
 /// 交由内置 Risk/Execution/PortfolioState/Notification 四阶段接管（不自造）：
 ///   ratio = close / SMA200;  deviation = 1 - ratio
@@ -27,9 +28,9 @@ namespace Quant.Infra.Net.Runtime.Console.Strategies;
 ///   targetWeight = clamp(targetWeight, MinWeight, MaxWeight)
 /// 参数（Orchestration.Parameters，均带默认值）：Symbol=QQQM, MaPeriod=200, BaseWeight=0.5,
 /// AddIntensity=1.5, TrimIntensity=1.0, MaxWeight=1.0, MinWeight=0.0。
-/// R9 example: a QQQM reverse-MA200 DCA strategy wired via the R7 customStages parameter.
-/// Reads closes through SignalDataLoader, computes SMA200 + targetWeight, emits one Signal + one
-/// TargetPosition into the context; the built-in Risk/Execution/PortfolioState/Notification stages follow.
+/// R9 example: a QQQM reverse-MA200 DCA strategy wired via the R7 customStages parameter as a stage that
+/// inherits the Strategy base. Reads closes through the base (SignalDataLoader), computes SMA200 + targetWeight,
+/// emits one Signal + one TargetPosition into the context; the built-in Risk/Execution/PortfolioState/Notification stages follow.
 /// </summary>
 public static class QqqmReverseDcaStrategy
 {
@@ -76,9 +77,10 @@ public static class QqqmReverseDcaStrategy
     }
 
     /// <summary>
-    /// 组装自定义阶段序列：本策略阶段 + 内置 Risk/Execution/PortfolioState/Notification 四阶段
+    /// 组装自定义阶段序列：本策略阶段（继承自 <see cref="Strategy"/>）+ 内置 Risk/Execution/PortfolioState/Notification 四阶段
     /// （固定顺序，Notification 最后）。依赖自传入的 services（须已完成 AddQuantInfraNet）。
-    /// Builds the custom stage sequence: this strategy stage + the four built-in stages (fixed order, Notification last).
+    /// Builds the custom stage sequence: this strategy stage (inheriting Strategy) + the four built-in stages
+    /// (fixed order, Notification last). Dependencies come from the supplied services (after AddQuantInfraNet).
     /// </summary>
     /// <param name="services">服务集合（须已完成 AddQuantInfraNet 注册）/ Service collection (after AddQuantInfraNet).</param>
     /// <returns>五个阶段的序列 / The five-stage sequence.</returns>
@@ -145,15 +147,13 @@ public static class QqqmReverseDcaStrategy
     }
 
     /// <summary>
-    /// 策略阶段（IPipelineStage）：读收盘价 → SMA200 → targetWeight → Signal + TargetPosition 入 context。
-    /// The strategy stage: reads closes, computes SMA200 + targetWeight, and writes one Signal + one TargetPosition
-    /// (as an IReadOnlyList slot) into the context for the built-in stages to consume.
+    /// QQQM 逆向 MA200 定投策略阶段：继承 <see cref="Strategy"/> 基类，只实现"自己的"信号逻辑
+    /// （SMA200 + 公式 → Signal + TargetPosition）；数据装载、参数读取、事件日志、槽位契约由基类统一提供。
+    /// The QQQM reverse-MA200 DCA stage: inherits the Strategy base and implements only its own signal logic
+    /// (SMA200 + formula → Signal + TargetPosition); loading / params / events / slot contract come from the base.
     /// </summary>
-    public sealed class QqqmReverseDcaStage : IPipelineStage
+    public sealed class QqqmReverseDcaStage : Strategy
     {
-        private readonly ITraditionalFinanceSourceDataService? _yahooData;
-        private readonly IBinanceUsdFutureService? _binanceService;
-
         /// <summary>
         /// 初始化策略阶段（数据装载依赖均可选：回测下 context 已注入缓存切片，走缓存路径零网络）。
         /// Initializes the stage (all loading dependencies optional: under Backtest the context already holds
@@ -162,27 +162,21 @@ public static class QqqmReverseDcaStrategy
         public QqqmReverseDcaStage(
             ITraditionalFinanceSourceDataService? yahooData,
             IBinanceUsdFutureService? binanceService)
+            : base(yahooData, binanceService)
         {
-            _yahooData = yahooData;
-            _binanceService = binanceService;
         }
 
-        /// <summary>阶段名（固定 "QqqmReverseDca"）/ Stage name (fixed "QqqmReverseDca").</summary>
-        public string Name => "QqqmReverseDca";
+        /// <summary>策略名（固定 "QqqmReverseDca"）/ Strategy name (fixed "QqqmReverseDca").</summary>
+        public override string StrategyName => "QqqmReverseDca";
 
         /// <summary>
-        /// 执行策略：数据不足 → 记录事件并跳过（不产出 Signal，交由风控/执行阶段自然无动作）。
-        /// Executes the strategy: insufficient data → records an event and skips (no Signal; downstream stages become no-ops).
+        /// 子类核心逻辑：数据不足 → 记录事件并跳过（不产出 Signal）；否则算 SMA200 + targetWeight → Publish。
+        /// Core logic: insufficient data → log + skip (no Signal); otherwise compute SMA200 + targetWeight → Publish.
         /// </summary>
         /// <param name="context">管道上下文（不得为 null）/ Pipeline context (must not be null).</param>
         /// <param name="ct">取消令牌 / Cancellation token.</param>
-        public async Task ExecuteAsync(IPipelineContext context, CancellationToken ct)
+        protected override async Task ExecuteCoreAsync(IPipelineContext context, CancellationToken ct)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
-
             var symbol = context.GetParameter("Symbol") ?? "QQQM";
             var maPeriod = Math.Max(2, GetInt(context, "MaPeriod", 200));
             var baseWeight = GetDouble(context, "BaseWeight", 0.5);
@@ -191,12 +185,12 @@ public static class QqqmReverseDcaStrategy
             var maxWeight = GetDouble(context, "MaxWeight", 1.0);
             var minWeight = GetDouble(context, "MinWeight", 0.0);
 
-            // 复用 SignalDataLoader 的装载规则：context 缓存优先 → 数据源回退 → 空序列（不自造一套）。
-            // Reuses SignalDataLoader's loading rule: context cache first → data-source fallback → empty series.
-            var closes = (await SignalDataLoader.LoadClosesAsync(context, symbol, ct, _yahooData, _binanceService).ConfigureAwait(false)).ToList();
+            // 数据装载、参数读取均走基类（SignalDataLoader 装载规则 + Orchestration.Parameters 默认值）。
+            // Loading + parameter reads go through the base (SignalDataLoader rule + Orchestration.Parameters defaults).
+            var closes = await LoadClosesAsync(context, symbol, ct).ConfigureAwait(false);
             if (closes.Count < maPeriod)
             {
-                context.AddEvent(PipelineEvent.Create(context.RunId, Name, $"insufficient data for '{symbol}': {closes.Count} < {maPeriod} (no signal)"));
+                Log(context, $"insufficient data for '{symbol}': {closes.Count} < {maPeriod} (no signal)");
                 return;
             }
 
@@ -225,17 +219,9 @@ public static class QqqmReverseDcaStrategy
                 OriginSignal = signal,
             };
 
-            // 与内置阶段同槽位契约：Risk/Execution/PortfolioState 读 IReadOnlyList<Signal/TargetPosition>。
-            // Matches the built-in stages' slot contract: they read the IReadOnlyList<...> slots.
-            context.Set<IReadOnlyList<Signal>>(new[] { signal });
-            context.Set<IReadOnlyList<TargetPosition>>(new[] { target });
-            context.AddEvent(PipelineEvent.Create(context.RunId, Name, $"{symbol} → {direction}, {reason}"));
+            // 槽位契约由基类 Publish 统一提供（IReadOnlyList<Signal> + IReadOnlyList<TargetPosition>）。
+            // The slot contract is provided uniformly by the base Publish (IReadOnlyList<Signal> + IReadOnlyList<TargetPosition>).
+            Publish(context, signal, target);
         }
-
-        private static int GetInt(IPipelineContext context, string key, int defaultValue)
-            => int.TryParse(context.GetParameter(key), NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : defaultValue;
-
-        private static double GetDouble(IPipelineContext context, string key, double defaultValue)
-            => double.TryParse(context.GetParameter(key), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : defaultValue;
     }
 }

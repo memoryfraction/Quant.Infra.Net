@@ -1,6 +1,8 @@
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
+using Quant.Infra.Net.Backtest.Broker;
 using Quant.Infra.Net.Backtest.Data;
+using Quant.Infra.Net.Backtest.Models;
 using Quant.Infra.Net.Backtest.Runner;
 using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Orchestration.Abstractions;
@@ -78,21 +80,35 @@ public static class QqqmReverseDcaStrategy
 
     /// <summary>
     /// 组装自定义阶段序列：本策略阶段（继承自 <see cref="Strategy"/>）+ 内置 Risk/Execution/PortfolioState/Notification 四阶段
-    /// （固定顺序，Notification 最后）。依赖自传入的 services（须已完成 AddQuantInfraNet）。
-    /// Builds the custom stage sequence: this strategy stage (inheriting Strategy) + the four built-in stages
-    /// (fixed order, Notification last). Dependencies come from the supplied services (after AddQuantInfraNet).
+    /// （固定顺序，Notification 最后）。
     /// </summary>
-    /// <param name="services">服务集合（须已完成 AddQuantInfraNet 注册）/ Service collection (after AddQuantInfraNet).</param>
+    /// <remarks>
+    /// 接收的是一个**已经完成 <c>AddQuantInfraNet</c> 注册并 Build 过**的 <see cref="IServiceProvider"/>——
+    /// 不能反过来接收尚未注册的 <see cref="IServiceCollection"/>：customStages 这个参数本身是"调用方先造好
+    /// Stage 实例、再传给 AddQuantInfraNet"的形状，而 Stage 需要的 IRiskManager/IExecutionModel 等服务
+    /// 恰恰是 AddQuantInfraNet 才会注册的——在同一个尚未 Build 的 IServiceCollection 上二次 BuildServiceProvider
+    /// 只会拿到一个空容器，GetRequiredService 必然抛异常。正确用法见 <see cref="RunExampleAsync"/>：先用默认
+    /// 管道调用 AddQuantInfraNet、Build 一次容器，再用这个容器现造自定义管道并手工构造 BacktestRunner，
+    /// 不依赖 AddQuantInfraNet 的 customStages 参数。
+    /// Takes an <see cref="IServiceProvider"/> that has **already** been built after AddQuantInfraNet — not an
+    /// unregistered IServiceCollection: customStages is shaped as "caller builds the stages first, then passes
+    /// them into AddQuantInfraNet", yet the stages need IRiskManager/IExecutionModel/etc., which is exactly what
+    /// AddQuantInfraNet itself registers. Building a second container from the same not-yet-registered
+    /// IServiceCollection only yields an empty container — GetRequiredService would always throw. See
+    /// <see cref="RunExampleAsync"/> for the correct sequencing: call AddQuantInfraNet with the default pipeline,
+    /// build the container once, then assemble the custom pipeline from that container and construct
+    /// BacktestRunner by hand — bypassing AddQuantInfraNet's customStages parameter entirely.
+    /// </remarks>
+    /// <param name="sp">已 Build 的服务容器（含 AddQuantInfraNet 注册的全部服务）/ An already-built provider (with everything AddQuantInfraNet registered).</param>
     /// <returns>五个阶段的序列 / The five-stage sequence.</returns>
-    /// <exception cref="ArgumentNullException">services 为 null / Thrown when services is null.</exception>
-    public static IEnumerable<IPipelineStage> BuildPipeline(IServiceCollection services)
+    /// <exception cref="ArgumentNullException">sp 为 null / Thrown when sp is null.</exception>
+    public static IEnumerable<IPipelineStage> BuildPipeline(IServiceProvider sp)
     {
-        if (services == null)
+        if (sp == null)
         {
-            throw new ArgumentNullException(nameof(services));
+            throw new ArgumentNullException(nameof(sp));
         }
 
-        var sp = services.BuildServiceProvider();
         return new IPipelineStage[]
         {
             new QqqmReverseDcaStage(
@@ -113,11 +129,20 @@ public static class QqqmReverseDcaStrategy
     }
 
     /// <summary>
-    /// 最小可运行示例（独立可选入口，约 20 行）：Stooq 数据源 + Backtest 模式 + customStages，
-    /// 输出 CAGR / Sharpe / MaxDrawdown。不改动 appsettings.json 的默认启动路径（默认启动不发真实网络请求）。
-    /// Minimal runnable example (standalone optional entry, ~20 lines): Stooq + Backtest + customStages,
-    /// prints CAGR / Sharpe / MaxDrawdown. Does not touch the default appsettings.json startup path.
+    /// 最小可运行示例（独立可选入口）：Stooq 数据源 + Backtest 模式，输出 CAGR / Sharpe / MaxDrawdown。
+    /// 不改动 appsettings.json 的默认启动路径（默认启动不发真实网络请求）。
+    /// Minimal runnable example (standalone optional entry): Stooq + Backtest, prints CAGR / Sharpe / MaxDrawdown.
+    /// Does not touch the default appsettings.json startup path.
     /// </summary>
+    /// <remarks>
+    /// 先用默认（八阶段）管道完成一次 AddQuantInfraNet 注册并 Build 容器——此时 IRiskManager/IExecutionModel/
+    /// IBinanceUsdFutureService 等已就绪；再用 BuildPipeline(sp) 现造自定义管道，手工构造 BacktestRunner 运行
+    /// 它（不经过 AddQuantInfraNet 的 customStages 参数，避免 R10-fix 之前的容器时序问题，见 BuildPipeline 备注）。
+    /// First completes one AddQuantInfraNet registration + Build with the default (eight-stage) pipeline — by then
+    /// IRiskManager/IExecutionModel/IBinanceUsdFutureService etc. are ready; then BuildPipeline(sp) assembles the
+    /// custom pipeline and a BacktestRunner is constructed by hand to run it (bypassing AddQuantInfraNet's
+    /// customStages parameter, avoiding the pre-R10-fix container-sequencing bug — see BuildPipeline's remarks).
+    /// </remarks>
     /// <param name="args">命令行参数（未使用）/ Command-line args (unused).</param>
     public static async Task<int> RunExampleAsync(string[] args)
     {
@@ -129,19 +154,23 @@ public static class QqqmReverseDcaStrategy
                 rt.RunMode = RunMode.Backtest;
                 rt.DataSource = DataSourceKind.Stooq;
             },
-            o => { foreach (var (k, v) in DefaultParameters) { o.Parameters[k] = v; } },
-            customStages: BuildPipeline(services));
+            o => { foreach (var (k, v) in DefaultParameters) { o.Parameters[k] = v; } });
         using var sp = services.BuildServiceProvider();
 
         var t0 = new DateTime(2022, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var ohlcvs = sp.GetRequiredService<ITraditionalFinanceSourceDataService>()
-            .DownloadOhlcvListAsync(symbol, t0, DateTime.UtcNow).GetAwaiter().GetResult();
+        var ohlcvs = await sp.GetRequiredService<ITraditionalFinanceSourceDataService>()
+            .DownloadOhlcvListAsync(symbol, t0, DateTime.UtcNow);
         var data = new HistoricalDataSet(new Dictionary<string, IReadOnlyList<Ohlcv>>
         {
             [symbol] = ohlcvs.OhlcvSet.OrderBy(b => b.OpenDateTime).ToList(),
         });
 
-        var result = await sp.GetRequiredService<BacktestRunner>().RunAsync(data, new[] { symbol });
+        var pipeline = new StrategyPipeline(BuildPipeline(sp));
+        var broker = (IBacktestBroker)sp.GetRequiredService<IBinanceUsdFutureService>();
+        var runner = new BacktestRunner(
+            pipeline, broker, sp.GetRequiredService<OrchestrationOptions>(), sp.GetRequiredService<BacktestOptions>());
+
+        var result = await runner.RunAsync(data, new[] { symbol });
         System.Console.WriteLine($"CAGR={result.Metrics.Cagr:P2} Sharpe={result.Metrics.SharpeRatio:F2} MaxDrawdown={result.Metrics.MaxDrawdown:P2}");
         return 0;
     }

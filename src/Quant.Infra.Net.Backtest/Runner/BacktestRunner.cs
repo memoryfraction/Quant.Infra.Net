@@ -23,7 +23,7 @@ namespace Quant.Infra.Net.Backtest.Runner;
 public sealed class BacktestRunner
 {
     private readonly StrategyPipeline _pipeline;
-    private readonly BacktestBrokerService _broker;
+    private readonly IBacktestBroker _broker;
     private readonly OrchestrationOptions _orchestrationOptions;
     private readonly BacktestOptions _backtestOptions;
 
@@ -32,12 +32,12 @@ public sealed class BacktestRunner
     /// Initializes the backtest engine.
     /// </summary>
     /// <param name="pipeline">策略管道（StrategyPipeline）/ The strategy pipeline.</param>
-    /// <param name="broker">回测 broker（回测撮合）/ The backtest broker (simulated matching).</param>
+    /// <param name="broker">回测 broker 的仿真控制面（依赖抽象而非 BacktestBrokerService 具体类，DIP）/ The backtest broker's simulation-control surface (depends on the abstraction, not the BacktestBrokerService concrete class — DIP).</param>
     /// <param name="orchestrationOptions">编排配置（Parameters 决定符号等）/ Orchestration options (Parameters picks symbols etc.).</param>
     /// <param name="backtestOptions">回测配置（FillTiming/成本等）/ Backtest options (FillTiming / costs etc.).</param>
     public BacktestRunner(
         StrategyPipeline pipeline,
-        BacktestBrokerService broker,
+        IBacktestBroker broker,
         OrchestrationOptions orchestrationOptions,
         BacktestOptions backtestOptions)
     {

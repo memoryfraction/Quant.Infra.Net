@@ -21,7 +21,7 @@ namespace Quant.Infra.Net.Backtest.Broker;
 /// sequences verbatim (B2 parity tests). On top of that it layers commission deduction,
 /// adverse-direction slippage, and one BacktestTrade record per open/close.
 /// </remarks>
-public sealed class BacktestBrokerService : IBinanceUsdFutureService
+public sealed class BacktestBrokerService : IBinanceUsdFutureService, IBacktestBroker
 {
     private const double PositionEpsilon = 1e-12; // 与 Paper 相同的持仓判零阈值 / same zero-position epsilon as Paper
 

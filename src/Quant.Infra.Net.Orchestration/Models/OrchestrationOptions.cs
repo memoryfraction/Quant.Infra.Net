@@ -49,4 +49,10 @@ public class OrchestrationOptions
     /// Strategy parameters (keys interpreted by the strategy itself, e.g., SymbolA/SymbolB, LookbackBars).
     /// </summary>
     public Dictionary<string, string> Parameters { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 通知路由配置（钉钉 / 企微 / 邮件；详见 §5.6）。
+    /// Notification routing configuration (DingTalk / WeChat Work / Email; see design §5.6).
+    /// </summary>
+    public NotificationOptions Notifications { get; set; } = new();
 }

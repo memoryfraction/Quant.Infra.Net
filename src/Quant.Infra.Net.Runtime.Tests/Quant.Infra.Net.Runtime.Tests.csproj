@@ -22,6 +22,8 @@
     <ProjectReference Include="..\Quant.Infra.Net.Orchestration\Quant.Infra.Net.Orchestration.csproj" />
     <ProjectReference Include="..\Quant.Infra.Net.Backtest\Quant.Infra.Net.Backtest.csproj" />
     <ProjectReference Include="..\Quant.Infra.Net.Runtime\Quant.Infra.Net.Runtime.csproj" />
+    <!-- Test fixture only: hosts the cross-assembly custom-descriptor probe (R1 item 5). -->
+    <ProjectReference Include="..\Quant.Infra.Net.Runtime.Console\Quant.Infra.Net.Runtime.Console.csproj" />
   </ItemGroup>
 
 </Project>

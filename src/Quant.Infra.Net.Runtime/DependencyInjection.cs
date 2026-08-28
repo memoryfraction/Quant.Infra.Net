@@ -50,6 +50,7 @@ public static class DependencyInjection
     /// <param name="configureBacktest">回测配置回调（仅 Backtest 模式生效）/ Backtest callback (only in Backtest mode).</param>
     /// <param name="customDataSource">Custom 数据种类的自定义实例（其他种类忽略；Custom 种类缺省 → fail-fast）/ Custom data source instance (ignored otherwise; Custom kind without it → fail-fast).</param>
     /// <param name="strategyAssemblies">要扫描发现 IStrategyDescriptor 的程序集（通常是 typeof(Program).Assembly）/ Assemblies to scan for IStrategyDescriptors (typically typeof(Program).Assembly).</param>
+    /// <param name="customStages">自定义阶段序列（提供后完全替代默认八阶段；缺省 null 保持默认八阶段）/ Custom stage sequence (replaces the default eight stages; default null keeps the eight).</param>
     /// <returns>服务集合（链式）/ The same service collection for chaining.</returns>
     /// <exception cref="ArgumentNullException">services / configureRuntime 为 null / Thrown when services / configureRuntime is null.</exception>
     /// <exception cref="NotSupportedException">RunMode 为 Testnet/Live 但未配置 BinanceApiKey/BinanceApiSecret（fail-fast，绝不静默退化为 Paper）/ Thrown when Testnet/Live is selected without credentials (fail-fast; never silently degrades to Paper).</exception>
@@ -61,6 +62,7 @@ public static class DependencyInjection
         Action<OrchestrationOptions>? configureOrchestration = null,
         Action<BacktestOptions>? configureBacktest = null,
         ITraditionalFinanceSourceDataService? customDataSource = null,
+        IEnumerable<IPipelineStage>? customStages = null,
         params Assembly[] strategyAssemblies)
     {
         if (services == null)
@@ -156,7 +158,7 @@ public static class DependencyInjection
         {
             // —— Backtest：D1 机制（BacktestBrokerService 记账 + BacktestRunner 驱动，零网络）
             // —— Backtest: D1 (BacktestBrokerService accounting + BacktestRunner driver, zero network)
-            RunMode.Backtest => services.AddQuantInfraNetBacktest(configureBacktest, configureOrchestration, generator),
+            RunMode.Backtest => services.AddQuantInfraNetBacktest(configureBacktest, configureOrchestration, generator, customStages),
 
             // —— Paper：墙钟 PipelineRunner + PaperBinanceUsdFutureService 记账
             // —— Paper: wall-clock PipelineRunner + PaperBinanceUsdFutureService accounting
@@ -164,7 +166,7 @@ public static class DependencyInjection
             {
                 orchestration.Environment = ExchangeEnvironment.Paper;
                 configureOrchestration?.Invoke(orchestration);
-            }, generator, broker),
+            }, generator, broker, customStages),
 
             // —— Testnet/Live：自动预注册真实 broker（U2）+ 编排层
             // —— Testnet/Live: auto pre-register the real broker (U2) + orchestration layer
@@ -172,13 +174,13 @@ public static class DependencyInjection
             {
                 orchestration.Environment = ExchangeEnvironment.Testnet;
                 configureOrchestration?.Invoke(orchestration);
-            }, generator, broker),
+            }, generator, broker, customStages),
 
             RunMode.Live => RegisterOrchestration(services, orchestration =>
             {
                 orchestration.Environment = ExchangeEnvironment.Live;
                 configureOrchestration?.Invoke(orchestration);
-            }, generator, broker),
+            }, generator, broker, customStages),
 
             _ => throw new InvalidOperationException($"Unknown RunMode: {runtimeOptions.RunMode}.")
         };
@@ -193,10 +195,11 @@ public static class DependencyInjection
         IServiceCollection services,
         Action<OrchestrationOptions> configure,
         ISignalGenerator generator,
-        IBinanceUsdFutureService broker)
+        IBinanceUsdFutureService broker,
+        IEnumerable<IPipelineStage>? customStages = null)
     {
         services.AddSingleton<IBinanceUsdFutureService>(_ => broker);
-        services.AddQuantInfraNetOrchestration(configure: configure, customSignalGenerator: generator);
+        services.AddQuantInfraNetOrchestration(configure: configure, customSignalGenerator: generator, customStages: customStages);
         return services;
     }
 }

@@ -38,13 +38,15 @@ public static class DependencyInjection
     /// <param name="configureBacktest">回测配置回调（初始权益/手续费/滑点/FillTiming 等）/ Backtest options callback (equity / costs / slippage / FillTiming).</param>
     /// <param name="configureOrchestration">编排配置回调（策略参数等；Environment 会被覆盖为 Paper）/ Orchestration callback (strategy parameters etc.; Environment is forced to Paper).</param>
     /// <param name="customSignalGenerator">自定义信号生成器（提供后替代按 Parameters["Strategy"] 解析的内置生成器）/ Custom signal generator (overrides the Parameters["Strategy"]-resolved built-in).</param>
+    /// <param name="customStages">自定义阶段序列（提供后完全替代默认八阶段；缺省 null 保持默认八阶段）/ Custom stage sequence (replaces the default eight stages; default null keeps the eight).</param>
     /// <returns>服务集合（链式）/ The same service collection for chaining.</returns>
     /// <exception cref="ArgumentNullException">services 为 null 时抛出 / Thrown when services is null.</exception>
     public static IServiceCollection AddQuantInfraNetBacktest(
         this IServiceCollection services,
         Action<BacktestOptions>? configureBacktest = null,
         Action<OrchestrationOptions>? configureOrchestration = null,
-        ISignalGenerator? customSignalGenerator = null)
+        ISignalGenerator? customSignalGenerator = null,
+        IEnumerable<IPipelineStage>? customStages = null)
     {
         if (services == null)
         {
@@ -75,7 +77,8 @@ public static class DependencyInjection
                 o.Environment = ExchangeEnvironment.Paper;
                 configureOrchestration?.Invoke(o);
             },
-            customSignalGenerator: customSignalGenerator);
+            customSignalGenerator: customSignalGenerator,
+            customStages: customStages);
 
         // 驱动器：事件驱动回放（非墙钟宿主服务）/ Driver: event-driven replay (NOT a wall-clock hosted service).
         services.TryAddSingleton(sp => new BacktestRunner(

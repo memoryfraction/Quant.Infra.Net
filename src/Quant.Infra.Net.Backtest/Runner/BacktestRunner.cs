@@ -1,5 +1,6 @@
 using Quant.Infra.Net.Backtest.Broker;
 using Quant.Infra.Net.Backtest.Data;
+using Quant.Infra.Net.Backtest.Metrics;
 using Quant.Infra.Net.Backtest.Models;
 using Quant.Infra.Net.Orchestration.Models;
 using Quant.Infra.Net.Orchestration.Pipeline;
@@ -171,12 +172,15 @@ public sealed class BacktestRunner
             _broker.DeferFills = false;
         }
 
+        var allTrades = _broker.Trades;
         return new BacktestResult
         {
             EquityCurve = equityCurve,
-            Trades = _broker.Trades,
+            Trades = allTrades,
             RunEvents = runEvents,
-            // Metrics 由 B4（SweepRunner/TradeStatistics）装配 / Metrics are assembled in B4
+            // B4：StrategyPerformanceAnalyzer（曲线指标）+ TradeStatistics（交易级）装配，不重新实现同名指标。
+            // B4: assembled from StrategyPerformanceAnalyzer (curve metrics) + TradeStatistics (trade-level).
+            Metrics = BacktestMetricsFactory.Assemble(equityCurve, allTrades),
         };
     }
 

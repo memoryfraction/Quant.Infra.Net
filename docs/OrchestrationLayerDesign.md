@@ -10,6 +10,8 @@
 
 | 版本 | 日期 | 更新内容 | 更新人 |
 |------|------|---------|--------|
+| 1.4.2 | 2026-08-28 | **Demo 默认策略改为单标的 `MaCross`**（原为双标的 `PairTradingZScore`）：单标的 = 一条信号/一条目标仓位/一条执行报告，新读者更容易肉眼核对结果；appsettings.json 同步移除了对 MaCross 无用的 `SymbolA`/`SymbolB` 残留参数（此前会导致 DataIngestStage 多余加载一组未使用的配对数据）。新增独立的 [编排层详细使用说明（中文）](OrchestrationQuickStart-ch.md) / [Orchestration Quick Start Guide (English)](OrchestrationQuickStart-en.md)：明确 Demo 用的数据源（`DemoTraditionalFinanceSourceDataService`，合成数据、零网络）、标的（合成 AAPL）、策略（MaCross），以及接入真实数据源 / 更换标的 / 自定义策略的分步说明；根 README 与 readme-en/readme-ch 均已链接到这两份新文档 | agent(claude-sonnet-5) |
+| 1.4.1 | 2026-08-28 | **审阅整改**：补齐 `TargetPosition.OriginSignal`（§5.4，此前缺失，"全链路溯源"实际不可用，现已在 `TargetPositionStage` 回填并有 M6 端到端测试覆盖）；`PipelineEvent` 补齐 `Severity` 字段（§5.7）；`OrchestrationOptions` 风控默认值改回与 §5.7 契约一致（`MaxWeightPerSymbol=0.3`/`MaxGrossExposure=1.0`/`KillSwitchDrawdownRate=-0.15`/`MinRebalanceDelta=0.01`，Console Demo 的 appsettings.json 仍显式覆盖为放宽值，不受影响）；Console Demo `Program.cs` 修正重复 `using`、去除与 `AddQuantInfraNetOrchestration()` 内部重复的 `IntervalTrigger` 注册，精简至 37 行（≤40 行验收线内）；补充 `M6DependencyInjectionTests` 中 MaCross / MeanReversion 两条端到端用例（此前只有 PairTradingZScore 有端到端证据）；消除编排层自身引入的 3 个编译警告（CS0105 重复 using、CS8619/CS8620 可空性）；`docs/readme-en.md`/`docs/readme-ch.md`（完整版说明文档）补充编排层 Quick Start 小节，根 README 架构图追加中文标注。`IPipelineContext` 的文件/命名空间位置（§4 目录结构 vs 实际 `Models/PipelineContext.cs`）与 `PortfolioSnapshot` 字段命名（`Equity`/`AsOfUtc` vs 实际 `AccountEquityUsd`/`SnapshotUtc`）仍与 §4/§5 契约文本不完全一致——重命名涉及面较广，本轮未动，留待后续单独整改 | agent(claude-sonnet-5) |
 | 1.4.0 | 2026-08-28 | **M0–M6 全部实施完成**：新增 `Quant.Infra.Net.Orchestration{,.Tests,.Console}` 三个项目（§6 全里程碑落地：契约/信号/风控/Paper执行/管道/DI与Runner/Demo）；Orchestration.Tests 93/93 全绿；Console Demo 三策略（PairTradingZScore/MaCross/MeanReversion）Paper 单周期实测通过；根 README 架构图与文档表已追加编排层 | agent(qwen3.8:27b) |
 | 1.3.0 | 2026-08-27 | **审阅修正（关键）**：`InMemoryBinanceBrokerService` 核实为 `BrokerServiceBase` 的空壳实现（非 `IBinanceUsdFutureService`，方法体全部 `throw NotImplementedException`），且现有唯一的 `IBinanceUsdFutureService` 实现（`BinanceUsdFutureService`）只支持 Testnet/Live、会打真实 Binance API——**编排层必须新建纸上交易实现 `PaperBinanceUsdFutureService`**（新增 §3.5 D3 重写 + §5.4.1 + M3 任务）；修正 `ITraditionalFinanceSourceDataService` 的数据拉取方法名（`DownloadOhlcvListAsync` 而非 `GetOhlcvListAsync`）；补充 `Ohlcvs.OhlcvSet` 为 `HashSet<Ohlcv>`（无序）必须按时间戳排序的规则；补充 `PipelineRunner` 的事件→异步循环桥接与 `IntervalTrigger.Start()` 调用说明；修正 §2 表格对 `PortfolioCalculationService` 的错误归因 | rex |
 | 1.2.0 | 2026-08-27 | 内置范例策略扩充为 3 个：新增 MaCross（含经典 200MA 均线）与 MeanReversion 两个生成器，§9 重写为三策略 Demo | rex |
@@ -67,7 +69,7 @@ Quant.Infra.Net 目前是「水平能力库」：数据、分析、券商、通�
 
 ## 2. 可行性评估
 
-外部贡献者（Lim Hwang）提出的 "research-to-execution orchestration layer" 方向**可行且时机正确**。逐项映射：
+"research-to-execution orchestration layer" 方向**可行且时机正确**。逐项映射：
 
 | 提案要素 | 库内已有能力 | 缺口（本方案补齐） |
 |---------|------------|------------------|
@@ -1199,4 +1201,4 @@ z-score 2.31 | 相关性 0.87 | spread 触发入场
 
 **何时再拆仓库**：编排层拥有独立发布节奏（例如回测引擎、多进程调度进来之后）、外部贡献者多于主库、或主库契约冻结进入维护期——满足任两条再拆。
 
-**贡献者协作建议（回复 Lim Hwang）**：欢迎以本方案为共同起点参与；先在 `feature/orchestration-layer` 分支上认领里程碑（建议从 M2 信号层或 M4 风控层切入，两者独立性强、可并行），每个里程碑一个 PR，公共契约以本文档 §5 为准，变更需先提 RFC 修订本文档。
+**贡献者协作建议**：欢迎以本方案为共同起点参与；先在 `feature/orchestration-layer` 分支上认领里程碑（建议从 M2 信号层或 M4 风控层切入，两者独立性强、可并行），每个里程碑一个 PR，公共契约以本文档 §5 为准，变更需先提 RFC 修订本文档。

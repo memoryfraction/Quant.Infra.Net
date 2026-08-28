@@ -61,7 +61,8 @@ public sealed class RiskStage : IPipelineStage
         {
             var message = string.Join("; ", assessment.Reasons);
             context.AddEvent(PipelineEvent.Create(context.RunId, Name,
-                string.Format(CultureInfo.InvariantCulture, "risk check REJECTED: {0}", message)));
+                string.Format(CultureInfo.InvariantCulture, "risk check REJECTED: {0}", message),
+                severity: NotificationSeverity.Warning));
             await _hub.PublishAsync(NotificationSeverity.Warning, "Risk check rejected", message, ct)
                 .ConfigureAwait(false);
             throw new PipelineAbortException(string.Format(CultureInfo.InvariantCulture, "risk check rejected: {0}", message));

@@ -101,7 +101,7 @@ public sealed class PipelineContext : IPipelineContext
 
         lock (_gate)
         {
-            _events.Add(PipelineEvent.Create(RunId, "Pipeline", $"error accumulated: {error.Message}"));
+            _events.Add(PipelineEvent.Create(RunId, "Pipeline", $"error accumulated: {error.Message}", severity: NotificationSeverity.Critical));
             _errors.Add(error);
         }
     }

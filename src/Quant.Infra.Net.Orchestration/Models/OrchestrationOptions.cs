@@ -21,28 +21,28 @@ public class OrchestrationOptions
     public decimal InitialEquityUsd { get; set; } = 10000m;
 
     /// <summary>
-    /// 单标的最大权重（风控规则 1 的阈值）。
-    /// Maximum weight per symbol (threshold of risk rule 1).
+    /// 单标的最大权重（风控规则 1 的阈值；设计 §5.7 契约默认值）。
+    /// Maximum weight per symbol (threshold of risk rule 1; design §5.7 contract default).
     /// </summary>
-    public double MaxWeightPerSymbol { get; set; } = 0.5;
+    public double MaxWeightPerSymbol { get; set; } = 0.3;
 
     /// <summary>
-    /// 总敞口上限 Σ|w|（风控规则 2 的阈值）。
-    /// Total gross exposure cap Σ|w| (threshold of risk rule 2).
+    /// 总敞口上限 Σ|w|（风控规则 2 的阈值；设计 §5.7 契约默认值）。
+    /// Total gross exposure cap Σ|w| (threshold of risk rule 2; design §5.7 contract default).
     /// </summary>
-    public double MaxGrossExposure { get; set; } = 2.0;
+    public double MaxGrossExposure { get; set; } = 1.0;
 
     /// <summary>
-    /// Kill-switch 回撤阈值（负数；风控规则 3，低于该值即触发）。
-    /// Kill-switch drawdown threshold (negative; risk rule 3, triggered when equity drawdown is at or below it).
+    /// Kill-switch 回撤阈值（负数；风控规则 3，低于该值即触发；设计 §5.7 契约默认值）。
+    /// Kill-switch drawdown threshold (negative; risk rule 3, triggered when equity drawdown is at or below it; design §5.7 contract default).
     /// </summary>
-    public double KillSwitchDrawdownRate { get; set; } = -0.20;
+    public double KillSwitchDrawdownRate { get; set; } = -0.15;
 
     /// <summary>
-    /// 调仓死区 |target − actual| &lt; 该值则跳过（避免高频微调）。
-    /// Rebalance dead zone: skip when |target − actual| is below this value (avoids high-frequency micro-adjustments).
+    /// 调仓死区 |target − actual| &lt; 该值则跳过（避免高频微调；设计 §5.7 契约默认值）。
+    /// Rebalance dead zone: skip when |target − actual| is below this value (avoids high-frequency micro-adjustments; design §5.7 contract default).
     /// </summary>
-    public double MinRebalanceDelta { get; set; } = 0.02;
+    public double MinRebalanceDelta { get; set; } = 0.01;
 
     /// <summary>
     /// 策略参数（键值由策略自己解释，如 SymbolA/SymbolB、LookbackBars）。

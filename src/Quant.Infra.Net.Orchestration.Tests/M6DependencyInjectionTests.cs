@@ -192,6 +192,9 @@ public sealed class M6DependencyInjectionTests
         var targets = ctx.Get<IReadOnlyList<TargetPosition>>();
         Assert.IsNotNull(targets);
         Assert.AreEqual(2, targets!.Count);
+        // —— 审计溯源：每条 TargetPosition 都能回溯到产生它的 Signal —— / audit trail: every target traces back to its originating signal
+        Assert.IsTrue(targets.All(t => t.OriginSignal != null), "expected every target to carry its originating signal");
+        Assert.IsTrue(targets.All(t => t.OriginSignal!.Symbol == t.Symbol));
         var reports = ctx.Get<IReadOnlyList<ExecutionReport>>();
         Assert.IsNotNull(reports);
         Assert.AreEqual(2, reports!.Count);
@@ -217,6 +220,111 @@ public sealed class M6DependencyInjectionTests
         {
             Assert.IsTrue(stages.Contains(expected), $"expected an event from stage '{expected}'");
         }
+        Assert.AreEqual(0, ctx.Errors.Count, $"errors: {string.Join("; ", ctx.Errors.Select(e => e.Message))}");
+    }
+
+    /// <summary>
+    /// M6 端到端：MaCross 策略单周期（陡峭上升序列 → close 显著高于 SMA(10) → Long）。
+    /// M6 end-to-end: MaCross strategy single cycle (steep uptrend → close well above SMA(10) → Long).
+    /// </summary>
+    [TestMethod]
+    public async Task Paper_EndToEnd_SingleCycle_MaCross_ProducesLongSignal_Execution_Snapshot()
+    {
+        var (services, series) = BaseServices();
+        series.Add("AAA", TestSeries.Wave(40, drift: 0.6));
+        services.Configure<OrchestrationOptions>(o =>
+        {
+            o.Parameters["Strategy"] = "MaCross";
+            o.Parameters["Symbol"] = "AAA";
+            o.Parameters["FastPeriod"] = "1";
+            o.Parameters["SlowPeriod"] = "10";
+            o.Parameters["AllowShort"] = "false";
+        });
+        services.AddQuantInfraNetOrchestration();
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetRequiredService<ISignalGenerator>();
+        var pipeline = sp.GetRequiredService<StrategyPipeline>();
+        var options = sp.GetRequiredService<IOptions<OrchestrationOptions>>().Value;
+
+        var ctx = new PipelineContext(1, options.Parameters);
+        await pipeline.RunAsync(ctx, CancellationToken.None);
+
+        var signals = ctx.Get<IReadOnlyList<Signal>>();
+        Assert.IsNotNull(signals);
+        Assert.AreEqual(1, signals!.Count);
+        Assert.AreEqual(SignalDirection.Long, signals[0].Direction, $"reason was: {signals[0].Reason}");
+
+        var targets = ctx.Get<IReadOnlyList<TargetPosition>>();
+        Assert.IsNotNull(targets);
+        Assert.AreEqual(1, targets!.Count);
+        Assert.AreSame(signals[0], targets[0].OriginSignal);
+
+        var reports = ctx.Get<IReadOnlyList<ExecutionReport>>();
+        Assert.IsNotNull(reports);
+        Assert.IsTrue(reports!.All(r => r.Success), $"expected all executions to succeed: {string.Join("; ", reports.Select(r => r.ErrorMessage ?? "ok"))}");
+
+        var broker = (PaperBinanceUsdFutureService)sp.GetRequiredService<IBinanceUsdFutureService>();
+        Assert.IsTrue(await broker.HasUsdFuturePositionAsync("AAA"));
+
+        var store = sp.GetRequiredService<IPortfolioStateStore>();
+        var snapshot = await store.GetLatestAsync(CancellationToken.None);
+        Assert.IsNotNull(snapshot);
+        Assert.IsTrue(snapshot!.AccountEquityUsd > 0m);
+        Assert.AreEqual(0, ctx.Errors.Count, $"errors: {string.Join("; ", ctx.Errors.Select(e => e.Message))}");
+    }
+
+    /// <summary>
+    /// M6 端到端：MeanReversion 策略单周期（末点大幅偏离窗口均值 → z ≤ −EntryZ → Long）。
+    /// M6 end-to-end: MeanReversion strategy single cycle (last point far below the window mean → z ≤ −EntryZ → Long).
+    /// </summary>
+    [TestMethod]
+    public async Task Paper_EndToEnd_SingleCycle_MeanReversion_ProducesLongSignal_Execution_Snapshot()
+    {
+        var closes = TestSeries.Wave(30);
+        closes[^1] -= 25.0; // 末点显著低于近期均值 → 超跌 / last point drops sharply below the recent mean → oversold
+        var (services, series) = BaseServices();
+        series.Add("AAA", closes);
+        services.Configure<OrchestrationOptions>(o =>
+        {
+            o.Parameters["Strategy"] = "MeanReversion";
+            o.Parameters["Symbol"] = "AAA";
+            o.Parameters["LookbackBars"] = "20";
+            o.Parameters["EntryZ"] = "1.5";
+            o.Parameters["ExitZ"] = "0.5";
+            o.Parameters["AllowShort"] = "true";
+        });
+        services.AddQuantInfraNetOrchestration();
+        using var sp = services.BuildServiceProvider();
+
+        sp.GetRequiredService<ISignalGenerator>();
+        var pipeline = sp.GetRequiredService<StrategyPipeline>();
+        var options = sp.GetRequiredService<IOptions<OrchestrationOptions>>().Value;
+
+        var ctx = new PipelineContext(1, options.Parameters);
+        await pipeline.RunAsync(ctx, CancellationToken.None);
+
+        var signals = ctx.Get<IReadOnlyList<Signal>>();
+        Assert.IsNotNull(signals);
+        Assert.AreEqual(1, signals!.Count);
+        Assert.AreEqual(SignalDirection.Long, signals[0].Direction, $"reason was: {signals[0].Reason}");
+
+        var targets = ctx.Get<IReadOnlyList<TargetPosition>>();
+        Assert.IsNotNull(targets);
+        Assert.AreEqual(1, targets!.Count);
+        Assert.AreSame(signals[0], targets[0].OriginSignal);
+
+        var reports = ctx.Get<IReadOnlyList<ExecutionReport>>();
+        Assert.IsNotNull(reports);
+        Assert.IsTrue(reports!.All(r => r.Success), $"expected all executions to succeed: {string.Join("; ", reports.Select(r => r.ErrorMessage ?? "ok"))}");
+
+        var broker = (PaperBinanceUsdFutureService)sp.GetRequiredService<IBinanceUsdFutureService>();
+        Assert.IsTrue(await broker.HasUsdFuturePositionAsync("AAA"));
+
+        var store = sp.GetRequiredService<IPortfolioStateStore>();
+        var snapshot = await store.GetLatestAsync(CancellationToken.None);
+        Assert.IsNotNull(snapshot);
+        Assert.IsTrue(snapshot!.AccountEquityUsd > 0m);
         Assert.AreEqual(0, ctx.Errors.Count, $"errors: {string.Join("; ", ctx.Errors.Select(e => e.Message))}");
     }
 

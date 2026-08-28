@@ -36,6 +36,49 @@ Quant.Infra.Net 提供统一的 C# API，将连接多个金融数据源、券商
 
 ---
 
+## 编排层 Orchestration Layer（Beta）
+
+`Quant.Infra.Net.Orchestration` 把上面这些独立模块串成一条可直接运行的管道：`数据采集 → 统计分析 → 信号生成 → 目标仓位 → 风控前置检查 → 执行调仓 → 组合状态更新 → 通知推送`。不用自己写胶水代码，注册一个扩展方法、选一个内置策略即可。
+
+**3 个内置策略**（改一个配置值即可切换，零代码）：
+
+| 策略 | `Parameters.Strategy` | 风格 |
+|------|------------------------|------|
+| 配对交易 z-score | `PairTradingZScore` | 统计套利（OLS 价差 + z-score） |
+| 经典 200 日均线 | `MaCross` | 趋势跟踪 |
+| 均值回归 z-score | `MeanReversion` | 震荡 / 均值回归 |
+
+**一分钟内跑起来** —— Demo 默认用单标的 `MaCross` 策略，跑在进程内生成的合成 `AAPL` 序列上（零网络、零 API Key、不是真实行情——具体跑的是什么见下文）：
+
+```bash
+git clone https://github.com/memoryfraction/Quant.Infra.Net.git
+cd Quant.Infra.Net/src
+dotnet run --project Quant.Infra.Net.Orchestration.Console
+```
+
+控制台会打印完整事件流：数据采集 → 信号生成 → 风控检查 → Paper 模拟执行 → 组合快照。单标的意味着一条信号 / 一条目标仓位 / 一条执行报告，整个运行过程肉眼就能核对。修改 `Quant.Infra.Net.Orchestration.Console/appsettings.json` 即可切换策略或标的。
+
+**Demo 具体用的什么数据源、什么标的、什么策略？怎么换成自己的？** 完整拆解 + 接入真实数据源/更换标的/自定义策略的分步说明，见 [编排层详细使用说明](OrchestrationQuickStart-ch.md)。
+
+**接入自己的宿主程序**（`Environment` 默认 `Paper`——纯内存、零网络请求，默认安全）：
+
+```csharp
+var builder = Host.CreateApplicationBuilder(args);
+builder.Services.Configure<OrchestrationOptions>(builder.Configuration.GetSection("Orchestration"));
+builder.Services.AddQuantInfraNetOrchestration();   // Paper 环境 + 按 "Strategy" 参数自动装配管道
+
+var host = builder.Build();
+await host.RunAsync();
+```
+
+扩展点：向 `AddQuantInfraNetOrchestration(...)` 传入 `customStages`、`customSignalGenerator` 或 `customExecutionModel`，即可用自己的实现替换默认管道的任意一环。
+
+切实盘需要两步显式操作，任何路径都不会默认触达实盘：在配置里把 `"Environment"` 改成 `"Testnet"` 或 `"Live"`，并在调用 `AddQuantInfraNetOrchestration()` 之前自行注册实盘 `IBinanceUsdFutureService`（该方法只会自动注册 Paper 模拟券商）。
+
+完整契约（接口签名、里程碑、风控默认值、扩展点）见 [编排层设计文档](OrchestrationLayerDesign.md)。
+
+---
+
 ## 为什么要用这个库？
 
 ### 量化开发中的痛点
@@ -140,7 +183,8 @@ await dingTalk.SendStrategyAlert("AAPL/MSFT 价差均值回归触发");
 
 | 版本 | 日期 | 描述 |
 |---------|------|-------------|
-| **1.5.1** *(当前)* | 2026-08-12 | CodeStandard.md 合规 —— 所有公共成员添加中英文 XML 文档、参数验证审计、版本号统一 |
+| **1.5.2** *(当前)* | 2026-08-28 | **编排层 Orchestration Layer（Beta）** —— 新增 `Quant.Infra.Net.Orchestration` 包：`AddQuantInfraNetOrchestration()` DI 入口、8 阶段管道、3 个内置策略（PairTradingZScore/MaCross/MeanReversion）、默认 Paper（纯内存零网络）执行、含熔断的风控前置检查、按严重级别路由的通知、可直接运行的控制台 Demo。详见 [编排层设计文档](OrchestrationLayerDesign.md) |
+| 1.5.1 | 2026-08-12 | CodeStandard.md 合规 —— 所有公共成员添加中英文 XML 文档、参数验证审计、版本号统一 |
 | 1.5.0 | 2026-05-28 | **Interactive Brokers (InterReact)** 完整集成 —— 通过 TWS/Gateway 下单、行情数据、账户管理；**Charles Schwab** 完整券商服务 —— 报价、期权链、订单、持仓；许可证改为 MIT；增强分析服务单元测试 |
 | 1.4.0 | 2024-05-16 | 更新 API 集成以应对近期券商变动，添加全面文档 |
 | 1.3.0 | 2024-04-05 | 增强通知服务，支持邮件模板和改进的错误处理 |

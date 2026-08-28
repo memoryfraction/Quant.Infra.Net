@@ -68,7 +68,8 @@ public sealed class TargetPositionStage : IPipelineStage
             targets.Add(new TargetPosition
             {
                 Symbol = signal.Symbol,
-                TargetWeight = Math.Round(directionWeight, 8)
+                TargetWeight = Math.Round(directionWeight, 8),
+                OriginSignal = signal
             });
         }
 

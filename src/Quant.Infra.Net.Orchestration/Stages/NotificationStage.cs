@@ -51,7 +51,7 @@ public sealed class NotificationStage : IPipelineStage
         if (context.Errors.Count > 0)
         {
             var detail = string.Join(" | ", context.Errors.Select(e => e.Message).Take(5));
-            context.AddEvent(PipelineEvent.Create(context.RunId, Name, $"WARNING notified: {context.Errors.Count} error(s)"));
+            context.AddEvent(PipelineEvent.Create(context.RunId, Name, $"WARNING notified: {context.Errors.Count} error(s)", severity: NotificationSeverity.Warning));
             await _hub.PublishAsync(NotificationSeverity.Warning, "Orchestration run finished with errors", summary + " ; errors: " + detail, ct)
                 .ConfigureAwait(false);
             return;

@@ -28,9 +28,9 @@ internal sealed class RecordingNotificationHub : INotificationHub
 /// </summary>
 internal sealed class FixedSnapshotStore : IPortfolioStateStore
 {
-    private readonly PortfolioSnapshot _snapshot;
+    private readonly PortfolioSnapshot? _snapshot;
 
-    public FixedSnapshotStore(PortfolioSnapshot snapshot)
+    public FixedSnapshotStore(PortfolioSnapshot? snapshot)
     {
         _snapshot = snapshot;
     }
@@ -115,7 +115,7 @@ public class RiskStageTests
     public async Task NoStoredSnapshot_SynthesizedDefault()
     {
         var hub = new RecordingNotificationHub();
-        var store = new FixedSnapshotStore(null!);
+        var store = new FixedSnapshotStore(null);
         var ctx = new PipelineContext(702);
         ctx.Set<IReadOnlyList<TargetPosition>>(new List<TargetPosition>
         {

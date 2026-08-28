@@ -162,7 +162,7 @@ public class RebalanceExecutionModelTests
     {
         var (model, _, _) = NewModel();
         Assert.ThrowsException<ArgumentNullException>(() => model.RebalanceAsync(null!, CancellationToken.None).GetAwaiter().GetResult());
-        Assert.ThrowsException<ArgumentNullException>(() => model.RebalanceAsync(new TargetPosition?[] { null }, CancellationToken.None).GetAwaiter().GetResult());
+        Assert.ThrowsException<ArgumentNullException>(() => model.RebalanceAsync(new TargetPosition[] { null! }, CancellationToken.None).GetAwaiter().GetResult());
         Assert.ThrowsException<ArgumentException>(() => model.RebalanceAsync(new[] { new TargetPosition { Symbol = " " } }, CancellationToken.None).GetAwaiter().GetResult());
     }
 }

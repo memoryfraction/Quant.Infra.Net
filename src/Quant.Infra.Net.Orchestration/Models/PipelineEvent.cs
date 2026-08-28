@@ -26,10 +26,11 @@ public sealed class PipelineEvent
     /// <param name="stage">阶段名（不得为空白）/ Stage name (must not be blank).</param>
     /// <param name="message">事件消息（不得为 null）/ Event message (must not be null).</param>
     /// <param name="data">可选结构化数据 / Optional structured data.</param>
+    /// <param name="severity">事件严重级别，默认 Info / Event severity, defaults to Info.</param>
     /// <returns>新事件实例 / A new event instance.</returns>
     /// <exception cref="ArgumentException">stage 为空白时抛出 / Thrown when stage is blank.</exception>
     /// <exception cref="ArgumentNullException">message 为 null 时抛出 / Thrown when message is null.</exception>
-    public static PipelineEvent Create(long runId, string stage, string message, object? data = null)
+    public static PipelineEvent Create(long runId, string stage, string message, object? data = null, NotificationSeverity severity = NotificationSeverity.Info)
     {
         if (string.IsNullOrWhiteSpace(stage))
         {
@@ -46,7 +47,8 @@ public sealed class PipelineEvent
             TimestampUtc = DateTime.UtcNow,
             Stage = stage,
             Message = message,
-            Data = data
+            Data = data,
+            Severity = severity
         };
     }
 
@@ -79,4 +81,10 @@ public sealed class PipelineEvent
     /// Optional structured data.
     /// </summary>
     public object? Data { get; private init; }
+
+    /// <summary>
+    /// 事件严重级别（默认 Info）。
+    /// Event severity (defaults to Info).
+    /// </summary>
+    public NotificationSeverity Severity { get; private init; } = NotificationSeverity.Info;
 }

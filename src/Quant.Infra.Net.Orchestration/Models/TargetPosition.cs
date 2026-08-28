@@ -16,4 +16,9 @@ public class TargetPosition
     /// 目标权重（组合比例）/ Target weight (portfolio fraction).
     /// </summary>
     public double TargetWeight { get; init; }
+
+    /// <summary>
+    /// 来源信号，供审计溯源（Signal→TargetPosition→ExecutionReport 全链路）/ Originating signal for audit trail (Signal→TargetPosition→ExecutionReport).
+    /// </summary>
+    public Signal? OriginSignal { get; init; }
 }

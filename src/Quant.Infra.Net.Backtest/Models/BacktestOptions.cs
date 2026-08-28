@@ -33,29 +33,29 @@ public sealed class BacktestOptions
     /// 初始权益（USD）。
     /// Initial equity in USD.
     /// </summary>
-    public decimal InitialEquityUsd { get; init; } = 10000m;
+    public decimal InitialEquityUsd { get; set; } = 10000m;
 
     /// <summary>
     /// 预热 bar 数（前 WarmupBars 根不交易，仅用于指标预热）。
     /// Warm-up bars (no trading; reserved for indicator warm-up).
     /// </summary>
-    public int WarmupBars { get; init; } = 0;
+    public int WarmupBars { get; set; } = 0;
 
     /// <summary>
     /// 手续费（基点，按成交名义价值从权益扣减）。
     /// Commission in basis points, deducted from equity on traded notional.
     /// </summary>
-    public decimal CommissionBps { get; init; } = 0m;
+    public decimal CommissionBps { get; set; } = 0m;
 
     /// <summary>
     /// 滑点（基点，成交价在标记价上按不利方向偏移）。
     /// Slippage in basis points; the fill price is offset from the mark against the trade direction.
     /// </summary>
-    public decimal SlippageBps { get; init; } = 0m;
+    public decimal SlippageBps { get; set; } = 0m;
 
     /// <summary>
     /// 成交价时机。
     /// Fill timing.
     /// </summary>
-    public FillTiming FillTiming { get; init; } = FillTiming.SameBarClose;
+    public FillTiming FillTiming { get; set; } = FillTiming.SameBarClose;
 }

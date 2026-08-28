@@ -101,12 +101,13 @@ public sealed class DemoTraditionalFinanceSourceDataService : ITraditionalFinanc
                 return PairLeg(n, seedB: symbol == "BBB");
 
             default:
-                // 稳定上升趋势 + 轻微周期波动：MaCross(last > SMA200) 与 MeanReversion(z≥+2 → Short) 均可触发。
-                // Steady uptrend + mild wobble: triggers both MaCross(last > SMA200) and MeanReversion(z≥+2 → Short).
+                // 稳定上升趋势 + 轻微周期波动：MaCross(last > SMA200) 与 MeanReversion(z≥+EntryZ → Short) 均可触发
+                // （末 100 根窗口 z≈2.5，超过默认 EntryZ 2.0）。
+                // Steady uptrend + mild wobble: triggers MaCross(last > SMA200) and MeanReversion(z≈+2.5 ≥ EntryZ → Short).
                 var trend = new double[n];
                 for (var i = 0; i < n; i++)
                 {
-                    trend[i] = 100.0 * Math.Pow(1.004, i) + Math.Sin(i / 6.28) + (rng.NextDouble() - 0.5) * 0.4;
+                    trend[i] = 100.0 * Math.Pow(1.005, i) + Math.Sin(i / 6.28) + (rng.NextDouble() - 0.5) * 0.4;
                 }
 
                 return trend;

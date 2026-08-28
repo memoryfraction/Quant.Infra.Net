@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Quant.Infra.Net.Analysis.Service;
 using Quant.Infra.Net.Broker.Interfaces;
-using Quant.Infra.Net.Orchestration.Abstractions;
 using Quant.Infra.Net.Orchestration.Execution;
 using Quant.Infra.Net.Orchestration.Models;
 using Quant.Infra.Net.Orchestration.Pipeline;

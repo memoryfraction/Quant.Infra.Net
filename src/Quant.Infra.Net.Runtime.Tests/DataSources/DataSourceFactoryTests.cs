@@ -61,11 +61,17 @@ public class DataSourceFactoryTests
         Assert.AreEqual(FakeSymbol, ohlcvs.Symbol);
     }
 
-    /// <summary>Yahoo Kind 未注册 IHistoricalDataSourceService → 容器 fail-fast / Yahoo kind without IHistoricalDataSourceService fails fast from the container.</summary>
+    /// <summary>Yahoo Kind 不需要调用方预注册（工厂兜底 HistoricalDataSourceServiceCsv；Yahoo 分支直连 Chart API）/ Yahoo kind needs no caller pre-registration (factoryCsv fallback; the Yahoo branch hits the Chart API directly).</summary>
     [TestMethod]
-    public void Yahoo_Kind_Requires_Historical_Service()
-        => Assert.ThrowsException<InvalidOperationException>(
-            () => DataSourceFactory.Create(DataSourceKind.Yahoo, new ServiceCollection().BuildServiceProvider(), null));
+    public void Yahoo_Kind_Resolves_Without_Caller_Registration()
+    {
+        var source = DataSourceFactory.Create(
+            DataSourceKind.Yahoo,
+            new ServiceCollection().BuildServiceProvider(),
+            null);
+
+        Assert.IsInstanceOfType(source, typeof(TraditionalFinanceSourceDataService));
+    }
 
     /// <summary>R2 验收 ②：Custom 缺 customDataSource → ArgumentException（fail-fast，绝不静默回退）/ Custom without customDataSource throws ArgumentException.</summary>
     [TestMethod]

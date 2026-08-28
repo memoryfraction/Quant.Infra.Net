@@ -23,7 +23,7 @@ public static class DataSourceFactory
     /// Creates an ITraditionalFinanceSourceDataService for the given kind.
     /// </summary>
     /// <param name="kind">数据源种类 / Data source kind.</param>
-    /// <param name="serviceProvider">统一容器（Yahoo 种类需 IHistoricalDataSourceService；Csv 种类缺省 HistoricalDataSourceServiceCsv；Binance 种类需 IBinanceUsdFutureService）/ Unified container (Yahoo requires IHistoricalDataSourceService; Csv defaults to HistoricalDataSourceServiceCsv; Binance requires IBinanceUsdFutureService).</param>
+    /// <param name="serviceProvider">统一容器（Csv/Yahoo 种类缺省 HistoricalDataSourceServiceCsv；Binance 种类需 IBinanceUsdFutureService）/ Unified container (Csv/Yahoo default to HistoricalDataSourceServiceCsv; Binance requires IBinanceUsdFutureService).</param>
     /// <param name="customDataSource">Custom 种类的自定义实例（其他种类忽略）/ Custom kind instance (ignored otherwise).</param>
     /// <returns>对应种类的数据源实例 / The data source instance for the kind.</returns>
     /// <exception cref="ArgumentNullException">serviceProvider 为 null 时抛出 / Thrown when serviceProvider is null.</exception>
@@ -44,7 +44,7 @@ public static class DataSourceFactory
             Models.DataSourceKind.Demo => new DemoSyntheticSourceDataService(),
 
             Models.DataSourceKind.Yahoo => new TraditionalFinanceSourceDataService(
-                serviceProvider.GetRequiredService<IHistoricalDataSourceService>()),
+                serviceProvider.GetService<IHistoricalDataSourceService>() ?? new HistoricalDataSourceServiceCsv()),
 
             Models.DataSourceKind.Csv => new TraditionalFinanceSourceDataService(
                 serviceProvider.GetService<IHistoricalDataSourceService>() ?? new HistoricalDataSourceServiceCsv()),

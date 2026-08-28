@@ -5,7 +5,7 @@ using Quant.Infra.Net.Orchestration.Models;
 using Quant.Infra.Net.Orchestration.Signals;
 using Quant.Infra.Net.SourceData.Service;
 
-namespace Quant.Infra.Net.Orchestration.Strategies;
+namespace Quant.Infra.Net.Runtime.Strategies;
 
 /// <summary>
 /// 策略基类（抽象）：所有自定义策略阶段继承本类而非各自实现 <see cref="IPipelineStage"/>（依赖抽象而非具体，SOLID）。

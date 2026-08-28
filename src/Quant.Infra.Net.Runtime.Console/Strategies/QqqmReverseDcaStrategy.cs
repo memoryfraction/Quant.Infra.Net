@@ -10,7 +10,7 @@ using Quant.Infra.Net.Orchestration.Notifications;
 using Quant.Infra.Net.Orchestration.Pipeline;
 using Quant.Infra.Net.Orchestration.Signals;
 using Quant.Infra.Net.Orchestration.Stages;
-using Quant.Infra.Net.Orchestration.Strategies;
+using Quant.Infra.Net.Runtime.Strategies;
 using Quant.Infra.Net.Runtime.Models;
 using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service;

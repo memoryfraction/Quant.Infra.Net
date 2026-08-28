@@ -1,17 +1,34 @@
-namespace Quant.Infra.Net.Orchestration.Console;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Quant.Infra.Net.Analysis.Service;
+using Quant.Infra.Net.Orchestration;
+using Quant.Infra.Net.Orchestration.Models;
+using Quant.Infra.Net.Orchestration.Pipeline;
+using Quant.Infra.Net.Shared.Model;
+using Quant.Infra.Net.Shared.Service;
+using Quant.Infra.Net.SourceData.Service;
+using Quant.Infra.Net.Orchestration.Console;
 
-/// <summary>
-/// 控制台宿主入口（M6 将替换为完整 PipelineRunner 宿主程序）。
-/// Console host entry point (replaced by the full PipelineRunner host program in M6).
-/// </summary>
-internal static class Program
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.Configure<OrchestrationOptions>(builder.Configuration.GetSection("Orchestration"));
+builder.Services.AddSingleton<IAnalysisService, AnalysisService>();
+builder.Services.AddSingleton<ITraditionalFinanceSourceDataService, DemoTraditionalFinanceSourceDataService>();
+builder.Services.AddQuantInfraNetOrchestration();
+builder.Services.AddSingleton<IntervalTrigger>(_ => new IntervalTrigger(StartMode.NextMinute, TimeSpan.Zero));
+
+var host = builder.Build();
+var runner = host.Services.GetRequiredService<PipelineRunner>();
+runner.RunCompleted += ctx =>
 {
-    /// <summary>
-    /// 程序入口点。
-    /// Program entry point.
-    /// </summary>
-    private static void Main()
+    System.Console.WriteLine($"--- Orchestration cycle runId={ctx.RunId} strategy={ctx.GetParameter("Strategy") ?? "-"} ---");
+    foreach (var evt in ctx.Events)
     {
-        System.Console.WriteLine("Quant.Infra.Net Orchestration Console (skeleton — full implementation in M6).");
+        System.Console.WriteLine($"{evt.TimestampUtc:HH:mm:ss} INF [{evt.Stage}] {evt.Message}");
     }
-}
+    System.Console.WriteLine($"--- cycle complete: events={ctx.Events.Count} errors={ctx.Errors.Count} ---");
+};
+var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+runner.RunCompleted += _ => lifetime.StopApplication(); // 完成一整轮后退出宿主（演示）/ exit the host after one full cycle (demo)
+
+await host.RunAsync();

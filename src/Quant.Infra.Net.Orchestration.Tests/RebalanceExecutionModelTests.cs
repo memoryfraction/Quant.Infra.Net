@@ -49,7 +49,7 @@ public class RebalanceExecutionModelTests
     {
         var options = new OrchestrationOptions { MinRebalanceDelta = minRebalanceDelta };
         var paper = new PaperBinanceUsdFutureService(options);
-        var model = new RebalanceExecutionModel(paper, options);
+        var model = new RebalanceExecutionModel(new BinanceUsdFutureExecutionBrokerAdapter(paper), options);
         return (model, paper, options);
     }
 
@@ -144,7 +144,7 @@ public class RebalanceExecutionModelTests
     {
         var options = new OrchestrationOptions();
         var broker = new FailingSetBinanceBroker();
-        var model = new RebalanceExecutionModel(broker, options);
+        var model = new RebalanceExecutionModel(new BinanceUsdFutureExecutionBrokerAdapter(broker), options);
 
         var reports = await model.RebalanceAsync(new[] { new TargetPosition { Symbol = "AAPL", TargetWeight = 0.3d } }, CancellationToken.None);
 

@@ -2,7 +2,7 @@
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Version](https://img.shields.io/badge/Version-1.5.1-blue.svg)](https://github.com/memoryfraction/Quant.Infra.Net/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Quant.Infra.Net** 是一个 .NET 量化交易基础库 —— 数据获取、统计分析、券商集成、组合分析和通知推送，一个 NuGet 包全部搞定。
+> 面向量化交易的一站式 .NET **框架**：多源数据接入、统一券商执行（币安/盈透/嘉信）、实时消息推送与内置组合分析工具——从想法到回测、模拟盘、实盘，改配置、改一个策略文件就行，不用改动你的代码库。
 
 > 📖 [文档 / GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/)
 

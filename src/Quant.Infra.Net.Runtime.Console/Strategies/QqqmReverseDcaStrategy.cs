@@ -120,9 +120,9 @@ public static class QqqmReverseDcaStrategy
                 sp.GetRequiredService<IPortfolioStateStore>()),
             new ExecutionStage(
                 sp.GetRequiredService<IExecutionModel>(),
-                sp.GetRequiredService<IBinanceUsdFutureService>()),
+                sp.GetRequiredService<IExecutionBroker>()),
             new PortfolioStateStage(
-                sp.GetRequiredService<IBinanceUsdFutureService>(),
+                sp.GetRequiredService<IExecutionBroker>(),
                 sp.GetRequiredService<IPortfolioStateStore>()),
             new NotificationStage(sp.GetRequiredService<INotificationHub>()),
         };

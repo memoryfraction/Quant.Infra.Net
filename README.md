@@ -2,7 +2,9 @@
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Core](https://img.shields.io/badge/Core-1.5.1-blue.svg)](https://www.nuget.org/packages/Quant.Infra.Net)  [![Runtime](https://img.shields.io/badge/Runtime-1.6.0-green.svg)](https://www.nuget.org/packages/Quant.Infra.Net.Runtime)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Quant.Infra.Net** is a .NET quantitative trading infrastructure library — data acquisition, statistical analysis, broker integration, portfolio analytics, and notifications in one package.
+> A one-stop .NET **framework** for quantitative trading: multi-source data ingestion, unified broker execution (Binance/IB/Schwab), real-time alerting, and built-in portfolio analytics — go from idea to backtest to paper to live by changing config and a strategy file, not your codebase.
+>
+> 面向量化交易的一站式 .NET **框架**：多源数据接入、统一券商执行（币安/盈透/嘉信）、实时消息推送与内置组合分析工具——从想法到回测、模拟盘、实盘，改配置、改一个策略文件就行，不用改动你的代码库。
 >
 > 📖 [Documentation / GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/) · 📦 [NuGet packages](https://www.nuget.org/profiles/memoryfraction)
 
@@ -301,6 +303,7 @@ Set them in `appsettings.json` under `Orchestration:Parameters`, or pass them in
 | [User Manual / 使用手册](docs/Manual.md) | Installation, module usage guide, API examples |
 | [Architecture Overview / 架构概览](docs/Architect.md) | System design, module relationships, data flow |
 | [Code Standards / 代码规范](docs/CodeStandard.md) | SOLID principles, XML docs, naming conventions, checklist |
+| [**How-to Guides (docs/manual)**](docs/manual/README-en.md) / [任务导向深度指南 (中文)](docs/manual/README-ch.md) | Task-oriented deep guides for the Runtime/Orchestration/Backtest layers: full configuration reference, writing a strategy, custom risk/data source/broker, testing & deployment, FAQ |
 
 ---
 

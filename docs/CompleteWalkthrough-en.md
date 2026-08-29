@@ -371,3 +371,7 @@ That exception is **the feature** — it is the only reason a misconfigured host
 ---
 
 *Companion files: [CompleteWalkthrough-ch.md](CompleteWalkthrough-ch.md) · [BacktestQuickStart-en.md](BacktestQuickStart-en.md) · [OrchestrationQuickStart-en.md](OrchestrationQuickStart-en.md) · [assets/qqqm-reverse-dca-equity-curve.png](assets/qqqm-reverse-dca-equity-curve.png) · [assets/qqqm-reverse-dca-target-weight.png](assets/qqqm-reverse-dca-target-weight.png) · [assets/qqqm_fetch_data.js](assets/qqqm_fetch_data.js)*
+
+
+
+

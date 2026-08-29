@@ -38,6 +38,8 @@
 dotnet run --project src/Quant.Infra.Net.Runtime.Console -- QqqmDoc
 ```
 
+The example reads a **local cached snapshot** of real QQQM daily closes (`docs/assets/_qqqm_yfinance.json`) first - zero network, fully deterministic. If that file is missing, it falls back to the free public Stooq feed. Refresh with `node docs/assets/qqqm_fetch_data.js`.
+
 Full walkthrough with the verbatim console output, both charts, and how to modify the strategy: [Complete Walkthrough (EN)](CompleteWalkthrough-en.md).
 
 ---

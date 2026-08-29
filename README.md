@@ -96,6 +96,12 @@
 > **Bottom line / 结论:** the .NET-ecosystem "stale wrapper" risk is real — and it's precisely why this library routes the popular free source through the well-maintained Python `yfinance` and keeps two independent fallbacks. **You write the strategy once; you swap data sources by config when the market's plumbing changes.**
 > **一句话：** .NET 生态"封装库过期"的风险是真实的——而这正就是这个库把流行免费源路由到维护良好的 Python `yfinance`、并保留两条独立后备的原因。**你只写一次策略；当行情管道的实现变了，你只需换配置就能换数据源。**
 
+
+
+**Going beyond free feeds / 免费源之外：**
+The same `ITraditionalFinanceSourceDataService` interface accepts **any** data provider - including professional paid feeds (Alpaca, Polygon, IEX, Databento, your broker feed, a local CSV file, etc.). The pattern is the same: implement the interface, register it in DI, set `Runtime:DataSource` to your provider. Your strategy, pipeline, and backtest runner code do not change.
+> 免费源之外：同一个 `ITraditionalFinanceSourceDataService` 接口可以对接**任意**数据供应商——包括付费专业数据源（Alpaca、Polygon、IEX、Databento、券商自有行情、本地 CSV 文件等）。做法完全一致：实现接口 → 注册到 DI → 配置 `Runtime:DataSource`。策略、管线、回测运行器代码零改动。
+
 > ⚠️ **Free public data, research use only / 免费公共数据，仅供研究** — Yahoo/`yfinance` and Stooq are free public feeds with **no SLA** and are intended for **research/backtesting**, not production order flow. For live trading, point the same interface at your broker's data feed (Binance Futures, Alpaca, Schwab, IB) — the strategy code is unchanged.
 > ⚠️ **免费公共数据，仅供研究** —— Yahoo/`yfinance` 与 Stooq 是**无 SLA** 的免费公共行情，仅供**研究/回测**，不应用于生产下单。实盘请让同一接口指向你的券商行情（Binance Futures、Alpaca、Schwab、IB）——策略代码不变。
 
@@ -125,8 +131,8 @@ CAGR=7.73%  Sharpe=0.04  Calmar=0.41
 MaxDrawdown=-18.97%  WinRate=53.3%  ProfitFactor=1.16  Commission=0 USD
 ```
 
-> **Why "real data" but no network needed:** the example uses the free public **Stooq** feed first, and falls back to a cached snapshot of **real QQQM daily closes** (`docs/assets/_qqqm_yfinance.json`) when the feed is unreachable. Refresh the cache any time with `node docs/assets/qqqm_fetch_data.js`. Both are free public data for **research/backtesting only**.
-> **为什么是"真实数据"却不需要联网：** 示例优先用免费的公共 **Stooq** 行情，拉不到时回退到缓存的 **QQQM 真实日线快照**（`docs/assets/_qqqm_yfinance.json`）。随时用 `node docs/assets/qqqm_fetch_data.js` 刷新。两者均为仅供**研究/回测**的免费公共数据。
+> **Why no network is needed:** the example reads the **local cached snapshot of real QQQM daily closes** (`docs/assets/_qqqm_yfinance.json`) first - zero network, fully deterministic. If that file is missing, it falls back to the free public **Stooq** feed (stooq.com). Refresh the cache any time with `node docs/assets/qqqm_fetch_data.js`. Both are free public data for **research/backtesting only**.
+> **为什么不需要联网：** 示例**优先读取本地缓存的真实 QQQM 日线快照**（`docs/assets/_qqqm_yfinance.json`）——零网络、完全确定性。若该文件缺失，再回退到免费公共 **Stooq** 行情（stooq.com）。随时用 `node docs/assets/qqqm_fetch_data.js` 刷新缓存。两者均为仅供**研究/回测**的免费公共数据。
 
 **Switch the mode with ONE config value / 用一个配置值切换模式:**
 

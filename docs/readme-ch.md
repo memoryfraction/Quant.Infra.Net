@@ -38,6 +38,8 @@
 dotnet run --project src/Quant.Infra.Net.Runtime.Console -- QqqmDoc
 ```
 
+示例**优先读取本地缓存的真实 QQQM 日线快照**（`docs/assets/_qqqm_yfinance.json`）——零网络、完全确定性。若该文件缺失，再回退到免费公共 Stooq 行情。随时用 `node docs/assets/qqqm_fetch_data.js` 刷新。
+
 完整图文教程（含逐字控制台输出、两张图、如何改策略）：[完整图文教程 (中文)](CompleteWalkthrough-ch.md)。
 
 ---

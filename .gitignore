@@ -402,13 +402,9 @@ result
 tools
 !src/Quant.Infra.Net.Mcp/Tools/
 /src/MyQuantApp/MyQuantApp.csproj.lscache
-/src/Quant.Infra.Net
 /src/Quant.Infra.Net/Quant.Infra.Net.csproj.lscache
-/src/Quant.Infra.Net.Console
 /src/Quant.Infra.Net.Console/Quant.Infra.Net.Console.csproj.lscache
-/src/Quant.Infra.Net.Tests
 /src/Quant.Infra.Net.Tests/Quant.Infra.Net.Tests.csproj.lscache
-/src/Quant.Infra.Net.Web
 /src/Quant.Infra.Net.Web/Quant.Infra.Net.Web.csproj.lscache
 /test-results.txt
 /.workbuddy/memory

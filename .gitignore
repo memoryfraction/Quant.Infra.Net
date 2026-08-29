@@ -400,6 +400,7 @@ FodyWeavers.xsd
 result
 .kiro
 tools
+!src/Quant.Infra.Net.Mcp/Tools/
 /src/MyQuantApp/MyQuantApp.csproj.lscache
 /src/Quant.Infra.Net
 /src/Quant.Infra.Net/Quant.Infra.Net.csproj.lscache
@@ -416,9 +417,3 @@ tools
 /nupkg-local/
 /docs/articles
 /docs/assets/_deprecated_python_charts
-/docs/assets/qqqm-reverse-dca-drawdown.png
-/docs/assets/qqqm-reverse-dca-equity-curve.png
-/docs/assets/qqqm-reverse-dca-target-weight.png
-/docs/assets/qqqm-reverse-dca-vs-buyhold.png
-/docs/assets/qqqm-reverse-dca-weight-vs-price.png
-/docs/assets/_qqqm_yfinance.json

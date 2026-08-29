@@ -31,6 +31,7 @@
 | **自定义券商执行** — `IExecutionBroker`、适配器、`customBroker` 入口 | [custom-broker-en.md](custom-broker-en.md) | [custom-broker-ch.md](custom-broker-ch.md) | ✅ 就绪 |
 | **测试与部署** — 给策略写单测、Backtest/Paper 一致性、Paper/Live 长跑、崩溃恢复 | [testing-and-deployment-en.md](testing-and-deployment-en.md) | [testing-and-deployment-ch.md](testing-and-deployment-ch.md) | ✅ 就绪 |
 | **FAQ** — 常见报错与其"预期行为" | [faq-en.md](faq-en.md) | [faq-ch.md](faq-ch.md) | ✅ 就绪 |
+| **MCP Server（AI Agent 接入）** — 4 个工具、Claude Desktop 配置、SOLID 数据源、Agent Prompt 模式 | [mcp-server-en.md](mcp-server-en.md) | [mcp-server-ch.md](mcp-server-ch.md) | ✅ 新增 |
 
 ## 建议阅读顺序
 
@@ -38,4 +39,5 @@
 2. [写策略](writing-a-strategy-ch.md) — 最常见的真实任务。
 3. 只有需要超出默认配置时，再看：[风控](risk-management-ch.md)、[自定义数据源](custom-data-source-ch.md)、[自定义券商](custom-broker-ch.md)。
 4. 部署之前：[测试与部署](testing-and-deployment-ch.md) 与 [FAQ](faq-ch.md)。
+
 

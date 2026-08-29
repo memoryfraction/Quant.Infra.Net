@@ -34,6 +34,7 @@ kinds, and this folder is exactly one of them:
 | **Custom broker execution** — `IExecutionBroker`, adapters, the `customBroker` entry point | [custom-broker-en.md](custom-broker-en.md) | [custom-broker-ch.md](custom-broker-ch.md) | ✅ ready |
 | **Testing & deployment** — unit-testing your strategy, Backtest/Paper parity, long-running Paper/Live, crash recovery | [testing-and-deployment-en.md](testing-and-deployment-en.md) | [testing-and-deployment-ch.md](testing-and-deployment-ch.md) | ✅ ready |
 | **FAQ** — common failures and their intended behavior | [faq-en.md](faq-en.md) | [faq-ch.md](faq-ch.md) | ✅ ready |
+| **MCP Server (AI Agent access)** — 4 tools, Claude Desktop config, SOLID data sources, Agent prompt patterns | [mcp-server-en.md](mcp-server-en.md) | [mcp-server-ch.md](mcp-server-ch.md) | ✅ new |
 
 ## Reading order suggestion
 
@@ -43,4 +44,5 @@ kinds, and this folder is exactly one of them:
    [Custom data source](custom-data-source-en.md), [Custom broker](custom-broker-en.md).
 4. Before you deploy anything: [Testing & deployment](testing-and-deployment-en.md) and
    [FAQ](faq-en.md).
+
 

@@ -400,6 +400,7 @@ FodyWeavers.xsd
 result
 .kiro
 tools
+!src/Quant.Infra.Net.Mcp/Tools/
 /src/MyQuantApp/MyQuantApp.csproj.lscache
 /src/Quant.Infra.Net
 /src/Quant.Infra.Net/Quant.Infra.Net.csproj.lscache

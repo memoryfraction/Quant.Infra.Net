@@ -1,4 +1,3 @@
-using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Orchestration.Abstractions;
 using Quant.Infra.Net.Orchestration.Models;
 using Quant.Infra.Net.Orchestration.Pipeline;
@@ -13,16 +12,16 @@ namespace Quant.Infra.Net.Orchestration.Stages;
 public sealed class ExecutionStage : IPipelineStage
 {
     private readonly IExecutionModel _model;
-    private readonly IBinanceUsdFutureService _broker;
+    private readonly IExecutionBroker _broker;
 
     /// <summary>
     /// 创建执行阶段。
     /// Creates the execution stage.
     /// </summary>
     /// <param name="model">执行模型（不得为 null）/ Execution model (must not be null).</param>
-    /// <param name="broker">券商服务（不得为 null；Paper 环境下为 PaperBinanceUsdFutureService）/ Broker service (must not be null).</param>
+    /// <param name="broker">券商无关的执行接口（不得为 null；Paper 环境下包装 PaperBinanceUsdFutureService）/ Broker-agnostic execution surface (must not be null).</param>
     /// <exception cref="ArgumentNullException">入参为 null 时抛出 / Thrown when null.</exception>
-    public ExecutionStage(IExecutionModel model, IBinanceUsdFutureService broker)
+    public ExecutionStage(IExecutionModel model, IExecutionBroker broker)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));

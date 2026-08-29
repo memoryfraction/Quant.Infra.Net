@@ -120,8 +120,9 @@ public class ExecutionAndPortfolioStateStageTests
         var options = new OrchestrationOptions();
         var paper = new PaperBinanceUsdFutureService(options);
         paper.SetMarkPrice("AAPL", 100d);
-        var model = new RebalanceExecutionModel(paper, options);
-        var stage = new ExecutionStage(model, paper);
+        var broker = new BinanceUsdFutureExecutionBrokerAdapter(paper);
+        var model = new RebalanceExecutionModel(broker, options);
+        var stage = new ExecutionStage(model, broker);
 
         var ctx = new PipelineContext(500);
         ctx.Set<IReadOnlyList<TargetPosition>>(new List<TargetPosition>
@@ -148,9 +149,10 @@ public class ExecutionAndPortfolioStateStageTests
         var options = new OrchestrationOptions();
         var paper = new PaperBinanceUsdFutureService(options);
         var store = new InMemoryPortfolioStateStore();
-        var model = new RebalanceExecutionModel(paper, options);
-        var execution = new ExecutionStage(model, paper);
-        var state = new PortfolioStateStage(paper, store);
+        var broker = new BinanceUsdFutureExecutionBrokerAdapter(paper);
+        var model = new RebalanceExecutionModel(broker, options);
+        var execution = new ExecutionStage(model, broker);
+        var state = new PortfolioStateStage(broker, store);
 
         var ctx = new PipelineContext(600);
         // 上下文行情：AAPL 最新收盘 100（单 Ohlcvs 槽）

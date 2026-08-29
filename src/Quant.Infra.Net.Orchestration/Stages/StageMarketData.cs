@@ -1,5 +1,4 @@
-using Quant.Infra.Net.Broker.Interfaces;
-using Quant.Infra.Net.Orchestration.Execution;
+using Quant.Infra.Net.Orchestration.Abstractions;
 using Quant.Infra.Net.Orchestration.Models;
 using Quant.Infra.Net.Orchestration.Pipeline;
 using Quant.Infra.Net.SourceData.Model;
@@ -50,14 +49,14 @@ internal static class StageMarketData
     }
 
     /// <summary>
-    /// 将 Paper 标记价写入纸上交易服务（非 Paper 服务时静默跳过）。
-    /// Applies Paper mark prices (silently skips non-Paper services).
+    /// 将 Paper 标记价写入支持 <see cref="IPaperMarkable"/> 的券商实现（不支持时静默跳过）。
+    /// Applies Paper mark prices to brokers implementing <see cref="IPaperMarkable"/> (silently skips otherwise).
     /// </summary>
     /// <param name="context">管道上下文（不得为 null）/ Pipeline context (must not be null).</param>
-    /// <param name="broker">券商服务 / Broker service.</param>
-    public static void ApplyPaperMarks(IPipelineContext context, IBinanceUsdFutureService broker)
+    /// <param name="broker">券商无关的执行接口 / Broker-agnostic execution surface.</param>
+    public static void ApplyPaperMarks(IPipelineContext context, IExecutionBroker broker)
     {
-        if (broker is not PaperBinanceUsdFutureService paper)
+        if (broker is not IPaperMarkable markable)
         {
             return;
         }
@@ -65,7 +64,7 @@ internal static class StageMarketData
         var latest = ExtractLatestCloses(context);
         if (latest.Count > 0)
         {
-            paper.SetMarkPrices(latest);
+            markable.SetMarkPrices(latest);
         }
     }
 

@@ -2,7 +2,7 @@
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Version](https://img.shields.io/badge/Version-1.5.1-blue.svg)](https://github.com/memoryfraction/Quant.Infra.Net/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Quant.Infra.Net** is a .NET quantitative trading infrastructure library — data acquisition, statistical analysis, broker integration, portfolio analytics, and notifications in one package.
+> A one-stop .NET **framework** for quantitative trading: multi-source data ingestion, unified broker execution (Binance/IB/Schwab), real-time alerting, and built-in portfolio analytics — go from idea to backtest to paper to live by changing config and a strategy file, not your codebase.
 
 > 📖 [Documentation / GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/)
 

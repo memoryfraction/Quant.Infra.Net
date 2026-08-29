@@ -2,6 +2,9 @@
 
 > **Target audience / 目标读者**: Quantitative developers who want to focus on strategy logic, not infrastructure plumbing. Focuses on **"how to use"** rather than internal implementation details.
 
+> **Beyond the core library?** This manual covers the core `Quant.Infra.Net` API. For deep, task-oriented guides to the **Runtime / Orchestration / Backtest** layers (configuration reference, writing a strategy, custom data source / broker, testing & deployment, FAQ), see **[docs/manual/](manual/README-en.md)** (中文: [manual/README-ch.md](manual/README-ch.md)).
+
+
 ---
 
 ## Table of Contents / 目录

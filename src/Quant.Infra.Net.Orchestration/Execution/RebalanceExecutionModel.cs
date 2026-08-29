@@ -1,33 +1,31 @@
-using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Orchestration.Abstractions;
-using Quant.Infra.Net.Orchestration.Execution;
 using Quant.Infra.Net.Orchestration.Models;
-using Binance.Net.Enums;
 
 namespace Quant.Infra.Net.Orchestration.Execution;
 
 /// <summary>
-/// 目标持仓调仓执行模型：把 TargetPosition 列表与当前持仓的差异转换为券商调用
-/// （复用 IBinanceUsdFutureService.SetUsdFutureHoldingsAsync / LiquidateUsdFutureAsync 语义）。
-/// Target-position rebalancing model: turns target-vs-actual deltas into broker calls
-/// (reusing IBinanceUsdFutureService.SetUsdFutureHoldingsAsync / LiquidateUsdFutureAsync semantics).
+/// 目标持仓调仓执行模型：把 TargetPosition 列表与当前持仓的差异转换为券商无关的 IExecutionBroker 调用
+/// （SetTargetWeightAsync / LiquidateAsync；具体券商由调用方注入的 IExecutionBroker 实现决定）。
+/// Target-position rebalancing model: turns target-vs-actual deltas into broker-agnostic IExecutionBroker
+/// calls (SetTargetWeightAsync / LiquidateAsync); the concrete broker is whatever IExecutionBroker the
+/// caller injected.
 /// </summary>
 public sealed class RebalanceExecutionModel : IExecutionModel
 {
     private static readonly double FlatEpsilon = 1e-9;
 
-    private readonly IBinanceUsdFutureService _broker;
+    private readonly IExecutionBroker _broker;
     private readonly double _minRebalanceDelta;
 
     /// <summary>
     /// 创建调仓执行模型。
     /// Creates a rebalancing execution model.
     /// </summary>
-    /// <param name="broker">券商服务（Paper 环境下为 PaperBinanceUsdFutureService）/ Broker service (PaperBinanceUsdFutureService in Paper mode).</param>
+    /// <param name="broker">券商无关的执行接口（Paper 环境下为 BinanceUsdFutureExecutionBrokerAdapter 包装的 PaperBinanceUsdFutureService）/ Broker-agnostic execution surface (wraps PaperBinanceUsdFutureService in Paper mode).</param>
     /// <param name="options">编排配置（提供 MinRebalanceDelta 死区）/ Orchestration options (supply the MinRebalanceDelta dead zone).</param>
     /// <exception cref="ArgumentNullException">任一入参为 null 时抛出 / Thrown when any argument is null.</exception>
     /// <exception cref="ArgumentException">MinRebalanceDelta 为负时抛出 / Thrown when MinRebalanceDelta is negative.</exception>
-    public RebalanceExecutionModel(IBinanceUsdFutureService broker, OrchestrationOptions options)
+    public RebalanceExecutionModel(IExecutionBroker broker, OrchestrationOptions options)
     {
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));
         if (options == null)
@@ -52,7 +50,7 @@ public sealed class RebalanceExecutionModel : IExecutionModel
         }
 
         var reports = new List<ExecutionReport>(targets.Count);
-        var equity = await _broker.GetusdFutureAccountBalanceAsync().ConfigureAwait(false);
+        var equity = await _broker.GetAccountEquityUsdAsync().ConfigureAwait(false);
 
         foreach (var target in targets)
         {
@@ -88,15 +86,11 @@ public sealed class RebalanceExecutionModel : IExecutionModel
 
                 if (Math.Abs(target.TargetWeight) < FlatEpsilon)
                 {
-                    await _broker.LiquidateUsdFutureAsync(target.Symbol).ConfigureAwait(false);
+                    await _broker.LiquidateAsync(target.Symbol).ConfigureAwait(false);
                 }
                 else
                 {
-                    await _broker.SetUsdFutureHoldingsAsync(
-                        target.Symbol,
-                        Math.Abs(target.TargetWeight),
-                        target.TargetWeight >= 0d ? PositionSide.Long : PositionSide.Short)
-                        .ConfigureAwait(false);
+                    await _broker.SetTargetWeightAsync(target.Symbol, target.TargetWeight).ConfigureAwait(false);
                 }
 
                 var currentWeight = await GetActualWeightAsync(target.Symbol, equity).ConfigureAwait(false);
@@ -131,7 +125,7 @@ public sealed class RebalanceExecutionModel : IExecutionModel
 
     private async Task<double> GetActualWeightAsync(string symbol, decimal equity)
     {
-        var positions = await _broker.GetHoldingPositionAsync().ConfigureAwait(false);
+        var positions = await _broker.GetPositionsAsync().ConfigureAwait(false);
         var position = positions.FirstOrDefault(p => string.Equals(p.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
         if (position == null || equity <= 0m)
         {

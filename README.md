@@ -19,7 +19,7 @@
 
 ## 📈 See it work first / 先看一个真实结果
 
-> **A real, reproducible backtest — not a mock.** The example below runs the bundled `QQQM reverse-MA200 DCA` strategy over **real QQQM daily closes (2021 → 2026)**, with the exact console output and equity curve from the actual run. Nothing is fabricated.
+> **A real, reproducible backtest — not a mock.** The example below runs the bundled `QQQM reverse-MA200 DCA` strategy over **real QQQM daily closes (2020-12 → 2026-08)**, with the exact console output and equity curve from the actual run. Nothing is fabricated.
 >
 > 下面是一个**可复现的真实回测**——不是演示假数据。`QQQM 逆向 MA200 定投` 策略跑在 **QQQM 真实日线（2021 → 2026）** 上，控制台输出与权益曲线均取自真实运行，无任何虚构。
 
@@ -29,22 +29,22 @@
 
 > Target weight over time — the strategy holds more when price is below the SMA200 and trims when above (the contrarian buy-the-dip in action).
 
-**Real run result (real QQQM daily closes, 2021-01-04 → 2026-08-28):**
+**Real run result (real QQQM daily closes, 2020-12-01 → 2026-08-27):**
 
 | Metric | Value | What it means |
 |--------|-------|---------------|
 | Initial equity | **$10,000** | starting capital |
-| Final equity | **$14,435** | **+44.4%** over ~5.7 years |
-| CAGR | **7.73%** | annualized return |
-| Max Drawdown | **−18.97%** | worst peak-to-trough (2022 bear market) |
-| Sharpe | **0.04** | low — this is a "buy the dip" DCA, not a high-alpha system |
-| Win Rate | **53.3%** | |
-| Trades | **673** | daily rebalancing decisions |
-| Bars | **1,220** | (after 200-bar warmup) |
+| Final equity | **$14,556** | **+45.6%** over ~5.7 years |
+| CAGR | **8.0%** | annualized return (1,241 tradable bars, post-warmup) |
+| Max Drawdown | **−18.82%** | worst peak-to-trough (2022 bear market) |
+| Sharpe \| **0.67** | lower than buy-and-hold (0.72) — a drawdown-reducing DCA, not a return-maximizer |
+| Win Rate | **52.9%** | |
+| Trades | **684** | daily rebalancing decisions |
+| Bars | **1,241** | (after 200-bar warmup) |
 
-> **Read the Sharpe honestly:** this is a *contrarian DCA* — it deliberately holds more when price is below the SMA200 and trims when above. It is not designed to be a high-Sharpe momentum strategy; it is a **risk-managed, buy-the-dip accumulation** strategy. A low Sharpe with a −19% max drawdown and a +44% total return over a window that *included the 2022 bear market* is the honest, expected profile.
+> **Read the Sharpe honestly:** this is a *contrarian DCA* — it deliberately holds more when price is below the SMA200 and trims when above. It is not designed to be a high-Sharpe momentum strategy; it is a **risk-managed, buy-the-dip accumulation** strategy. It trades ~half the buy-and-hold return (Sharpe 0.66 vs 0.72) for a max drawdown that is half as deep (−18.8% vs −35%). The honest profile: lower return, lower Sharpe, far less peak-to-trough pain.
 >
-> **如何理解 Sharpe：** 这是一个*逆向定投*——价格低于 SMA200 时加仓、高于时减仓。它不是高 Sharpe 动量策略，而是**带风控的"越跌越买"积累策略**。在一个*包含 2022 熊市*的窗口里，−19% 最大回撤、+44% 总收益，就是这个策略真实且符合预期的画像。
+> **如何理解 Sharpe：** 这是一个*逆向定投*——价格低于 SMA200 时加仓、高于时减仓。它不是高 Sharpe 动量策略，而是**带风控的"越跌越买"积累策略**。它用约一半的买入持有收益（Sharpe 0.66 vs 0.72）换来了减半的最大回撤（−18.8% vs −35%）。真实画像：收益更低、夏普更低、但峰谷之间的痛小得多。
 
 **The strategy, in one sentence / 一句话策略:** every day, compute `SMA200` of QQQM closes — if price is *below* the MA (cheap), increase target weight; if *above* (expensive), reduce it. The full 30-line strategy code is in [Section 4](#-3-modify-the-strategy--改一下策略验证自己的想法).
 > 每天算 QQQM 收盘价的 `SMA200`——价格在均线**下方**（便宜）时加仓，在**上方**（贵）时减仓。完整的 30 行策略代码见[第 4 节](#-3-modify-the-strategy--改一下策略验证自己的想法)。
@@ -126,12 +126,12 @@ dotnet run --project src/Quant.Infra.Net.Runtime.Console -- QqqmDoc
 
 ```
 === Quant.Infra.Net CompleteWalkthrough — QQQM reverse-MA200 DCA (real data backtest) ===
-bars loaded: 1420  (2021-01-04 .. 2026-08-28)
+bars loaded: 1441  (2020-12-01 .. 2026-08-27)
 initial equity: 10000 USD | warmup bars: 200 | commission/slippage: 0 bps | fill: SameBarClose
 === backtest metrics (real run) ===
-bars=1220  trades=673
-CAGR=7.73%  Sharpe=0.04  Calmar=0.41
-MaxDrawdown=-18.97%  WinRate=53.3%  ProfitFactor=1.16  Commission=0 USD
+bars=1241  trades=684
+CAGR=8.00%  Sharpe=0.67  Calmar=0.43
+MaxDrawdown=-18.82%  WinRate=52.9%  ProfitFactor=1.16  Commission=0 USD
 ```
 
 > **Why no network is needed:** the example reads the **local cached snapshot of real QQQM daily closes** (`docs/assets/_qqqm_yfinance.json`) first - zero network, fully deterministic. If that file is missing, it falls back to the free public **Stooq** feed (stooq.com). Refresh the cache any time with `node docs/assets/qqqm_fetch_data.js`. Both are free public data for **research/backtesting only**.

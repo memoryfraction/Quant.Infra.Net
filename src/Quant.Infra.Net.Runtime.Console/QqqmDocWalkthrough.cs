@@ -160,6 +160,72 @@ public static class QqqmDocWalkthrough
         pltEq.SavePng(equityPath, 960, 540);
         C.WriteLine($"chart written: {equityPath}");
 
+        // —— 额外图表：策略 vs 买入持有、回撤对比、权重 vs 价格（全部 ScottPlot 原生输出，供文档/宣传直接使用）——
+        // 1) 策略净值 vs QQQM 买入持有（同一初始资金）
+        var startIdx = MaPeriod - 1;
+        var bhBase = (double)bars[startIdx].Close;
+        var cmpX = new List<double>();
+        var cmpS = new List<double>();
+        var cmpB = new List<double>();
+        for (var k = 0; k < curve.Count; k++)
+        {
+            cmpX.Add(curve[k].Key.ToOADate());
+            cmpS.Add((double)curve[k].Value);
+            cmpB.Add(10000.0 * closes[startIdx + k] / bhBase);
+        }
+        var pltCmp = new Plot();
+        pltCmp.Add.Scatter(cmpX, cmpB).Color = Color.FromHex("#999999");
+        var sLine = pltCmp.Add.Scatter(cmpX, cmpS); sLine.Color = Color.FromHex("#1f77b4"); sLine.LineWidth = 2;
+        pltCmp.Axes.DateTimeTicksBottom();
+        pltCmp.Title("QQQM reverse-MA200 DCA vs buy-and-hold ($10,000 start, real daily closes)");
+        pltCmp.XLabel("Date"); pltCmp.YLabel("Equity (USD)");
+        pltCmp.SavePng(Path.Combine(assetsDir, "qqqm-reverse-dca-vs-buyhold.png"), 960, 540);
+        C.WriteLine("chart written: qqqm-reverse-dca-vs-buyhold.png");
+
+        // 2) 回撤对比
+        var ddX = new List<double>();
+        var ddS = new List<double>();
+        var ddB = new List<double>();
+        var peakS = double.NegativeInfinity;
+        var peakB = double.NegativeInfinity;
+        for (var k = 0; k < curve.Count; k++)
+        {
+            peakS = Math.Max(peakS, (double)curve[k].Value);
+            peakB = Math.Max(peakB, cmpB[k]);
+            ddX.Add(curve[k].Key.ToOADate());
+            ddS.Add((double)curve[k].Value / peakS - 1.0);
+            ddB.Add(cmpB[k] / peakB - 1.0);
+        }
+        var pltDd = new Plot();
+        pltDd.Add.Scatter(ddX, ddB).Color = Color.FromHex("#cccccc");
+        var ddLine = pltDd.Add.Scatter(ddX, ddS); ddLine.Color = Color.FromHex("#1f77b4"); ddLine.LineWidth = 2;
+        pltDd.Axes.DateTimeTicksBottom();
+        pltDd.Title("Drawdown: strategy vs buy-and-hold (real daily closes)");
+        pltDd.XLabel("Date"); pltDd.YLabel("Drawdown");
+        pltDd.SavePng(Path.Combine(assetsDir, "qqqm-reverse-dca-drawdown.png"), 960, 540);
+        C.WriteLine("chart written: qqqm-reverse-dca-drawdown.png");
+
+        // 3) 目标权重 vs 归一化价格
+        var wpX = new List<double>();
+        var wpW = new List<double>();
+        var wpP = new List<double>();
+        for (var i = startIdx; i < idx.Count; i++)
+        {
+            var sma = closes.Skip(i - MaPeriod + 1).Take(MaPeriod).Average();
+            wpX.Add(idx[i].OpenDateTime.ToOADate());
+            wpW.Add(QqqmReverseDcaStrategy.ComputeTargetWeight(closes[i], sma, 0.5, 1.5, 1.0, 0.0, 1.0));
+            wpP.Add(closes[i] / bhBase);
+        }
+        var pltWp = new Plot();
+        pltWp.Add.Scatter(wpX, wpP).Color = Color.FromHex("#bbbbbb");
+        var wpLine = pltWp.Add.Scatter(wpX, wpW); wpLine.Color = Color.FromHex("#d62728"); wpLine.LineWidth = 2;
+        pltWp.Axes.DateTimeTicksBottom();
+        pltWp.Title("Target weight (red) vs QQQM price normalized to 1.0 (grey)");
+        pltWp.XLabel("Date"); pltWp.YLabel("Weight / Price(base=1.0)");
+        pltWp.SavePng(Path.Combine(assetsDir, "qqqm-reverse-dca-weight-vs-price.png"), 960, 540);
+        C.WriteLine("chart written: qqqm-reverse-dca-weight-vs-price.png");
+
+        // 4) 原目标权重图
         var wX = new List<double>();
         var wY = new List<double>();
         for (var i = MaPeriod - 1; i < idx.Count; i++)

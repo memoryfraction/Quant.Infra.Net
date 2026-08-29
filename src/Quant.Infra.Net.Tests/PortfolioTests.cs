@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quant.Infra.Net.Account.Service;
 using Quant.Infra.Net.Portfolio.Models;
@@ -163,13 +163,13 @@ namespace Quant.Infra.Net.Tests
             // Arrange
             var marketValueDict = GenerateFakeMarketValueDict();
             var riskFreeRate = 0.02m; // 2%
-            var returns = marketValueDict.Values.Zip(marketValueDict.Values.Skip(1), (prev, curr) => curr - prev).ToList();
-            var averageReturn = returns.Average();
-            var standardDeviation = (decimal)Math.Sqrt(returns.Select(r => Math.Pow((double)r - (double)averageReturn, 2)).Average());
-            var expectedSharpeRatio = (averageReturn - riskFreeRate) / standardDeviation;
+            var ordered = marketValueDict.OrderBy(kvp => kvp.Key).ToList();
+            var returns = new List<decimal>(); for (var i = 1; i < ordered.Count; i++) { var prev = ordered[i - 1].Value; if (prev != 0) returns.Add(ordered[i].Value / prev - 1); }
+            var averageReturn = returns.Average(); var standardDeviation = (decimal)Math.Sqrt(returns.Select(r => Math.Pow((double)r - (double)averageReturn, 2)).Average());
+            var expectedSharpeRatio = (averageReturn - riskFreeRate / 12) / standardDeviation * (decimal)Math.Sqrt(12.0); // annualize (12 obs/yr)
 
             // Act
-            var actualSharpeRatio = StrategyPerformanceAnalyzer.CalculateSharpeRatio(marketValueDict, riskFreeRate);
+            var actualSharpeRatio = StrategyPerformanceAnalyzer.CalculateSharpeRatio(marketValueDict, riskFreeRate, 12);
 
             // Assert
             Assert.AreEqual(expectedSharpeRatio, actualSharpeRatio, "Sharpe Ratio calculation is incorrect.");

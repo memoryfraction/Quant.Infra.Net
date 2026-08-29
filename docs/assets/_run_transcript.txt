@@ -1,0 +1,145 @@
+=== Quant.Infra.Net CompleteWalkthrough — QQQM reverse-MA200 DCA (real data backtest) ===
+data source: Stooq (stooq.com free public daily bars; window 2021-01-04 -> now)
+data source: stooq.com unreachable/blocked for this run — Stooq request timed out for QQQM at https://stooq.com/q/d/l/?s=qqqm.us&i=d.
+data source (resolved): cached real QQQM daily closes (docs/assets/_qqqm_yfinance.json; refresh with docs/assets/qqqm_fetch_data.js)
+bars loaded: 1420  (2021-01-04 .. 2026-08-28)
+initial equity: 10000 USD | warmup bars: 200 | commission/slippage: 0 bps | fill: SameBarClose
+=== backtest metrics (real run) ===
+bars=1220  trades=673
+CAGR=7.73%  Sharpe=0.04  Calmar=0.41
+MaxDrawdown=-18.97%  WinRate=53.3%  ProfitFactor=1.16  Commission=0 USD
+=== equity curve (every 20 bars) ===
+2021-10-19  equity=10000.00 USD
+2021-11-16  equity=10230.63 USD
+2021-12-15  equity=10253.87 USD
+2022-01-13  equity=10070.29 USD
+2022-02-11  equity=9700.95 USD
+2022-03-14  equity=9231.89 USD
+2022-04-11  equity=9710.47 USD
+2022-05-10  equity=8996.85 USD
+2022-06-08  equity=9202.16 USD
+2022-07-08  equity=8984.68 USD
+2022-08-05  equity=9553.68 USD
+2022-09-02  equity=9085.03 USD
+2022-10-03  equity=8653.60 USD
+2022-10-31  equity=8803.08 USD
+2022-11-29  equity=8918.24 USD
+2022-12-28  equity=8520.77 USD
+2023-01-27  equity=9231.93 USD
+2023-02-27  equity=9231.98 USD
+2023-03-27  equity=9462.43 USD
+2023-04-25  equity=9488.64 USD
+2023-05-23  equity=9788.72 USD
+2023-06-22  equity=10108.62 USD
+2023-07-21  equity=10193.81 USD
+2023-08-18  equity=10040.40 USD
+2023-09-18  equity=10179.83 USD
+2023-10-16  equity=10187.21 USD
+2023-11-13  equity=10305.89 USD
+2023-12-12  equity=10533.71 USD
+2024-01-11  equity=10648.73 USD
+2024-02-09  equity=10909.91 USD
+2024-03-11  equity=10937.07 USD
+2024-04-09  equity=10985.85 USD
+2024-05-07  equity=10993.76 USD
+2024-06-05  equity=11218.31 USD
+2024-07-05  equity=11492.32 USD
+2024-08-02  equity=11092.40 USD
+2024-08-30  equity=11414.90 USD
+2024-09-30  equity=11555.86 USD
+2024-10-28  equity=11640.36 USD
+2024-11-25  equity=11770.24 USD
+2024-12-24  equity=12006.90 USD
+2025-01-27  equity=11887.52 USD
+2025-02-25  equity=11885.73 USD
+2025-03-25  equity=11714.63 USD
+2025-04-23  equity=11405.06 USD
+2025-05-21  equity=12196.89 USD
+2025-06-20  equity=12352.34 USD
+2025-07-21  equity=12717.71 USD
+2025-08-18  equity=12840.60 USD
+2025-09-16  equity=12970.82 USD
+2025-10-14  equity=13044.63 USD
+2025-11-11  equity=13242.76 USD
+2025-12-10  equity=13316.26 USD
+2026-01-09  equity=13328.73 USD
+2026-02-09  equity=13241.50 USD
+2026-03-10  equity=13196.04 USD
+2026-04-08  equity=13229.08 USD
+2026-05-06  equity=14036.33 USD
+2026-06-04  equity=14345.45 USD
+2026-07-06  equity=14326.05 USD
+2026-08-03  equity=14200.35 USD
+2026-08-28  equity=14356.25 USD
+=== 2022 drawdown window: strategy activity (real numbers) ===
+QQQM 2022: first close=165.2400  last close=109.5300  change=-33.71%
+per-bar target weight (first 12 + last 12 of the window, MA200 formula):
+2022-01-03  close=165.2400  SMA200= 148.7604  targetWeight=0.3892
+2022-01-04  close=163.0700  SMA200= 148.9208  targetWeight=0.4050
+2022-01-05  close=158.1500  SMA200= 149.0601  targetWeight=0.4390
+2022-01-06  close=157.9600  SMA200= 149.2089  targetWeight=0.4413
+2022-01-07  close=156.2700  SMA200= 149.3503  targetWeight=0.4537
+2022-01-10  close=156.4200  SMA200= 149.4827  targetWeight=0.4536
+2022-01-11  close=158.6100  SMA200= 149.6275  targetWeight=0.4400
+2022-01-12  close=159.3600  SMA200= 149.7782  targetWeight=0.4360
+2022-01-13  close=155.4700  SMA200= 149.8995  targetWeight=0.4628
+2022-01-14  close=156.2800  SMA200= 150.0139  targetWeight=0.4582
+2022-01-18  close=152.6200  SMA200= 150.0965  targetWeight=0.4832
+2022-01-19  close=150.7800  SMA200= 150.1709  targetWeight=0.4959
+  ...
+2022-12-30  close=109.5300  SMA200= 123.2522  targetWeight=0.6670
+2022-12-29  close=109.6500  SMA200= 123.4042  targetWeight=0.6672
+2022-12-28  close=107.0000  SMA200= 123.5310  targetWeight=0.7007
+2022-12-27  close=108.3900  SMA200= 123.6506  targetWeight=0.6851
+2022-12-23  close=110.0300  SMA200= 123.7761  targetWeight=0.6666
+2022-12-22  close=109.7900  SMA200= 123.9073  targetWeight=0.6709
+2022-12-21  close=112.5000  SMA200= 124.0469  targetWeight=0.6396
+2022-12-20  close=110.8900  SMA200= 124.1496  targetWeight=0.6602
+2022-12-19  close=111.0100  SMA200= 124.2634  targetWeight=0.6600
+2022-12-16  close=112.8600  SMA200= 124.4023  targetWeight=0.6392
+2022-12-15  close=114.0000  SMA200= 124.5421  targetWeight=0.6270
+2022-12-14  close=117.7700  SMA200= 124.6863  targetWeight=0.5832
+=== trades (real run) ===
+2021-10-19  QQQM  side=Long  fill=154.26  notional=4067.02672384092 USD  commission=0 USD
+2021-10-27  QQQM  side=Long  fill=156.21  notional=4010.56582387212 USD  commission=0 USD
+2021-10-28  QQQM  side=Long  fill=157.91  notional=3918.12634476699 USD  commission=0 USD
+2021-11-02  QQQM  side=Long  fill=159.89  notional=3832.07602645901 USD  commission=0 USD
+2021-11-03  QQQM  side=Long  fill=161.63  notional=3735.00215171384 USD  commission=0 USD
+2021-11-04  QQQM  side=Long  fill=163.68  notional=3617.42459128801 USD  commission=0 USD
+2021-11-09  QQQM  side=Long  fill=162.51  notional=3727.03441723319 USD  commission=0 USD
+2021-11-10  QQQM  side=Long  fill=160.12  notional=3887.82341081315 USD  commission=0 USD
+2021-11-12  QQQM  side=Long  fill=162.23  notional=3781.89302134053 USD  commission=0 USD
+2021-11-18  QQQM  side=Long  fill=165.11  notional=3648.73393099761 USD  commission=0 USD
+2021-11-23  QQQM  side=Long  fill=163.39  notional=3790.67959568685 USD  commission=0 USD
+2021-11-26  QQQM  side=Long  fill=160.8  notional=3970.31132120662 USD  commission=0 USD
+2021-11-29  QQQM  side=Long  fill=164.26  notional=3769.11547668786 USD  commission=0 USD
+2021-11-30  QQQM  side=Long  fill=161.89  notional=3925.28735157482 USD  commission=0 USD
+2021-12-01  QQQM  side=Long  fill=159.22  notional=4095.30711395394 USD  commission=0 USD
+2021-12-03  QQQM  side=Long  fill=157.54  notional=4211.6404398266 USD  commission=0 USD
+2021-12-07  QQQM  side=Long  fill=163.62  notional=3873.55988444866 USD  commission=0 USD
+2021-12-09  QQQM  side=Long  fill=161.96  notional=4000.14846912618 USD  commission=0 USD
+2021-12-10  QQQM  side=Long  fill=163.65  notional=3911.12428384873 USD  commission=0 USD
+2021-12-13  QQQM  side=Long  fill=161.27  notional=4066.35558969953 USD  commission=0 USD
+2021-12-14  QQQM  side=Long  fill=159.67  notional=4172.26753041826 USD  commission=0 USD
+2021-12-15  QQQM  side=Long  fill=163.12  notional=3981.9183340925 USD  commission=0 USD
+2021-12-16  QQQM  side=Long  fill=159.12  notional=4233.68327314488 USD  commission=0 USD
+2021-12-20  QQQM  side=Long  fill=156.59  notional=4402.96952447761 USD  commission=0 USD
+2021-12-21  QQQM  side=Long  fill=160  notional=4220.8467726416 USD  commission=0 USD
+2021-12-22  QQQM  side=Long  fill=161.96  notional=4119.20547359527 USD  commission=0 USD
+2021-12-27  QQQM  side=Long  fill=165.9  notional=3910.53722548804 USD  commission=0 USD
+2021-12-30  QQQM  side=Long  fill=164.51  notional=4033.52419080485 USD  commission=0 USD
+2022-01-04  QQQM  side=Long  fill=163.07  notional=4158.67949430113 USD  commission=0 USD
+2022-01-05  QQQM  side=Long  fill=158.15  notional=4453.03436721985 USD  commission=0 USD
+2022-01-07  QQQM  side=Long  fill=156.27  notional=4577.61450442172 USD  commission=0 USD
+2022-01-11  QQQM  side=Long  fill=158.61  notional=4469.52858761775 USD  commission=0 USD
+2022-01-13  QQQM  side=Long  fill=155.47  notional=4660.91502027942 USD  commission=0 USD
+2022-01-18  QQQM  side=Long  fill=152.62  notional=4824.55497440935 USD  commission=0 USD
+2022-01-19  QQQM  side=Long  fill=150.78  notional=4923.08135048357 USD  commission=0 USD
+2022-01-20  QQQM  side=Long  fill=148.81  notional=5071.36694867108 USD  commission=0 USD
+2022-01-21  QQQM  side=Long  fill=144.64  notional=5406.24617793676 USD  commission=0 USD
+2022-01-25  QQQM  side=Long  fill=141.82  notional=5622.8855503212 USD  commission=0 USD
+2022-01-27  QQQM  side=Long  fill=140.36  notional=5730.02220355245 USD  commission=0 USD
+2022-01-28  QQQM  side=Long  fill=144.68  notional=5418.25735339062 USD  commission=0 USD
+chart written: E:\Github\Quant.Infra.Net\docs\assets\qqqm-reverse-dca-equity-curve.png
+chart written: E:\Github\Quant.Infra.Net\docs\assets\qqqm-reverse-dca-target-weight.png
+done.

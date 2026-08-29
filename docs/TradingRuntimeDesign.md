@@ -6,7 +6,7 @@
 >
 > 更根本的问题是量化圈的经典事故：**回测用一套策略实现，上线时因为各种原因（重写、抄漏一行、参数改了忘记同步）变成了另一套逻辑，回测的历史表现和实盘完全对不上**。单纯"加一个回测模块"不能防住这件事——如果回测和 Paper/实盘是两个互不相干的入口，用户依然要自己保证传给两边的策略参数一致，这个"自己保证"正是事故的根源。
 >
-> 本方案分两个阶段一次性解决这两个问题：**阶段一（B0-B6）**建一个事件驱动回测引擎，与编排层零侵入集成；**阶段二（R0-R5）**在两者之上加一层唯一入口，用一个 `RunMode` 开关自动切 Backtest/Paper/Testnet/Live，并把"策略即插件文件"变成正式约定，从架构上让"两套实现"这件事物理上不可能发生。
+> 本方案分两个阶段一次性解决这两个问题：**阶段一（B0-B6）**建一个事件驱动回测引擎，与编排层零侵入集成；**阶段二（R0-R6）**在两者之上加一层唯一入口，用一个 `RunMode` 开关自动切 Backtest/Paper/Testnet/Live，把"策略即插件文件"变成正式约定，并在唯一入口落地后收敛掉过渡期的两个独立 Demo 项目（R6），从架构上让"两套实现"这件事物理上不可能发生。
 >
 > 本文档沿用 [编排层设计文档](OrchestrationLayerDesign.md) 的写法：既是可自主执行的规格说明书，也是供人类评审的架构设计文档，接口签名、目录结构、里程碑验收标准均已定死，实现时**不得擅自更改公共契约**。
 
@@ -16,6 +16,7 @@
 
 | 版本 | 日期 | 更新内容 | 更新人 |
 |------|------|---------|--------|
+| 1.1.1 | 2026-08-28 | 新增 R6「收敛 Console 项目」里程碑：`Runtime.Console` 落地（R5）后，`Orchestration.Console`/`Backtest.Console` 两个过渡期 Demo 项目不再提供增量信息，改为删除，最终稳态收敛为 `MyQuantApp`（外部用户示例）+ `Runtime.Console`（唯一内部端到端 Demo）+ 各层独立 `.Tests` 项目（不合并）；起因：人工审阅 Solution Explorer 发现 3 个 Console 项目并存有维护负担 | agent(claude-sonnet-5) |
 | 1.1.0 | 2026-08-28 | 合并原 `BacktestEngineDesign.md`（回测引擎，B0-B6）与 `UnifiedRuntimeDesign.md`（统一运行时，R0-R5）为单一实施文档；新增 §3「仓库与发布策略」正面回答：继续在本仓库改还是另起仓库、要不要现在发 NuGet、老用户升级影响多大 | agent(claude-sonnet-5) |
 | 1.0.0 | 2026-08-28 | （已废弃，内容并入本文档）初版分拆为两份文档：事件驱动回测引擎设计 + 统一运行时设计 | agent(claude-sonnet-5) |
 
@@ -31,7 +32,7 @@
 6. [目录结构](#6-目录结构)
 7. [核心契约](#7-核心契约)
 8. [一致性保证矩阵：三种模式到底哪里允许不一样](#8-一致性保证矩阵三种模式到底哪里允许不一样)
-9. [里程碑与验收标准（阶段一 B0-B6 + 阶段二 R0-R5）](#9-里程碑与验收标准)
+9. [里程碑与验收标准（阶段一 B0-B6 + 阶段二 R0-R6）](#9-里程碑与验收标准)
 10. [测试策略](#10-测试策略)
 11. [实现护栏](#11-实现护栏)
 12. [范例：一个策略文件，四种模式全打通](#12-范例一个策略文件四种模式全打通)
@@ -478,7 +479,7 @@ src/
 ├── Quant.Infra.Net/                        # 现有核心库（不动）
 ├── Quant.Infra.Net.Orchestration/          # 现有编排层（不动，M0-M6 已完成）
 ├── Quant.Infra.Net.Orchestration.Tests/    # 现有（不动）
-├── Quant.Infra.Net.Orchestration.Console/  # 现有（不动）
+├── (R6 已退役：历史快照中的 Quant.Infra.Net.Orchestration.Console 独立宿主 → 功能并入 Quant.Infra.Net.Runtime.Console, RunMode=Paper)
 ├── Quant.Infra.Net.Tests/ Quant.Infra.Net.Console/ MyQuantApp/  # 现有（不动）
 │
 ├── Quant.Infra.Net.Backtest/               # ★ 阶段一新增：回测引擎类库
@@ -508,9 +509,7 @@ src/
 │   ├── TradeStatisticsTests.cs
 │   └── B5EndToEndTests.cs                   # 端到端：复用编排层 3 个内置策略跑一次完整回测
 │
-├── Quant.Infra.Net.Backtest.Console/       # ★ 阶段一新增：端到端回测 Demo 宿主
-│   ├── Program.cs                          # ≤50 行：跑一次 MaCross 回测，打印绩效报告
-│   └── appsettings.json
+└── (R6 已退役：历史快照中的 Quant.Infra.Net.Backtest.Console 独立宿主 → 功能并入 Quant.Infra.Net.Runtime.Console, RunMode=Backtest)
 │
 ├── Quant.Infra.Net.Runtime/                 # ★ 阶段二新增：统一运行时
 │   ├── Models/
@@ -924,83 +923,94 @@ switch (runtimeOptions.RunMode)
 
 ## 9. 里程碑与验收标准
 
-> **执行协议**：阶段一（B0-B6）在阶段二（R0-R5）之前完成——`RunMode.Backtest` 分支直接调用 `AddQuantInfraNetBacktest()`，该方法不存在时 R3/R4 无法验收。每个里程碑完成后：①`dotnet build` 零 warning 零 error；②`dotnet test` 全绿（含新增测试）；③git commit（阶段一格式 `backtest(B{n}): ...`，阶段二格式 `runtime(R{n}): ...`）。任一验收不过则修复后再进入下一里程碑，禁止跳过。
+> **执行协议**：阶段一（B0-B6）在阶段二（R0-R6）之前完成——`RunMode.Backtest` 分支直接调用 `AddQuantInfraNetBacktest()`，该方法不存在时 R3/R4 无法验收。每个里程碑完成后：①`dotnet build` 零 warning 零 error；②`dotnet test` 全绿（含新增测试）；③git commit（阶段一格式 `backtest(B{n}): ...`，阶段二格式 `runtime(R{n}): ...`）。任一验收不过则修复后再进入下一里程碑，禁止跳过。R6 是唯一允许删除既有源码文件的里程碑（删除对象限定为 `Orchestration.Console`/`Backtest.Console` 两个 Demo 项目本身，不涉及它们之外的任何文件），其余全部里程碑仍遵守 §11 护栏第 1 条"现有项目只读"。
 
 ### 阶段一：回测引擎
 
 **B0 — 脚手架**
-- [ ] 创建 `src/Quant.Infra.Net.Backtest`（net8.0 类库）、`...Backtest.Tests`（MSTest）、`...Backtest.Console`
-- [ ] `dotnet sln add` 三个新项目；引用 `Quant.Infra.Net.Orchestration`（间接带入 `Quant.Infra.Net`）
+- [x] 创建 `src/Quant.Infra.Net.Backtest`（net8.0 类库）、`...Backtest.Tests`（MSTest）、`...Backtest.Console`
+- [x] `dotnet sln add` 三个新项目；引用 `Quant.Infra.Net.Orchestration`（间接带入 `Quant.Infra.Net`）
 - **验收**：解决方案编译通过
 
 **B1 — 历史数据集 + 防未来函数**
-- [ ] `Data/HistoricalDataSet.cs`：构造时按 symbol 排序去重、`Timeline` 求并集、`SliceUpTo`/`CloseAt` 实现
-- [ ] 测试：`HistoricalDataSetTests` —— 乱序输入排序正确；`SliceUpTo` 边界（恰好等于 asOfUtc 含入、之后一根不含入）；多 symbol 时间戳不对齐时 `Timeline` 并集正确
-- [ ] 测试：`LookAheadBiasTests` —— 关键专项用例：构造一段历史数据，在最后一根植入一个"极端异常值"（如断崖式暴涨），断言 `SliceUpTo` 在该 bar 之前的任意 asOfUtc 都取不到这根异常 bar；再接一次真实信号生成器调用，断言提前时刻的信号不受未来异常值影响
+- [x] `Data/HistoricalDataSet.cs`：构造时按 symbol 排序去重、`Timeline` 求并集、`SliceUpTo`/`CloseAt` 实现
+- [x] 测试：`HistoricalDataSetTests` —— 乱序输入排序正确；`SliceUpTo` 边界（恰好等于 asOfUtc 含入、之后一根不含入）；多 symbol 时间戳不对齐时 `Timeline` 并集正确
+- [x] 测试：`LookAheadBiasTests` —— 关键专项用例：构造一段历史数据，在最后一根植入一个"极端异常值"（如断崖式暴涨），断言 `SliceUpTo` 在该 bar 之前的任意 asOfUtc 都取不到这根异常 bar；再接一次真实信号生成器调用，断言提前时刻的信号不受未来异常值影响
 - **验收**：测试全绿，尤其 `LookAheadBiasTests` 必须显式覆盖"信号不受未来数据影响"这一属性，不能只测切片函数本身
 
 **B2 — 回测经纪商（记账 + 手续费 + 滑点）**
-- [ ] `Broker/BacktestBrokerService.cs`：记账算法照抄 `PaperBinanceUsdFutureService` 模式（§7.4），新增手续费/滑点/`Trades` 日志
-- [ ] 测试：`BacktestBrokerServiceTests` —— 开仓/平仓权益变化正确；`CommissionBps`/`SlippageBps` 为 0 时与 `PaperBinanceUsdFutureService` 同参数输入下的权益输出**完全一致**（回归对照测试）；非 0 时手续费/滑点方向与金额正确；`Trades` 记录正确
+- [x] `Broker/BacktestBrokerService.cs`：记账算法照抄 `PaperBinanceUsdFutureService` 模式（§7.4），新增手续费/滑点/`Trades` 日志
+- [x] 测试：`BacktestBrokerServiceTests` —— 开仓/平仓权益变化正确；`CommissionBps`/`SlippageBps` 为 0 时与 `PaperBinanceUsdFutureService` 同参数输入下的权益输出**完全一致**（回归对照测试）；非 0 时手续费/滑点方向与金额正确；`Trades` 记录正确
 - **验收**：测试全绿，且与 `PaperBinanceUsdFutureService` 的零成本对照测试必须存在并通过（保证"回测和 Paper 结果口径一致"的关键回归锚点）
 
 **B3 — 回测驱动器（事件驱动回放）**
-- [ ] `Runner/BacktestRunner.cs`：`RunAsync` 按 §5.5 流程图实现；`FillTiming.SameBarClose` 为 v1 唯一支持值，`NextBarOpen` 在本里程碑内一并实现
-- [ ] `Models/BacktestOptions.cs`、`FillTiming.cs`、`BacktestTrade.cs`、`BacktestResult.cs`、`BacktestMetrics.cs`
-- [ ] 测试：`BacktestRunnerTests` —— 用手工构造的确定性序列跑一次 `MaCrossSignalGenerator`，断言权益曲线长度、方向、`RiskStage` 拒单场景下曲线走平；`FillTiming.NextBarOpen` 场景断言成交价取自下一根 Open
+- [x] `Runner/BacktestRunner.cs`：`RunAsync` 按 §5.5 流程图实现；`FillTiming.SameBarClose` 为 v1 唯一支持值，`NextBarOpen` 在本里程碑内一并实现
+- [x] `Models/BacktestOptions.cs`、`FillTiming.cs`、`BacktestTrade.cs`、`BacktestResult.cs`、`BacktestMetrics.cs`
+- [x] 测试：`BacktestRunnerTests` —— 用手工构造的确定性序列跑一次 `MaCrossSignalGenerator`，断言权益曲线长度、方向、`RiskStage` 拒单场景下曲线走平；`FillTiming.NextBarOpen` 场景断言成交价取自下一根 Open
 - **验收**：测试全绿；一次跑通编排层 3 个内置策略中至少 1 个（`MaCross`）的完整回测无异常
 
 **B4 — 绩效指标 + 参数扫描**
-- [ ] `Reporting/TradeStatistics.cs`：从 `IReadOnlyList<BacktestTrade>` 计算胜率/盈亏比/总手续费
-- [ ] `BacktestResult.Metrics` 组装：`EquityCurve` 转 `Dictionary<DateTime, decimal>` 喂给 `StrategyPerformanceAnalyzer`
-- [ ] `Sweep/ParameterSweepRunner.cs`：接受参数网格，`Parallel.ForEach` 跑多次独立的 `BacktestRunner`（每个网格点全新 DI 容器/`BacktestBrokerService` 实例，不共享状态）
-- [ ] 测试：`TradeStatisticsTests`；`ParameterSweepRunnerTests`（3×3 网格返回 9 条互不干扰的结果）
+- [x] `Reporting/TradeStatistics.cs`：从 `IReadOnlyList<BacktestTrade>` 计算胜率/盈亏比/总手续费
+- [x] `BacktestResult.Metrics` 组装：`EquityCurve` 转 `Dictionary<DateTime, decimal>` 喂给 `StrategyPerformanceAnalyzer`
+- [x] `Sweep/ParameterSweepRunner.cs`：接受参数网格，`Parallel.ForEach` 跑多次独立的 `BacktestRunner`（每个网格点全新 DI 容器/`BacktestBrokerService` 实例，不共享状态）
+- [x] 测试：`TradeStatisticsTests`；`ParameterSweepRunnerTests`（3×3 网格返回 9 条互不干扰的结果）
 - **验收**：测试全绿；不允许重新实现 `StrategyPerformanceAnalyzer` 同名指标（护栏见 §11）
 
 **B5 — DI、Console Demo、端到端测试**
-- [ ] `DependencyInjection.cs`（§7.7 前半段引用的 `AddQuantInfraNetBacktest` 全部契约，D1 机制）
-- [ ] `Backtest.Console`：`Program.cs`（≤50 行，跑一次 `MaCross` 回测并打印绩效报告）
-- [ ] 测试：`B5EndToEndTests` —— 对编排层 3 个内置策略各跑一次完整回测，断言 `Metrics` 非默认值、`Trades.Count > 0`、`EquityCurve` 长度与输入 bar 数一致
-- **验收**：`dotnet run --project src/Quant.Infra.Net.Backtest.Console` 完整跑通并打印出 CAGR/Sharpe/MaxDrawdown/总交易数/胜率；三个内置策略均有端到端测试覆盖
+- [x] `DependencyInjection.cs`（§7.7 前半段引用的 `AddQuantInfraNetBacktest` 全部契约，D1 机制）
+- [x] 独立回测 Demo 宿主：`Program.cs`（≤50 行，跑一次 `MaCross` 回测并打印绩效报告）（R6 已退役，等价入口 = `Quant.Infra.Net.Runtime.Console`，`RunMode = "Backtest"`）
+- [x] 测试：`B5EndToEndTests` —— 对编排层 3 个内置策略各跑一次完整回测，断言 `Metrics` 非默认值、`Trades.Count > 0`、`EquityCurve` 长度与输入 bar 数一致
+- **验收**：`dotnet run --project src/Quant.Infra.Net.Runtime.Console`（默认 `RunMode = "Backtest"`；原独立宿主已于 R6 退役）完整跑通并打印出 CAGR/Sharpe/MaxDrawdown/总交易数/胜率；三个内置策略均有端到端测试覆盖
 
 **B6 — 阶段一文档**
-- [ ] 新增 `docs/BacktestQuickStart-en.md` / `docs/BacktestQuickStart-ch.md`（跟随 `OrchestrationQuickStart-*.md` 既有体例）
-- [ ] 更新 `docs/readme-en.md`/`docs/readme-ch.md`：新增 "Backtest Engine (Beta)" 小节
+- [x] 新增 `docs/BacktestQuickStart-en.md` / `docs/BacktestQuickStart-ch.md`（跟随 `OrchestrationQuickStart-*.md` 既有体例）
+- [x] 更新 `docs/readme-en.md`/`docs/readme-ch.md`：新增 "Backtest Engine (Beta)" 小节
 - **验收**：一个从未接触过本仓库的读者，跟着 Quick Start 能在本机独立跑通一次回测并看懂输出
 
 ### 阶段二：统一运行时
 
 **R0 — 脚手架**
-- [ ] 创建 `Quant.Infra.Net.Runtime`（+ `.Tests`、`.Console`），引用 `Quant.Infra.Net.Backtest`
+- [x] 创建 `Quant.Infra.Net.Runtime`（+ `.Tests`、`.Console`），引用 `Quant.Infra.Net.Backtest`
 - **验收**：解决方案编译通过
 
 **R1 — 策略目录（策略即插件文件）**
-- [ ] `Strategies/IStrategyDescriptor.cs`、`StrategyCatalog.cs`（反射扫描 + 重名 fail-fast）
-- [ ] `Strategies/BuiltInStrategyDescriptors.cs`：3 个内置策略的描述符（U4）
-- [ ] 测试：`StrategyCatalogTests` —— 扫描到 3 个内置策略；按名解析大小写不敏感；未知名抛异常且消息列出可用策略名；两个程序集内出现同名策略时构造期抛异常
+- [x] `Strategies/IStrategyDescriptor.cs`、`StrategyCatalog.cs`（反射扫描 + 重名 fail-fast）
+- [x] `Strategies/BuiltInStrategyDescriptors.cs`：3 个内置策略的描述符（U4）
+- [x] 测试：`StrategyCatalogTests` —— 扫描到 3 个内置策略；按名解析大小写不敏感；未知名抛异常且消息列出可用策略名；两个程序集内出现同名策略时构造期抛异常
 - **验收**：测试全绿；新增一个自定义策略描述符类无需修改 `Quant.Infra.Net.Runtime` 任何现有文件即可被发现
 
 **R2 — 数据源工厂**
-- [ ] `Models/DataSourceKind.cs`、`DataSources/DataSourceFactory.cs`
-- [ ] 测试：`DataSourceFactoryTests` —— 4 个内置 Kind 各自解析出正确类型；`Custom` 无 `customDataSource` 时抛异常
+- [x] `Models/DataSourceKind.cs`、`DataSources/DataSourceFactory.cs`
+- [x] 测试：`DataSourceFactoryTests` —— 4 个内置 Kind 各自解析出正确类型；`Custom` 无 `customDataSource` 时抛异常
 - **验收**：测试全绿
 
 **R3 — 统一入口 + RunMode 分派**
-- [ ] `Models/RunMode.cs`、`RuntimeOptions.cs`、`DependencyInjection.cs`（§7.7 全部契约）
-- [ ] 测试：`RunModeDispatchTests` —— 四种 `RunMode` 分别断言 DI 容器里解析出的关键服务类型
+- [x] `Models/RunMode.cs`、`RuntimeOptions.cs`、`DependencyInjection.cs`（§7.7 全部契约）
+- [x] 测试：`RunModeDispatchTests` —— 四种 `RunMode` 分别断言 DI 容器里解析出的关键服务类型
 - **验收**：测试全绿
 
 **R4 — 一致性回归测试（本方案最关键的验收项）**
-- [ ] `ParityRegressionTests.cs`：用同一份 `OrchestrationOptions.Parameters` + 同一段历史数据，分别以 `RunMode.Backtest` 跑一次回放、以 `RunMode.Paper` 手动单步跑一次（复用 `StrategyPipeline.RunAsync`，注入同一批历史数据作为"当前"行情），断言两者在**同一个模拟/当前 bar** 上产出的 `Signal`/`TargetPosition`/`RiskAssessment` 完全相等
-- [ ] 额外用例：故意注入一个"有状态突变 bug"的假策略（内部用可变静态字段），断言测试能捕捉到 Backtest 多次调用与 Paper 单次调用之间的差异——验证这套回归测试本身有效
+- [x] `ParityRegressionTests.cs`：用同一份 `OrchestrationOptions.Parameters` + 同一段历史数据，分别以 `RunMode.Backtest` 跑一次回放、以 `RunMode.Paper` 手动单步跑一次（复用 `StrategyPipeline.RunAsync`，注入同一批历史数据作为"当前"行情），断言两者在**同一个模拟/当前 bar** 上产出的 `Signal`/`TargetPosition`/`RiskAssessment` 完全相等
+- [x] 额外用例：故意注入一个"有状态突变 bug"的假策略（内部用可变静态字段），断言测试能捕捉到 Backtest 多次调用与 Paper 单次调用之间的差异——验证这套回归测试本身有效
 - **验收**：核心断言测试全绿；用一个真正跑两种模式、逐字段比较输出的测试来验证，而不是停留在架构图上
 
 **R5 — 唯一 Demo 宿主 + 文档**
-- [ ] `Runtime.Console/Program.cs`（≤40 行，四模式共用；appsettings.json 默认 `RunMode: Backtest`）
-- [ ] `Runtime.Console/Strategies/ExampleCustomStrategy.cs`：单文件范例
-- [ ] 新增 `docs/UnifiedRuntimeQuickStart-en.md` / `-ch.md`
-- [ ] 更新根 `README.md` 架构图：在 Orchestration/Backtest 之上追加 Runtime 层，标注"一个开关"
+- [x] `Runtime.Console/Program.cs`（≤40 行，四模式共用；appsettings.json 默认 `RunMode: Backtest`）
+- [x] `Runtime.Console/Strategies/ExampleCustomStrategy.cs`：单文件范例
+- [x] 新增 `docs/UnifiedRuntimeQuickStart-en.md` / `-ch.md`
+- [x] 更新根 `README.md` 架构图：在 Orchestration/Backtest 之上追加 Runtime 层，标注"一个开关"
 - **验收**：改 `appsettings.json` 里的 `RunMode` 一个值，`dotnet run` 分别验证 Backtest/Paper 两种模式都能跑通（Testnet/Live 验收标准为"抛出预期的 fail-fast 异常"而非真的下单）
+
+**R6 — 收敛 Console 项目（唯一入口落地后，砍掉过渡期的脚手架）**
+
+> 背景：`Orchestration.Console`（M6 产物）与 `Backtest.Console`（B5 产物）各自的存在理由是"证明本层单独可跑"——在 `Runtime.Console` 出现之前，它们是唯一的端到端验收手段，不算重复建设。R5 完成后，`Runtime.Console` 用 `RunMode=Paper`/`RunMode=Backtest` 已经能覆盖两者原本证明的全部内容，此时继续维护三个 Demo（各自的 `appsettings.json`、各自要跟着契约变化同步的 `Program.cs`）就是纯维护负担，没有增量信息。本里程碑把解决方案收敛到"一个 Demo 入口 + 若干独立 Tests 项目"的稳态。
+
+- [x] 确认 `Runtime.Console` 以 `RunMode=Paper` 跑出的事件流/输出，与 `Orchestration.Console` 原有输出在信息量上等价（不要求逐字节相同，要求同样能看到 DataIngest→...→Notification 全部阶段的事件）；以 `RunMode=Backtest` 跑出的绩效报告与 `Backtest.Console` 原有输出等价
+- [x] 删除 `Quant.Infra.Net.Orchestration.Console` 项目源码与 `.sln` 条目（`Quant.Infra.Net.Orchestration.Tests` **不删**——测试隔离和 Demo 隔离是两回事，各层的 Tests 项目继续保留、不合并）
+- [x] 删除 `Quant.Infra.Net.Backtest.Console` 项目源码与 `.sln` 条目（`Quant.Infra.Net.Backtest.Tests` 同样不删）
+- [x] 更新 `docs/OrchestrationQuickStart-en.md`/`-ch.md`、`docs/BacktestQuickStart-en.md`/`-ch.md`（若 B6 已产出）里所有 `dotnet run --project Quant.Infra.Net.Orchestration.Console`/`...Backtest.Console` 的命令，改成 `dotnet run --project Quant.Infra.Net.Runtime.Console`（配 `appsettings.json` 里对应的 `RunMode` 取值）
+- [x] 更新根 `README.md`/`docs/readme-en.md`/`docs/readme-ch.md` 里任何提到独立 Orchestration/Backtest Demo 命令的地方，统一指向 `Runtime.Console`
+- **验收**：`dotnet sln list` 只剩 `MyQuantApp` 一个"外部用户示例"性质的可执行项目，加 `Quant.Infra.Net.Runtime.Console` 一个"内部端到端 Demo"性质的可执行项目；全部 `*.Tests` 项目数量不变、全绿；全仓库搜索确认没有文档还在引用已删除的两个 Console 项目
 
 ---
 
@@ -1118,7 +1128,7 @@ await host.RunAsync();
 
 ## 14. 后续演进
 
-**依赖顺序**：`OrchestrationLayerDesign.md`（已实现 M0-M6）→ 本文档阶段一 B0-B6 → 本文档阶段二 R0-R5。
+**依赖顺序**：`OrchestrationLayerDesign.md`（已实现 M0-M6）→ 本文档阶段一 B0-B6 → 本文档阶段二 R0-R6。
 
 **后续演进方向**（不在本方案范围，供未来参考）：
 - 多经纪商切换（不止 Binance）：扩展到 Alpaca/Schwab 需要在 §7.7 的分派逻辑里增加对应分支，`IStrategyDescriptor`/`StrategyCatalog` 机制本身与具体经纪商无关，不需要改动

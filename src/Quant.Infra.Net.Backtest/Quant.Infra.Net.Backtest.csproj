@@ -9,12 +9,12 @@
     <Version>1.6.0</Version>
 
   <!-- ==================== NuGet Package Metadata ==================== -->
-    <PackageId>Quant.Infra.Net.Orchestration</PackageId>
+    <PackageId>Quant.Infra.Net.Backtest</PackageId>
     <Authors>Rong (Rex) Fan</Authors>
     <Company>Rong (Rex) Fan</Company>
     <Copyright>(c) 2024-2026 Rong (Rex) Fan. All rights reserved.</Copyright>
-    <Description>Event-driven strategy pipeline (signal → risk → target position → execution → portfolio state) for Quant.Infra.Net, shared unchanged across backtest, paper, and live trading to prevent implementation drift.</Description>
-    <PackageTags>dotnet;quantitative;trading;strategy;pipeline;orchestration;event-driven;risk;backtest</PackageTags>
+    <Description>Event-driven (bar-by-bar) backtest engine for Quant.Infra.Net's Orchestration pipeline — replays the exact same StrategyPipeline used in paper/live trading against historical data, with look-ahead-bias guards.</Description>
+    <PackageTags>dotnet;quantitative;trading;backtest;event-driven;strategy;historical;simulation;metrics</PackageTags>
     <PackageProjectUrl>https://memoryfraction.github.io/Quant.Infra.Net/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/memoryfraction/Quant.Infra.Net.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -27,18 +27,16 @@
   <!-- =============================================================== -->
   </PropertyGroup>
 
-  <!-- Dependency whitelist (docs/OrchestrationLayerDesign.md §8.3):
+  <!-- Dependency whitelist (docs/TradingRuntimeDesign.md §11.6):
        only Microsoft.Extensions.* abstractions are allowed.
        依赖白名单：仅允许 Microsoft.Extensions.* 抽象包。 -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Quant.Infra.Net\Quant.Infra.Net.csproj" />
+    <ProjectReference Include="..\Quant.Infra.Net.Orchestration\Quant.Infra.Net.Orchestration.csproj" />
   </ItemGroup>
 
   <ItemGroup>

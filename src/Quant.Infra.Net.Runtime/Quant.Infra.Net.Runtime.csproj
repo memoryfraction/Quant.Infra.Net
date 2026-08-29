@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <Version>1.6.0</Version>
+
+  <!-- ==================== NuGet Package Metadata ==================== -->
+    <PackageId>Quant.Infra.Net.Runtime</PackageId>
+    <Authors>Rong (Rex) Fan</Authors>
+    <Company>Rong (Rex) Fan</Company>
+    <Copyright>(c) 2024-2026 Rong (Rex) Fan. All rights reserved.</Copyright>
+    <Description>Unified RunMode switch (Backtest/Paper/Testnet/Live) and one-file-per-strategy plugin convention for Quant.Infra.Net — write a strategy once, run it everywhere.</Description>
+    <PackageTags>dotnet;quantitative;trading;runtime;run-mode;strategy;plugin;backtest;paper;live</PackageTags>
+    <PackageProjectUrl>https://memoryfraction.github.io/Quant.Infra.Net/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/memoryfraction/Quant.Infra.Net.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageReleaseNotes>v1.6.0 — initial release: Orchestration event-driven pipeline + Backtest engine + Runtime RunMode/plugin layer on top of Quant.Infra.Net 1.5.1.</PackageReleaseNotes>
+  <!-- =============================================================== -->
+  </PropertyGroup>
+
+  <!-- Dependency whitelist (docs/TradingRuntimeDesign.md §11.6):
+       ProjectRefs to Orchestration + Backtest, and only Microsoft.Extensions.* abstractions.
+       依赖白名单：ProjectRef Orchestration + Backtest，NuGet 仅 Microsoft.Extensions.* 抽象包。 -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
+    <!-- Microsoft.Extensions.Primitives 是 Configuration.Abstractions 9.0.10 的声明传递依赖（IChangeToken/StaticChangeToken），
+         显式声明以便 BrokerConfiguration 的 IConfigurationSection 成员编译；非新增依赖面。
+         Primitives is the declared transitive dependency of Configuration.Abstractions 9.0.10 (IChangeToken/StaticChangeToken);
+         declared explicitly so BrokerConfiguration's IConfigurationSection members compile. Not a new dependency surface. -->
+    <PackageReference Include="Microsoft.Extensions.Primitives" Version="9.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Quant.Infra.Net.Orchestration\Quant.Infra.Net.Orchestration.csproj" />
+    <ProjectReference Include="..\Quant.Infra.Net.Backtest\Quant.Infra.Net.Backtest.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>

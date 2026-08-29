@@ -303,6 +303,7 @@ Set them in `appsettings.json` under `Orchestration:Parameters`, or pass them in
 | [User Manual / 使用手册](docs/Manual.md) | Installation, module usage guide, API examples |
 | [Architecture Overview / 架构概览](docs/Architect.md) | System design, module relationships, data flow |
 | [Code Standards / 代码规范](docs/CodeStandard.md) | SOLID principles, XML docs, naming conventions, checklist |
+| [**How-to Guides (docs/manual)**](docs/manual/README-en.md) / [任务导向深度指南 (中文)](docs/manual/README-ch.md) | Task-oriented deep guides for the Runtime/Orchestration/Backtest layers: full configuration reference, writing a strategy, custom risk/data source/broker, testing & deployment, FAQ |
 
 ---
 

@@ -8,6 +8,80 @@
 
 ---
 
+## 📈 See it work first / 先看一个真实结果
+
+> **A real, reproducible backtest — not a mock.** The example below runs the bundled `QQQM reverse-MA200 DCA` strategy over **real QQQM daily closes (2021 → 2026)**, with the exact console output and equity curve from the actual run. Nothing is fabricated.
+
+![QQQM reverse-MA200 DCA backtest equity curve](assets/qqqm-reverse-dca-equity-curve.png)
+
+![Target weight over time](assets/qqqm-reverse-dca-target-weight.png)
+
+> Target weight over time — the strategy holds more when price is below the SMA200 and trims when above (the contrarian buy-the-dip in action).
+
+**Real run result (real QQQM daily closes, 2021-01-04 → 2026-08-28):**
+
+| Metric | Value | What it means |
+|--------|-------|---------------|
+| Initial equity | **$10,000** | starting capital |
+| Final equity | **$14,435** | **+44.4%** over ~5.7 years |
+| CAGR | **7.73%** | annualized return |
+| Max Drawdown | **−18.97%** | worst peak-to-trough (2022 bear market) |
+| Sharpe | **0.04** | low — this is a "buy the dip" DCA, not a high-alpha system |
+| Win Rate | **53.3%** | |
+| Trades | **673** | daily rebalancing decisions |
+
+> **Read the Sharpe honestly:** this is a *contrarian DCA* — it deliberately holds more when price is below the SMA200 and trims when above. A low Sharpe with a −19% max drawdown and a +44% total return over a window that *included the 2022 bear market* is the honest, expected profile.
+
+**Run it yourself (offline, no API keys):**
+
+```bash
+dotnet run --project src/Quant.Infra.Net.Runtime.Console -- QqqmDoc
+```
+
+Full walkthrough with the verbatim console output, both charts, and how to modify the strategy: [Complete Walkthrough (EN)](CompleteWalkthrough-en.md).
+
+---
+
+## 📡 Data Sources — the thing people get wrong / 数据来源——很多人踩坑的地方
+
+> **Data source is the #1 reason a quant project quietly dies.** The classic failure: you build on a .NET wrapper for Yahoo Finance, then Yahoo changes their API, the wrapper's author doesn't update for 3–6 months, and your whole pipeline is dead. **This repo is designed so that can't be your single point of failure.**
+
+**The core idea: data source is a *swappable interface*, not a hard dependency.** `ITraditionalFinanceSourceDataService` / `ICryptoSourceDataService` are the contract; the implementation is a config value (`Runtime:DataSource`). When one source breaks or goes stale, you **swap the source, not the strategy**.
+
+**Three layers, in order of preference:**
+
+| # | Source | Mechanism | Why it's resilient to the "stale .NET wrapper" problem |
+|---|--------|-----------|----------------------------------------------------------|
+| 1 | **Yahoo Finance via `yfinance`** (Python) | `pythonnet` runs the **well-maintained Python `yfinance`** directly | `yfinance` is a popular, community-maintained Python package — when Yahoo changes, it's typically patched in *days*, not months. You get the same Yahoo data through the *actively-maintained* wrapper, not an abandoned .NET reimplementation. |
+| 2 | **Yahoo Finance Chart API** (direct HTTP) | Thin in-repo C# client (`query1.finance.yahoo.com/v8/finance/chart`) | If `yfinance` breaks, drop to the raw public Chart API — a ~50-line endpoint you can **fix yourself in hours** because it's your code, not a third-party black box. |
+| 3 | **Stooq** (free public daily bars) | Plain HTTP to `stooq.com` | A **completely independent** free feed. If the *entire Yahoo path* is unavailable, Stooq still gives you real daily closes for backtesting. |
+
+> **Bottom line:** the .NET-ecosystem "stale wrapper" risk is real — and it's precisely why this library routes the popular free source through the well-maintained Python `yfinance` and keeps two independent fallbacks. **You write the strategy once; you swap data sources by config when the market's plumbing changes.** Free public data is for **research/backtesting only** — for live trading, point the same interface at your broker's feed (Binance/Alpaca/Schwab/IB); the strategy code is unchanged.
+
+---
+
+## ✍️ Modify the strategy — validate your own idea / 改一下策略，验证自己的想法
+
+**This is the moment that convinces people.** The entire QQQM strategy is **one ~30-line method** in `src/Quant.Infra.Net.Runtime.Console/Strategies/QqqmReverseDcaStrategy.cs`. Change the numbers, change the symbol, add your own logic — and re-run the exact same backtest. No framework changes.
+
+**The strategy in one sentence:** every day, compute `SMA200` of QQQM closes — if price is *below* the MA (cheap), increase target weight; if *above* (expensive), reduce it.
+
+**Tweak parameters (zero code) / 调参数（零代码）:**
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `Symbol` | `QQQM` | any symbol your data source serves |
+| `MaPeriod` | `200` | SMA window |
+| `BaseWeight` | `0.5` | target weight at the MA |
+| `AddIntensity` | `1.5` | how hard to add when *below* the MA |
+| `TrimIntensity` | `1.0` | how hard to trim when *above* the MA |
+
+Set them in `appsettings.json` under `Orchestration:Parameters`, then re-run the **same** `dotnet run` command and read the new metrics — **your hypothesis, measured against the same real data.**
+
+**Add a brand-new strategy (one file):** create a class implementing `IStrategyDescriptor` (wrapping an `ISignalGenerator`), see `ExampleCustomStrategy.cs` for the minimal case; the `AddQuantInfraNet(..., strategyAssemblies: ...)` reflection scan discovers it automatically; set `Orchestration:Parameters:Strategy = "MyStrategy"`. It now runs in **Backtest, Paper, Testnet, and Live** with identical logic.
+
+---
+
 ## What Is This?
 
 Quant.Infra.Net provides a unified C# API that abstracts away the complexity of connecting to multiple financial data sources, brokers, and notification channels. Instead of writing separate integrations for each platform, you write strategy logic once — the library handles the rest.
@@ -138,6 +212,21 @@ Full contract and guardrails (fill-timing matrix, milestones B0–B6, dependency
 
 ---
 
+## Packages / NuGet 包
+
+The project is published as a family of NuGet packages. Most users only need the top one — its dependencies pull in the rest automatically:
+
+| Package | Version | What it gives you |
+|---------|---------|-------------------|
+| `Quant.Infra.Net` | 1.5.1 | Core infrastructure: data sources (Yahoo/Binance/Alpaca/Schwab/IB), broker & order execution, statistical analysis, portfolio analytics, notifications |
+| `Quant.Infra.Net.Orchestration` | 1.6.0 | Event-driven strategy pipeline: signal → risk → target position → execution → portfolio state |
+| `Quant.Infra.Net.Backtest` | 1.6.0 | Event-driven (bar-by-bar) backtest engine with look-ahead-bias guards |
+| `Quant.Infra.Net.Runtime` | 1.6.0 | Unified `RunMode` switch (Backtest/Paper/Testnet/Live) + one-file-per-strategy plugin convention — **recommended entry point** |
+
+Dependency chain: `Runtime 1.6.0` → `Backtest 1.6.0` + `Orchestration 1.6.0` → `Quant.Infra.Net 1.5.1`. One `dotnet add package` on `Quant.Infra.Net.Runtime` installs the whole stack; install `Quant.Infra.Net` alone if you only need data/broker/analysis/notification building blocks.
+
+---
+
 ## Why Use This Library?
 
 ### Pain Points in Quant Development
@@ -170,7 +259,11 @@ When building quantitative trading systems, most developers encounter these chal
 dotnet new console -n MyQuantApp
 cd MyQuantApp
 
-# Add the library
+# Full stack: unified runtime + backtest engine + orchestration pipeline + core
+# (one command pulls in everything via the dependency chain above)
+dotnet add package Quant.Infra.Net.Runtime
+
+# Core only (data / broker / analysis / notifications - no strategy pipeline)
 dotnet add package Quant.Infra.Net --version 1.5.1
 
 # Required for Python-based data sources (Yahoo Finance via yfinance)
@@ -178,6 +271,12 @@ dotnet add package pythonnet
 
 # Recommended for dependency injection
 dotnet add package Microsoft.Extensions.DependencyInjection
+
+# Then run your strategy with ONE config switch - see the Unified Runtime Quick Start
+# "Runtime:RunMode" = Backtest | Paper | Testnet | Live
+services.AddQuantInfraNet(rt => rt.RunMode = RunMode.Backtest,
+                           o => o.Parameters["Strategy"] = "MaCross",
+                           b => b.InitialEquityUsd = 10000);
 ```
 
 ### Step 2: Use in Code
@@ -242,7 +341,8 @@ await dingTalk.SendStrategyAlert("Mean reversion triggered for AAPL/MSFT spread"
 
 | Version | Date | Description |
 |---------|------|-------------|
-| **1.5.2** *(current)* | 2026-08-28 | **Orchestration Layer (Beta)** — new `Quant.Infra.Net.Orchestration` package: `AddQuantInfraNetOrchestration()` DI entry point, 8-stage pipeline, 3 built-in strategies (PairTradingZScore/MaCross/MeanReversion), Paper (in-memory, zero-network) execution by default, risk gate with kill-switch, severity-routed notifications, and a runnable console demo. See [Orchestration Layer Design](OrchestrationLayerDesign.md) |
+| **1.6.0** *(current)* | 2026-08-29 | **Three new NuGet packages** — `Quant.Infra.Net.Orchestration` 1.6.0 (event-driven 8-stage strategy pipeline), `Quant.Infra.Net.Backtest` 1.6.0 (bar-by-bar backtest engine with look-ahead-bias guards), `Quant.Infra.Net.Runtime` 1.6.0 (unified `RunMode` switch: Backtest/Paper/Testnet/Live + one-file-per-strategy plugin convention). Core `Quant.Infra.Net` stays at 1.5.1, unchanged. See [Trading Runtime Design](TradingRuntimeDesign.md) and [Complete Walkthrough](CompleteWalkthrough-en.md) |
+| **1.5.2** | 2026-08-28 | **Orchestration Layer (Beta)** — new `Quant.Infra.Net.Orchestration` package: `AddQuantInfraNetOrchestration()` DI entry point, 8-stage pipeline, 3 built-in strategies (PairTradingZScore/MaCross/MeanReversion), Paper (in-memory, zero-network) execution by default, risk gate with kill-switch, severity-routed notifications, and a runnable console demo. See [Orchestration Layer Design](OrchestrationLayerDesign.md) |
 | 1.5.1 | 2026-08-12 | Code_Standards.md compliance — bilingual XML documentation on all public members, parameter validation audit, version alignment |
 | 1.5.0 | 2026-05-28 | **Interactive Brokers (InterReact)** full integration — order, market data, account management via TWS/Gateway; **Charles Schwab** full broker service — quotes, option chains, orders, positions; license changed to MIT; enhanced analysis service unit tests |
 | 1.4.0 | 2024-05-16 | Updated API integrations to handle recent broker changes, added comprehensive documentation |

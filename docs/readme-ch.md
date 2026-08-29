@@ -8,6 +8,80 @@
 
 ---
 
+## 📈 先看一个真实结果
+
+> **可复现的真实回测——不是演示假数据。** 下面的示例跑的是内置的 `QQQM 逆向 MA200 定投` 策略，数据是 **QQQM 真实日线（2021 → 2026）**，控制台输出与权益曲线均取自真实运行，无任何虚构。
+
+![QQQM 逆向 MA200 定投回测权益曲线](assets/qqqm-reverse-dca-equity-curve.png)
+
+![目标权重随时间变化](assets/qqqm-reverse-dca-target-weight.png)
+
+> 目标权重随时间变化——价格低于 SMA200 时多持有、高于 SMA200 时减仓（逆向低买高卖的体现）。
+
+**真实运行结果（QQQM 真实日线，2021-01-04 → 2026-08-28）：**
+
+| 指标 | 数值 | 含义 |
+|--------|-------|------|
+| 初始资金 | **$10,000** | 起始本金 |
+| 期末资金 | **$14,435** | 约 5.7 年 **+44.4%** |
+| CAGR | **7.73%** | 年化收益 |
+| 最大回撤 | **−18.97%** | 最差峰谷（2022 熊市） |
+| Sharpe | **0.04** | 偏低——这是"越跌越买"定投，不是高 Alpha 系统 |
+| 胜率 | **53.3%** | |
+| 交易次数 | **673** | 每日再平衡决策 |
+
+> **如何理解 Sharpe：** 这是一个*逆向定投*——价格低于 SMA200 时加仓、高于时减仓。在一个*包含 2022 熊市*的窗口里，−19% 最大回撤、+44% 总收益，就是这个策略真实且符合预期的画像。
+
+**自己跑一遍（离线、无需 API Key）：**
+
+```bash
+dotnet run --project src/Quant.Infra.Net.Runtime.Console -- QqqmDoc
+```
+
+完整图文教程（含逐字控制台输出、两张图、如何改策略）：[完整图文教程 (中文)](CompleteWalkthrough-ch.md)。
+
+---
+
+## 📡 数据来源——很多人踩坑的地方
+
+> **数据来源是量化项目悄悄死掉的第一原因。** 经典死法：你建在某个 Yahoo Finance 的 .NET 封装库上，然后 Yahoo 改了 API，封装库作者 3–6 个月不更新，你的整条管道就死了。**本仓库的设计就是为了让你不至于把命门押在单一数据源上。**
+
+**核心思想：数据源是*可替换的接口*，不是硬依赖。** 契约是 `ITraditionalFinanceSourceDataService` / `ICryptoSourceDataService`，背后的实现是一个配置值（`Runtime:DataSource`）。某个源坏了或过期了，你**换数据源，而不是改策略**。
+
+**三层，按优先级：**
+
+| # | 数据源 | 机制 | 为什么对".NET 封装库过期"问题有韧性 |
+|---|--------|-----------|----------------------------------------------------------|
+| 1 | **Yahoo Finance via `yfinance`**（Python） | `pythonnet` 直接运行**维护良好的 Python `yfinance`** | `yfinance` 是社区维护的流行 Python 包——Yahoo 一变更，通常几天内就修好，而不是几个月。你拿到同样的 Yahoo 数据，但走的是*活跃维护的*封装，而不是被弃用的 .NET 重写。 |
+| 2 | **Yahoo Finance Chart API**（直接 HTTP） | 仓库内的精简 C# 客户端（`query1.finance.yahoo.com/v8/finance/chart`） | 若 `yfinance` 本身坏了，退到原始公共 Chart API——一个约 50 行的端点，因为是*你的代码*而非第三方黑盒，你**几小时内就能自己修好**。 |
+| 3 | **Stooq**（免费公共日线） | 直接 HTTP 到 `stooq.com` | **完全独立**的免费行情。即使*整条 Yahoo 路径*不可用，Stooq 仍给你真实日线做回测。 |
+
+> **一句话：** .NET 生态"封装库过期"的风险是真实的——而这正就是这个库把流行免费源路由到维护良好的 Python `yfinance`、并保留两条独立后备的原因。**你只写一次策略；当行情管道的实现变了，你只需换配置就能换数据源。** 免费公共数据仅供**研究/回测**——实盘请让同一接口指向券商行情（Binance/Alpaca/Schwab/IB），策略代码不变。
+
+---
+
+## ✍️ 改一下策略，验证自己的想法
+
+**这是最能打动人的时刻。** 整个 QQQM 策略就是 `src/Quant.Infra.Net.Runtime.Console/Strategies/QqqmReverseDcaStrategy.cs` 里**一个约 30 行的方法**。改数字、换标的、加自己的逻辑——然后重跑同一个回测。无需改框架。
+
+**一句话策略：** 每天算 QQQM 收盘价的 `SMA200`——价格在均线**下方**（便宜）时加仓，在**上方**（贵）时减仓。
+
+**调参数（零代码）：**
+
+| 参数 | 默认 | 含义 |
+|-----------|---------|---------|
+| `Symbol` | `QQQM` | 你的数据源提供的任意标的 |
+| `MaPeriod` | `200` | SMA 窗口 |
+| `BaseWeight` | `0.5` | 均线处的目标权重 |
+| `AddIntensity` | `1.5` | 均线下方加仓强度 |
+| `TrimIntensity` | `1.0` | 均线上方减仓强度 |
+
+在 `appsettings.json` 的 `Orchestration:Parameters` 里设置，然后重跑**同一个** `dotnet run` 命令，读新的指标——**你的假设，用同一份真实数据来验证。**
+
+**新增一个策略（一个文件）：** 创建一个实现 `IStrategyDescriptor`（包装一个 `ISignalGenerator`）的类，最小用例见 `ExampleCustomStrategy.cs`；`AddQuantInfraNet(..., strategyAssemblies: ...)` 反射扫描会自动发现；设 `Orchestration:Parameters:Strategy = "MyStrategy"`。它现在能在 **Backtest、Paper、Testnet、Live** 四种模式下跑同样的逻辑。
+
+---
+
 ## 这是什么？
 
 Quant.Infra.Net 提供统一的 C# API，将连接多个金融数据源、券商和通知渠道的复杂性封装起来。你只需要写一次策略逻辑——剩下的交给库来处理。
@@ -138,6 +212,21 @@ var result = await provider.GetRequiredService<BacktestRunner>().RunAsync(myHist
 
 ---
 
+## NuGet 包
+
+本项目以 NuGet 包家族形式发布。大多数用户只需装最上面那个——依赖会自动带齐其余部分：
+
+| 包 | 版本 | 提供什么 |
+|---------|---------|---------|
+| `Quant.Infra.Net` | 1.5.1 | 核心基础设施：数据源（Yahoo/Binance/Alpaca/Schwab/IB）、券商与订单执行、统计分析、组合分析、通知推送 |
+| `Quant.Infra.Net.Orchestration` | 1.6.0 | 事件驱动策略管道：信号 → 风控 → 目标仓位 → 执行 → 组合状态 |
+| `Quant.Infra.Net.Backtest` | 1.6.0 | 事件驱动（逐 bar）回测引擎，架构级前视偏差防护 |
+| `Quant.Infra.Net.Runtime` | 1.6.0 | 统一 `RunMode` 开关（Backtest/Paper/Testnet/Live）+ 一文件一策略插件约定 —— **推荐入口** |
+
+依赖链：`Runtime 1.6.0` → `Backtest 1.6.0` + `Orchestration 1.6.0` → `Quant.Infra.Net 1.5.1`。对 `Quant.Infra.Net.Runtime` 执行一次 `dotnet add package` 即装齐整个技术栈；若只需要数据/券商/分析/通知等基础构件，单独装 `Quant.Infra.Net` 即可。
+
+---
+
 ## 为什么要用这个库？
 
 ### 量化开发中的痛点
@@ -170,7 +259,11 @@ var result = await provider.GetRequiredService<BacktestRunner>().RunAsync(myHist
 dotnet new console -n MyQuantApp
 cd MyQuantApp
 
-# 添加库
+# 完整技术栈：统一运行时 + 回测引擎 + 编排管道 + 核心库
+# （一条命令通过上面的依赖链自动带齐）
+dotnet add package Quant.Infra.Net.Runtime
+
+# 仅核心库（数据 / 券商 / 分析 / 通知，不含策略管道）
 dotnet add package Quant.Infra.Net --version 1.5.1
 
 # Python 数据源需要此包（Yahoo Finance 通过 yfinance）
@@ -178,6 +271,12 @@ dotnet add package pythonnet
 
 # 推荐使用依赖注入
 dotnet add package Microsoft.Extensions.DependencyInjection
+
+# 然后只需一个配置开关即可运行策略 - 详见统一运行时快速开始
+# "Runtime:RunMode" = Backtest | Paper | Testnet | Live
+services.AddQuantInfraNet(rt => rt.RunMode = RunMode.Backtest,
+                           o => o.Parameters["Strategy"] = "MaCross",
+                           b => b.InitialEquityUsd = 10000);
 ```
 
 ### 第二步：代码中使用
@@ -242,7 +341,8 @@ await dingTalk.SendStrategyAlert("AAPL/MSFT 价差均值回归触发");
 
 | 版本 | 日期 | 描述 |
 |---------|------|-------------|
-| **1.5.2** *(当前)* | 2026-08-28 | **编排层 Orchestration Layer（Beta）** —— 新增 `Quant.Infra.Net.Orchestration` 包：`AddQuantInfraNetOrchestration()` DI 入口、8 阶段管道、3 个内置策略（PairTradingZScore/MaCross/MeanReversion）、默认 Paper（纯内存零网络）执行、含熔断的风控前置检查、按严重级别路由的通知、可直接运行的控制台 Demo。详见 [编排层设计文档](OrchestrationLayerDesign.md) |
+| **1.6.0** *(当前)* | 2026-08-29 | **新增三个 NuGet 包** — `Quant.Infra.Net.Orchestration` 1.6.0（事件驱动 8 阶段策略管道）、`Quant.Infra.Net.Backtest` 1.6.0（逐 bar 回测引擎，架构级前视偏差防护）、`Quant.Infra.Net.Runtime` 1.6.0（统一 `RunMode` 开关：Backtest/Paper/Testnet/Live + 一文件一策略插件约定）。核心 `Quant.Infra.Net` 保持 1.5.1 不变。详见 [统一运行时设计](TradingRuntimeDesign.md) 与 [完整图文教程](CompleteWalkthrough-ch.md) |
+| **1.5.2** | 2026-08-28 | **编排层 Orchestration Layer（Beta）** — 新增 `Quant.Infra.Net.Orchestration` 包：`AddQuantInfraNetOrchestration()` DI 入口、8 阶段管道、3 个内置策略（PairTradingZScore/MaCross/MeanReversion）、默认 Paper（纯内存零网络）执行、含熔断的风控前置检查、按严重级别路由的通知、可直接运行的控制台 Demo。详见 [编排层设计文档](OrchestrationLayerDesign.md) |
 | 1.5.1 | 2026-08-12 | CodeStandard.md 合规 —— 所有公共成员添加中英文 XML 文档、参数验证审计、版本号统一 |
 | 1.5.0 | 2026-05-28 | **Interactive Brokers (InterReact)** 完整集成 —— 通过 TWS/Gateway 下单、行情数据、账户管理；**Charles Schwab** 完整券商服务 —— 报价、期权链、订单、持仓；许可证改为 MIT；增强分析服务单元测试 |
 | 1.4.0 | 2024-05-16 | 更新 API 集成以应对近期券商变动，添加全面文档 |

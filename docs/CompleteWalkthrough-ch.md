@@ -370,4 +370,5 @@ System.NotSupportedException:
 
 ---
 
-*配套文件：[CompleteWalkthrough-en.md](CompleteWalkthrough-en.md) · [回测引擎快速上手（中文）](BacktestQuickStart-ch.md) · [编排层快速上手（中文）](OrchestrationQuickStart-ch.md) · [assets/qqqm-reverse-dca-equity-curve.png](assets/qqqm-reverse-dca-equity-curve.png) · [assets/qqqm-reverse-dca-target-weight.png](assets/qqqm-reverse-dca-target-weight.png) · [assets/qqqm_fetch_data.js](assets/qqqm_fetch_data.js)*
+*配套文件：[CompleteWalkthrough-en.md](CompleteWalkthrough-en.md) · [回测引擎快速上手（中文）](BacktestQuickStart-ch.md) · [**任务导向深度指南（docs/manual）**](manual/README-ch.md) · [编排层快速上手（中文）](OrchestrationQuickStart-ch.md) · [assets/qqqm-reverse-dca-equity-curve.png](assets/qqqm-reverse-dca-equity-curve.png) · [assets/qqqm-reverse-dca-target-weight.png](assets/qqqm-reverse-dca-target-weight.png) · [assets/qqqm_fetch_data.js](assets/qqqm_fetch_data.js)*
+

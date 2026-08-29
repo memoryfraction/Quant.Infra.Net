@@ -99,6 +99,8 @@ Quant.Infra.Net 提供统一的 C# API，将连接多个金融数据源、券商
 
 > 完整模块详情和使用示例，请参阅 [使用手册](Manual.md) 和 [架构概览](Architect.md)。
 
+> **🤖 AI Agent 接入（新增）：** 用自然语言从 Claude Desktop / Cursor / 任何 MCP 客户端驱动 Quant.Infra.Net。详见 [MCP Server 指南](manual/mcp-server-ch.md)。
+
 ### 架构概览
 
 | 模块 | 职责 | 关键接口 / 服务 |

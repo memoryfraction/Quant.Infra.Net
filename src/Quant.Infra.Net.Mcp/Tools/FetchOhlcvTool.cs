@@ -50,7 +50,9 @@ public static class FetchOhlcvTool
         [Description("Data source: Demo (default, offline) | Finnhub | Fmp | TwelveData (real; needs API key).")]
         string? dataSource = null,
         [Description("Optional: explicit API key override (not needed if already in appsettings.json or env var).")]
-        string? apiKey = null)
+        string? apiKey = null,
+        [Description("Optional: file path for LocalFile source (CSV or JSON). Absolute or relative to AppContext.BaseDirectory.")]
+        string? localFilePath = null)
     {
         if (string.IsNullOrWhiteSpace(symbol))
             throw new ArgumentException("symbol is required.", nameof(symbol));
@@ -62,7 +64,7 @@ public static class FetchOhlcvTool
         string providerName;
         try
         {
-            (source, providerName) = ResolveSource(dataSource, apiKey);
+            (source, providerName) = ResolveSource(dataSource, apiKey, localFilePath);
         }
         catch (Exception ex)
         {
@@ -116,7 +118,7 @@ public static class FetchOhlcvTool
     /// Resolve the data source abstraction from the (dataSource, apiKey) pair.
     /// Defaults to Demo (offline) when no provider is named.
     /// </summary>
-    private static (IMcpSourceDataService, string) ResolveSource(string? dataSource, string? apiKey)
+    private static (IMcpSourceDataService, string) ResolveSource(string? dataSource, string? apiKey, string? localFilePath)
     {
         var name = (dataSource ?? "Demo").Trim();
         if (name.Equals("Demo", StringComparison.OrdinalIgnoreCase) ||
@@ -135,13 +137,15 @@ public static class FetchOhlcvTool
                 provider = McpSourceDataFactory.Provider.Fmp; break;
             case "TwelveData" or "twelvedata" or "12data":
                 provider = McpSourceDataFactory.Provider.TwelveData; break;
+            case "LocalFile" or "localfile" or "local" or "file":
+                provider = McpSourceDataFactory.Provider.LocalFile; break;
             default:
                 throw new ArgumentException(
-                    $"Unsupported dataSource '{name}'. Supported: Demo | Finnhub | Fmp | TwelveData.");
+                    $"Unsupported dataSource \x27{name}\x27. Supported: Demo | Finnhub | Fmp | TwelveData | LocalFile. Use localFilePath to specify the file path.");
         }
 
         var factory = new McpSourceDataFactory();
-        return (factory.Create(provider, apiKey), provider.ToString());
+        return (factory.Create(provider, apiKey, localFilePath), provider.ToString());
     }
 
     /// <summary>

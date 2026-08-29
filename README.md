@@ -304,6 +304,7 @@ Set them in `appsettings.json` under `Orchestration:Parameters`, or pass them in
 | [Architecture Overview / 架构概览](docs/Architect.md) | System design, module relationships, data flow |
 | [Code Standards / 代码规范](docs/CodeStandard.md) | SOLID principles, XML docs, naming conventions, checklist |
 | [**How-to Guides (docs/manual)**](docs/manual/README-en.md) / [任务导向深度指南 (中文)](docs/manual/README-ch.md) | Task-oriented deep guides for the Runtime/Orchestration/Backtest layers: full configuration reference, writing a strategy, custom risk/data source/broker, testing & deployment, FAQ |
+| [🤖 **MCP Server (AI Agent access)**](docs/manual/mcp-server-en.md) / [AI Agent 接入 (中文)](docs/manual/mcp-server-ch.md) | Drive Quant.Infra.Net from Claude Desktop / Cursor / any MCP client — `list_strategies` · `run_backtest` · `run_paper_cycle` · `fetch_ohlcv`. Natural-language prompts, SOLID data sources (Finnhub / FMP / TwelveData / LocalFile), explicit no-live-order boundary |
 
 ---
 
@@ -330,3 +331,4 @@ Set them in `appsettings.json` under `Orchestration:Parameters`, or pass them in
 ---
 
 > **Disclaimer**: See [DISCLAIMER](docs/Disclaimer.md) for full disclaimer and limitation of liability. Backtest performance is not indicative of future results. **Not investment advice.** / 详见免责声明了解完整免责条款与责任限制。回测表现不代表未来收益。**非投资建议。**
+

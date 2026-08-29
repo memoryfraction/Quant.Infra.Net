@@ -19,16 +19,18 @@ public sealed class McpSourceDataFactory
     /// <summary>
     /// 受支持的 Provider 枚举 / Supported provider enum.
     /// </summary>
-    public enum Provider { Finnhub, Fmp, TwelveData }
+    public enum Provider { Finnhub, Fmp, TwelveData, LocalFile }
 
     /// <summary>
     /// 根据 Provider + 显式 key 创建数据源 / Creates a data source for the given provider + explicit key.
     /// </summary>
     /// <exception cref="ArgumentException">API key 缺失时抛出（fail-fast，不静默回退）。/ Thrown when API key is missing.</exception>
-    public IMcpSourceDataService Create(Provider provider, string? apiKey = null, HttpClient? httpClient = null)
+    public IMcpSourceDataService Create(Provider provider, string? apiKey = null, string? localFilePath = null, HttpClient? httpClient = null)
     {
-        var key = apiKey ?? ResolveKey(provider);
-        if (string.IsNullOrWhiteSpace(key))
+        var key = provider == Provider.LocalFile
+            ? (localFilePath ?? apiKey ?? ResolveKey(provider))
+            : (apiKey ?? ResolveKey(provider));
+        if (string.IsNullOrWhiteSpace(key) && provider != Provider.LocalFile)
             throw new ArgumentException(
                 $"API key is required for {provider}. Add it to appsettings.json under " +
                 $"\"QuantInfraNet\" → \"DataSources\" → \"{SectionName(provider)}\" → \"ApiKey\", " +
@@ -37,9 +39,10 @@ public sealed class McpSourceDataFactory
 
         return provider switch
         {
-            Provider.Finnhub => new FinnhubSourceDataService(key, httpClient),
-            Provider.Fmp => new FmpSourceDataService(key, httpClient),
-            Provider.TwelveData => new TwelveDataSourceDataService(key, httpClient),
+            Provider.Finnhub => new FinnhubSourceDataService(key!, httpClient),
+            Provider.Fmp => new FmpSourceDataService(key!, httpClient),
+            Provider.TwelveData => new TwelveDataSourceDataService(key!, httpClient),
+            Provider.LocalFile => new LocalFileSourceDataService(key!),
             _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, "Unsupported provider.")
         };
     }
@@ -114,3 +117,6 @@ public sealed class McpSourceDataFactory
         _ => "https://twelvedata.com/pricing"
     };
 }
+
+
+

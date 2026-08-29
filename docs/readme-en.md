@@ -99,6 +99,8 @@ Quant.Infra.Net provides a unified C# API that abstracts away the complexity of 
 
 > For full module details and usage examples, see [User Manual](Manual.md) and [Architecture Overview](Architect.md).
 
+> **🤖 AI Agent access (new):** drive Quant.Infra.Net from Claude Desktop / Cursor / any MCP client with natural language. See [MCP Server guide](manual/mcp-server-en.md).
+
 ### Architecture Overview
 
 | Module | Responsibility | Key Interfaces / Services |

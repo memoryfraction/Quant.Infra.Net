@@ -60,6 +60,7 @@
         <p class="subtitle" data-lang="zh">数据获取、统计分析、券商集成、组合分析、通知推送 —— 一个 NuGet 包全部搞定</p>
         <div class="badges">
             <a href="https://dotnet.microsoft.com/download/dotnet/8.0" class="badge badge-dotnet">.NET 8</a>
+            <a href="https://www.nuget.org/profiles/memoryfraction" class="badge badge-license" target="_blank">NuGet</a>
             <span class="badge badge-version">v1.5.1</span>
             <a href="https://github.com/memoryfraction/Quant.Infra.Net/blob/main/LICENSE" class="badge badge-license">MIT License</a>
         </div>
@@ -71,6 +72,34 @@
 
     <!-- ============= ENGLISH CONTENT ============= -->
     <div data-lang="en">
+<section>
+<h2>📈 See it work first / 先看到真实结果</h2>
+<div class="card">
+<p data-lang="en" style="margin-bottom:1rem;">A real, reproducible backtest — not a mock. The bundled <code>QQQM reverse-MA200 DCA</code> strategy run over <strong>real QQQM daily closes (2021 → 2026)</strong>, with the equity curve and metrics from the actual run. Nothing is fabricated.</p>
+<p data-lang="zh" style="margin-bottom:1rem;">可复现的真实回测——不是演示假数据。内置的 <code>QQQM 逆向 MA200 定投</code> 策略跑在 <strong>QQQM 真实日线（2021 → 2026）</strong> 上，权益曲线与指标均取自真实运行，无任何虚构。</p>
+<img src="https://github.com/memoryfraction/Quant.Infra.Net/raw/main/docs/assets/qqqm-reverse-dca-equity-curve.png" alt="QQQM backtest equity curve" style="width:100%; border-radius:8px; margin-bottom:1rem;" />
+<img src="https://github.com/memoryfraction/Quant.Infra.Net/raw/main/docs/assets/qqqm-reverse-dca-target-weight.png" alt="QQQM target weight over time" style="width:100%; border-radius:8px; margin-bottom:1rem;" />
+<p data-lang="en" style="margin-bottom:0.5rem;"><em>Equity curve (top) and target weight over time (bottom) — the strategy holds more when price is below the SMA200 and trims when above.</em></p>
+<p data-lang="zh" style="margin-bottom:0.5rem;"><em>上：权益曲线；下：目标权重随时间变化——价格低于 SMA200 时多持有、高于时减仓（逆向低买高卖的体现）。</em></p>
+<table>
+<thead><tr><th>Metric / 指标</th><th>Value / 数值</th><th>Meaning / 含义</th></tr></thead>
+<tbody>
+<tr><td>Initial capital / 初始资金</td><td>$10,000</td><td data-lang="en">Starting cash / 起始现金</td><td data-lang="zh">起始现金</td></tr>
+<tr><td>Final equity / 最终权益</td><td>$14,435 (+44.4%)</td><td data-lang="en">Over ~5.7 years incl. the 2022 bear market / 约 5.7 年（含 2022 熊市）</td><td data-lang="zh">约 5.7 年（含 2022 熊市）</td></tr>
+<tr><td>CAGR / 年化</td><td>7.73%</td><td data-lang="en">Compounded annual growth / 复合年化</td><td data-lang="zh">复合年化</td></tr>
+<tr><td>Max drawdown / 最大回撤</td><td>-18.97%</td><td data-lang="en">Worst peak-to-trough / 最大峰谷回撤</td><td data-lang="zh">最大峰谷回撤</td></tr>
+<tr><td>Sharpe / 夏普</td><td>0.04</td><td data-lang="en">Low — honest for a buy-the-dip DCA; this is a risk-managed trend-following entry, not a high-alpha system / 偏低——逆向定投的真实特征，不是高阿尔法系统</td><td data-lang="zh">偏低——逆向定投的真实特征，不是高阿尔法系统</td></tr>
+<tr><td>Win rate / 胜率</td><td>53.3%</td><td data-lang="en">673 trades over 1420 bars / 1420 根 bar 共 673 笔</td><td data-lang="zh">1420 根 bar 共 673 笔</td></tr>
+</tbody>
+</table>
+<p style="margin-top:1rem;">
+<a href="https://memoryfraction.github.io/Quant.Infra.Net/" class="btn" data-lang="en">This site / 本站</a> 
+<a href="https://github.com/memoryfraction/Quant.Infra.Net/blob/main/docs/CompleteWalkthrough-en.md" class="btn" data-lang="en">Full walkthrough (EN)</a> 
+<a href="https://github.com/memoryfraction/Quant.Infra.Net/blob/main/docs/CompleteWalkthrough-ch.md" class="btn" data-lang="zh">完整图文教程（中文）</a>
+</p>
+</div>
+</section>
+
 
     <section>
         <h2>Why Use This Library?</h2>
@@ -155,7 +184,9 @@ var result = await broker.PlaceOrderAsync(new OrderRequest { Symbol="AAPL", Side
         <table>
             <thead><tr><th>Version</th><th>Date</th><th>Highlights</th></tr></thead>
             <tbody>
-                <tr><td><span class="version-tag">1.5.1</span></td><td>2026-08-12</td><td>Code_Standards.md compliance — bilingual XML docs on all public members, parameter validation audit</td></tr>
+                <tr><td><span class="version-tag">1.6.0</span></td><td>2026-08-29</td><td>New package family: <code>Quant.Infra.Net.Orchestration</code> (event-driven pipeline) + <code>Quant.Infra.Net.Backtest</code> (bar-by-bar backtest engine) + <code>Quant.Infra.Net.Runtime</code> (RunMode switch, one-file-per-strategy plugins). Core <code>Quant.Infra.Net</code> stays at 1.5.1.</td></tr>
+<tr><td><span class="version-tag">1.6.0</span></td><td>2026-08-29</td><td>新增包家族：<code>Quant.Infra.Net.Orchestration</code>（事件驱动管线）+ <code>Quant.Infra.Net.Backtest</code>（逐 bar 回测引擎）+ <code>Quant.Infra.Net.Runtime</code>（RunMode 切换、一行策略插件）。核心包 <code>Quant.Infra.Net</code> 保持 1.5.1 不变。</td></tr>
+<tr><td><span class="version-tag">1.5.1</span></td><td>2026-08-12</td><td>Code_Standards.md compliance — bilingual XML docs on all public members, parameter validation audit</td></tr>
                 <tr><td>1.5.0</td><td>2026-05-28</td><td>Interactive Brokers (InterReact) full integration; Charles Schwab broker service; MIT license; enhanced unit tests</td></tr>
                 <tr><td>1.4.0</td><td>2024-05-16</td><td>Updated broker API integrations, comprehensive documentation</td></tr>
                 <tr><td>1.3.0</td><td>2024-04-05</td><td>Enhanced notification services with email templates</td></tr>

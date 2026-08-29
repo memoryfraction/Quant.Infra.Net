@@ -411,3 +411,6 @@ tools
 /src/Quant.Infra.Net.Web/Quant.Infra.Net.Web.csproj.lscache
 /test-results.txt
 /.workbuddy/memory
+
+# Local NuGet pack output (local verification only, never committed)
+/nupkg-local/

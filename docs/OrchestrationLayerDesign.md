@@ -446,9 +446,7 @@ src/
 │   ├── PortfolioStateStoreTests.cs
 │   └── PipelineRunnerTests.cs
 │
-└── Quant.Infra.Net.Orchestration.Console/  # ★ 新增：端到端 Demo 宿主（见 §9）
-    ├── Program.cs                       # ≤40 行通用宿主，策略由配置选择（§9.4）
-    └── appsettings.json                 # 默认跑 PairTradingZScore，改 "Strategy" 即切换
+└── (R6 已退役：本历史快照中的独立 Demo 宿主 Program.cs/appsettings.json → 现由 Quant.Infra.Net.Runtime.Console 承载，RunMode=Paper)
 ```
 
 同时更新 `Quant.Infra.Net.sln`：`dotnet sln add` 三个新项目。
@@ -910,7 +908,7 @@ public static class DependencyInjection
 
 - [ ] 创建 `src/Quant.Infra.Net.Orchestration`（net8.0 类库，`LangVersion` 与主库一致）
 - [ ] 创建 `src/Quant.Infra.Net.Orchestration.Tests`（MSTest，参照现有 Tests 项目 csproj 的 PackageReference）
-- [ ] 创建 `src/Quant.Infra.Net.Orchestration.Console`（引用 Orchestration 项目 + `Microsoft.Extensions.Hosting`）
+- [ ]（已执行；该独立宿主已于 R6 移除，`dotnet run` 等价命令现指向 `Quant.Infra.Net.Runtime.Console`，见 TradingRuntimeDesign.md R6——保留本行作为里程碑记录）创建 `src/Quant.Infra.Net.Orchestration.Console`（引用 Orchestration 项目 + `Microsoft.Extensions.Hosting`）
 - [ ] `dotnet sln add` 三个项目；`dotnet build` 通过
 - **验收**：解决方案编译通过，空测试项目 `dotnet test` 通过
 
@@ -988,7 +986,7 @@ public static class DependencyInjection
 - [ ] `Orchestration.Console`：`Program.cs`（§9.4，≤40 行，策略由配置选择）+ appsettings.json（默认 PairTradingZScore）
 - [ ] 测试：`PipelineRunnerTests` —— `RunOnceAsync` 端到端：Fake 数据源 → 断言 context 中出现 Signal、ExecutionReport、PortfolioSnapshot，且 `InMemoryBinanceBrokerService` 持仓发生变化
 - [ ] 更新根 README 的架构图（追加 Orchestration 层）+ 本文档版本表
-- **验收**：`dotnet run --project src/Quant.Infra.Net.Orchestration.Console`（Paper 模式）完整跑通一个周期：控制台打印事件流、内存持仓变化、（若配置）钉钉收到摘要；把 appsettings 的 `Strategy` 改为 `"MaCross"`（200MA 参数组合）重跑，同样跑通——**三个策略都必须在 Demo 中实测一遍**
+- **验收**：`dotnet run --project src/Quant.Infra.Net.Runtime.Console`（`Runtime:RunMode = "Paper"`；原独立宿主已于 R6 退役）完整跑通一个周期：控制台打印事件流、内存持仓变化、（若配置）钉钉收到摘要；把 appsettings 的 `Strategy` 改为 `"MaCross"`（200MA 参数组合）重跑，同样跑通——**三个策略都必须在 Demo 中实测一遍**
 
 ---
 
@@ -1181,7 +1179,7 @@ z-score 2.31 | 相关性 0.87 | spread 触发入场
 1. `git log --oneline` → 应有 `orchestration(M0)` 至 `orchestration(M6)` 共 7 个里程碑 commit
 2. `dotnet build` → 0 error 0 warning
 3. `dotnet test` → 全绿（含 Orchestration.Tests 全部新增用例）
-4. `dotnet run --project src/Quant.Infra.Net.Orchestration.Console` → 输出形态与 10.3 一致
+4. `dotnet run --project src/Quant.Infra.Net.Runtime.Console`（`Runtime:RunMode = "Paper"`）→ 输出形态与 10.3 一致
 5. 护栏核查：`git diff main..HEAD -- src/Quant.Infra.Net src/Quant.Infra.Net.Tests src/Quant.Infra.Net.Console src/MyQuantApp` → **必须为空**（现有项目零改动）
 6. 若 `docs/OrchestrationLayerDesign-Issues.md` 存在 → 逐条 review LLM 记录的卡点
 

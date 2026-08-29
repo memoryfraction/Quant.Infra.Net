@@ -1,6 +1,8 @@
 # 编排层 Orchestration Layer —— 详细使用说明
 
 > 本文档是 [编排层设计文档](OrchestrationLayerDesign.md)（完整契约）与 [中文](readme-ch.md) / [English](readme-en.md) README「编排层 Orchestration Layer（Beta）」小节的配套文档，回答那一节留下的问题：`dotnet run` 跑起来的 Demo 到底用的什么数据、什么标的、什么策略；以及如何换成自己的数据源、标的和策略。
+>
+> ⚠️ **R6 收敛**：本文档所述 Demo 现由统一宿主 [`Quant.Infra.Net.Runtime.Console`](../src/Quant.Infra.Net.Runtime.Console/) 承载（原独立 Demo 宿主已退役）——运行前先在该宿主的 `appsettings.json` 里把 `Runtime:RunMode` 设为 `"Paper"`（`Testnet`/`Live` 需真实凭据，见 §5）。
 
 ---
 
@@ -9,23 +11,24 @@
 ```bash
 git clone https://github.com/memoryfraction/Quant.Infra.Net.git
 cd Quant.Infra.Net/src
-dotnet run --project Quant.Infra.Net.Orchestration.Console
+# 先改 appsettings.json:  "Runtime" → "RunMode": "Paper"
+dotnet run --project Quant.Infra.Net.Runtime.Console
 ```
 
 这个命令**不会**联网、不会连真实券商、也不会拉真实行情。具体来说：
 
 | 问题 | 答案 |
 |---|---|
-| **数据源** | `DemoTraditionalFinanceSourceDataService` —— 一个只用于 Demo 的进程内假实现，注册在 [`Program.cs`](../src/Quant.Infra.Net.Orchestration.Console/Program.cs) 里。它生成**确定性合成价格序列**（每次运行数字完全一样），从不调用 Yahoo Finance、Binance 或任何外部 API。 |
+| **数据源** | `DemoSyntheticSourceDataService` —— 只用于 Demo 的确定性合成实现，位于 [`Quant.Infra.Net.Runtime/DemoSyntheticSourceDataService.cs`](../src/Quant.Infra.Net.Runtime/DataSources/DemoSyntheticSourceDataService.cs)（`Runtime:DataSource = "Demo"` 时由 `DataSourceFactory` 实例化；原独立宿主内的 `DemoTraditionalFinanceSourceDataService` 已在 R6 收敛并入本实现）。它生成**确定性合成价格序列**（每次运行数字完全一样），从不调用 Yahoo Finance、Binance 或任何外部 API。 |
 | **标的** | 单一标的 `AAPL`——但价格序列是**合成的**（稳定上升趋势 + 轻微噪声），不是真实苹果股价数据。用这个代码只是因为读者眼熟，不代表接了真实行情。 |
-| **策略** | `MaCross`（经典 200 日均线趋势跟踪），配置在 [`appsettings.json`](../src/Quant.Infra.Net.Orchestration.Console/appsettings.json) 里。这是刻意选择的**单标的**默认策略（而不是双标的的 `PairTradingZScore`）——单标的意味着一条信号、一条目标仓位、一条执行报告，第一次接触的读者不用对照两条序列就能肉眼核对整个运行过程。 |
+| **策略** | `MaCross`（经典 200 日均线趋势跟踪），配置在统一宿主 [`appsettings.json`](../src/Quant.Infra.Net.Runtime.Console/appsettings.json) 的 `Orchestration` 节里。这是刻意选择的**单标的**默认策略（而不是双标的的 `PairTradingZScore`）——单标的意味着一条信号、一条目标仓位、一条执行报告，第一次接触的读者不用对照两条序列就能肉眼核对整个运行过程。 |
 | **券商 / 执行** | `PaperBinanceUsdFutureService`——纯内存纸上交易，零网络请求。因为 `appsettings.json` 里 `"Environment": "Paper"`，这个实现会被自动注册。 |
 | **通知** | 默认关闭（`"Notifications": { "Enabled": false }`），所以跑 Demo 不需要配置钉钉/企微/邮件的任何凭证。 |
 
 一个周期的数据流：
 
 ```
-DemoTraditionalFinanceSourceDataService（为 "AAPL" 生成 260 根合成日线）
+DemoSyntheticSourceDataService（为 "AAPL" 生成 260 根合成日线）
         │
         ▼
 DataIngestStage  → 装载行情并缓存到管道上下文
@@ -59,7 +62,7 @@ NotificationStage → 若 Notifications.Enabled=true 会发送 Info 摘要
 
 ## 2. 换成真实数据源
 
-Demo 用 `DemoTraditionalFinanceSourceDataService` 纯粹是为了离线运行、每次结果一致。要接真实行情，只需在你自己的 `Program.cs` 里换掉这一处 DI 注册。
+Demo 用 `DemoSyntheticSourceDataService` 纯粹是为了离线运行、每次结果一致。要接真实行情，只需在你自己的 `Program.cs` 里换掉这一处 DI 注册。
 
 ### 方式 A —— 用核心库自带的真实数据源
 
@@ -71,7 +74,7 @@ using Quant.Infra.Net.SourceData.Service.Historical;
 
 builder.Services.AddSingleton<IHistoricalDataSourceService, HistoricalDataSourceServiceCsv>();
 builder.Services.AddSingleton<ITraditionalFinanceSourceDataService, TraditionalFinanceSourceDataService>();
-// 删除 AddSingleton<ITraditionalFinanceSourceDataService, DemoTraditionalFinanceSourceDataService>() 这一行。
+// 自定义宿主中不注册 Demo 合成源（统一宿主里即不配 Runtime:DataSource = "Demo"）。
 builder.Services.AddQuantInfraNetOrchestration();
 ```
 
@@ -135,7 +138,7 @@ builder.Services.AddQuantInfraNetOrchestration();
 }
 ```
 
-（继续用 `DemoTraditionalFinanceSourceDataService` 的话，只有 `"AAA"`/`"BBB"`/其余任意标的（默认走上升趋势序列）才能产出有意义的合成信号，具体规则见 [`DemoTraditionalFinanceSourceDataService.cs`](../src/Quant.Infra.Net.Orchestration.Console/DemoTraditionalFinanceSourceDataService.cs)。一旦按第 2 节换成真实数据源，任何真实标的都可用。）
+（继续用 `DemoSyntheticSourceDataService`（`Runtime:DataSource = "Demo"`）的话，只有 `"AAA"`/`"BBB"`/其余任意标的（默认走上升趋势序列）才能产出有意义的合成信号，具体规则见 [`DemoSyntheticSourceDataService.cs`](../src/Quant.Infra.Net.Runtime/DataSources/DemoSyntheticSourceDataService.cs)。一旦按第 2 节换成真实数据源，任何真实标的都可用。）
 
 ---
 

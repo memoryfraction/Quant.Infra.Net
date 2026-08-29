@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <UserSecretsId>3f1c9c1e-1c1e-4d2f-9b8a-7a6f5e4d3c2b</UserSecretsId>
+    <UserSecretsId>7d2e5a31-8c4f-4b1d-9e6a-3c5f7b9d2a41</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Quant.Infra.Net.Orchestration\Quant.Infra.Net.Orchestration.csproj" />
+    <ProjectReference Include="..\Quant.Infra.Net.Runtime\Quant.Infra.Net.Runtime.csproj" />
   </ItemGroup>
 
   <ItemGroup>

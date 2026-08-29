@@ -1,33 +1,33 @@
-using Quant.Infra.Net.Shared.Model;
 using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service;
 
-namespace Quant.Infra.Net.Orchestration.Console;
+namespace Quant.Infra.Net.Runtime.DataSources;
 
 /// <summary>
-/// 演示宿主专用行情源：按标的生成确定性离线 K 线（零网络访问）。
-/// Demo-host-only market data source: deterministic offline candles per symbol (zero network access).
+/// 离线合成行情源（Demo 数据种类）：按标的生成确定性 K 线序列，零网络访问（设计 §5.3/§7.7）。
+/// 序列形状与 Orchestration 演示宿主同源（AAPL=稳定上升趋势；AAA/BBB=高相关配对且末点显著偏离），
+/// 保证同一参数下策略信号跨宿主一致。
+/// Offline synthetic data source (Demo kind): deterministic per-symbol candles with zero network access.
+/// Series shapes mirror the orchestration demo host (AAPL = steady uptrend; AAA/BBB = correlated pair with a
+/// terminal deviation) so strategy signals stay consistent across hosts for the same parameters.
 /// </summary>
-/// <remarks>
-/// 序列形状针对三种演示策略设计：AAPL=稳定上升趋势（MaCross/MeanReversion 可出信号），
-/// AAA+BBB=高相关配对且末点显著偏离（PairTradingZScore 可出方向信号）。
-/// Shapes are crafted for the three demo strategies: AAPL = steady uptrend; AAA+BBB = highly correlated pair with a terminal deviation.
-/// </remarks>
-public sealed class DemoTraditionalFinanceSourceDataService : ITraditionalFinanceSourceDataService
+public sealed class DemoSyntheticSourceDataService : ITraditionalFinanceSourceDataService
 {
     private const int PairBars = 150;
     private const int SoloBars = 260;
 
     /// <summary>
-    /// 同步每日数据（演示宿主不使用）/ demo host does not use daily sync.
+    /// 同步每日数据（演示宿主不使用）。
+    /// Begin syncing daily data (unused by demo hosts).
     /// </summary>
-    public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, ResolutionLevel Period = ResolutionLevel.Daily)
-        => Task.FromResult(OhlcvsFor(symbol, startDt, ResolutionLevel.Daily));
+    public Task<Ohlcvs> BeginSyncSourceDailyDataAsync(string symbol, DateTime startDt, DateTime endDt, string fullPathFileName, Shared.Model.ResolutionLevel Period = Shared.Model.ResolutionLevel.Daily)
+        => Task.FromResult(OhlcvsFor(symbol, startDt, Period));
 
     /// <summary>
-    /// 下载 OHLCV：按标的返回确定性序列。/ Download: deterministic per-symbol series.
+    /// 下载 OHLCV：按标的返回确定性序列（忽略 dataSource 分支）。
+    /// Download OHLCV: returns the deterministic per-symbol series (ignores the dataSource branch).
     /// </summary>
-    public Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, ResolutionLevel Period = ResolutionLevel.Daily, DataSource dataSource = DataSource.YahooFinance)
+    public Task<Ohlcvs> DownloadOhlcvListAsync(string symbol, DateTime startDt, DateTime endDt, Shared.Model.ResolutionLevel Period = Shared.Model.ResolutionLevel.Daily, Shared.Model.DataSource dataSource = Shared.Model.DataSource.YahooFinance)
     {
         if (string.IsNullOrWhiteSpace(symbol))
         {
@@ -38,31 +38,31 @@ public sealed class DemoTraditionalFinanceSourceDataService : ITraditionalFinanc
     }
 
     /// <summary>
-    /// 从文件读取（演示宿主不使用）/ unused by the demo host.
+    /// 从文件读取（演示宿主不使用）/ Read from file (unused by demo hosts).
     /// </summary>
     public Task<List<Ohlcv>> GetOhlcvListAsync(string fullPathFilename) => Task.FromResult(new List<Ohlcv>());
 
     /// <summary>
-    /// 保存 OHLCV（演示宿主不使用）/ unused by the demo host.
+    /// 保存 OHLCV（演示宿主不使用）/ Save OHLCV (unused by demo hosts).
     /// </summary>
     public Task SaveOhlcvListAsync(IEnumerable<Ohlcv> ohlcvList, string fullPathFileName) => Task.CompletedTask;
 
     /// <summary>
-    /// SP500 列表（演示宿主不使用）/ unused by the demo host.
+    /// SP500 列表（演示宿主不使用）/ S&P 500 list (unused by demo hosts).
     /// </summary>
     public Task<IEnumerable<string>> GetSp500SymbolsAsync(int number = 500) => Task.FromResult(Enumerable.Empty<string>());
 
-    private static Ohlcvs OhlcvsFor(string symbol, DateTime startDt, ResolutionLevel period)
+    private static Ohlcvs OhlcvsFor(string symbol, DateTime startDt, Shared.Model.ResolutionLevel period)
     {
         var step = period switch
         {
-            ResolutionLevel.Hourly => TimeSpan.FromHours(1),
-            ResolutionLevel.Weekly => TimeSpan.FromDays(7),
-            ResolutionLevel.Monthly => TimeSpan.FromDays(30),
+            Shared.Model.ResolutionLevel.Hourly => TimeSpan.FromHours(1),
+            Shared.Model.ResolutionLevel.Weekly => TimeSpan.FromDays(7),
+            Shared.Model.ResolutionLevel.Monthly => TimeSpan.FromDays(30),
             _ => TimeSpan.FromDays(1)
         };
 
-        var closes = ClosesFor(symbol, period);
+        var closes = ClosesFor(symbol);
         var set = new HashSet<Ohlcv>(closes.Length);
         for (var i = 0; i < closes.Length; i++)
         {
@@ -84,7 +84,7 @@ public sealed class DemoTraditionalFinanceSourceDataService : ITraditionalFinanc
         return new Ohlcvs { Symbol = symbol, OhlcvSet = set };
     }
 
-    private static double[] ClosesFor(string symbol, ResolutionLevel period)
+    private static double[] ClosesFor(string symbol)
     {
         var n = symbol is ("AAA" or "BBB") ? PairBars : SoloBars;
         var seed = 17;
@@ -101,9 +101,8 @@ public sealed class DemoTraditionalFinanceSourceDataService : ITraditionalFinanc
                 return PairLeg(n, seedB: symbol == "BBB");
 
             default:
-                // 稳定上升趋势 + 轻微周期波动：MaCross(last > SMA200) 与 MeanReversion(z≥+EntryZ → Short) 均可触发
-                // （末 100 根窗口 z≈2.5，超过默认 EntryZ 2.0）。
-                // Steady uptrend + mild wobble: triggers MaCross(last > SMA200) and MeanReversion(z≈+2.5 ≥ EntryZ → Short).
+                // 稳定上升趋势 + 轻微周期波动（与 Orchestration 演示宿主一致）。
+                // Steady uptrend + mild wobble (identical to the orchestration demo host).
                 var trend = new double[n];
                 for (var i = 0; i < n; i++)
                 {
@@ -116,8 +115,8 @@ public sealed class DemoTraditionalFinanceSourceDataService : ITraditionalFinanc
 
     private static double[] PairLeg(int n, bool seedB)
     {
-        // BBB = 100 + AR(0.4) 平稳游走；AAA = 1.2*BBB + AR(0.4)，AAA 末点 +5 显著正偏离 → 配对 z 显著 → 方向信号。
-        // BBB = 100 + stationary AR(0.4); AAA = 1.2*BBB + AR(0.4); AAA's last bar deviates +5 → strong pair z → directional signal.
+        // BBB = 100 + AR(0.4) 平稳游走；AAA = 1.2*BBB + AR(0.4)，AAA 末点 +5 显著正偏离 → 配对 z 显著。
+        // BBB = 100 + stationary AR(0.4); AAA = 1.2*BBB + AR(0.4); AAA's last bar deviates +5.
         var rngA = new Random(seedFrom("AAA"));
         var rngB = new Random(seedFrom("BBB"));
 
@@ -133,7 +132,7 @@ public sealed class DemoTraditionalFinanceSourceDataService : ITraditionalFinanc
             legA[i] = 1.2 * legB[i] + noiseA;
         }
 
-        legA[n - 1] += 5.0; // 末点偏离（配对最后一根显著失衡）/ terminal deviation (final bar strongly out of balance)
+        legA[n - 1] += 5.0; // 末点偏离（配对最后一根显著失衡）/ terminal deviation
 
         return seedB ? legB : legA;
 

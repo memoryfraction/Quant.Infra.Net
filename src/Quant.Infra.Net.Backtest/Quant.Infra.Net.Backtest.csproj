@@ -5,8 +5,26 @@
     <LangVersion>12.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
-    <Version>1.0.0</Version>
+    <IsPackable>true</IsPackable>
+    <Version>1.6.0</Version>
+
+  <!-- ==================== NuGet Package Metadata ==================== -->
+    <PackageId>Quant.Infra.Net.Backtest</PackageId>
+    <Authors>Rong (Rex) Fan</Authors>
+    <Company>Rong (Rex) Fan</Company>
+    <Copyright>(c) 2024-2026 Rong (Rex) Fan. All rights reserved.</Copyright>
+    <Description>Event-driven (bar-by-bar) backtest engine for Quant.Infra.Net's Orchestration pipeline — replays the exact same StrategyPipeline used in paper/live trading against historical data, with look-ahead-bias guards.</Description>
+    <PackageTags>dotnet;quantitative;trading;backtest;event-driven;strategy;historical;simulation;metrics</PackageTags>
+    <PackageProjectUrl>https://memoryfraction.github.io/Quant.Infra.Net/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/memoryfraction/Quant.Infra.Net.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageReleaseNotes>v1.6.0 — initial release: Orchestration event-driven pipeline + Backtest engine + Runtime RunMode/plugin layer on top of Quant.Infra.Net 1.5.1.</PackageReleaseNotes>
+  <!-- =============================================================== -->
   </PropertyGroup>
 
   <!-- Dependency whitelist (docs/TradingRuntimeDesign.md §11.6):
@@ -21,4 +39,7 @@
     <ProjectReference Include="..\Quant.Infra.Net.Orchestration\Quant.Infra.Net.Orchestration.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
 </Project>

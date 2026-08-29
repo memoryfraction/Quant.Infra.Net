@@ -23,8 +23,7 @@ kinds, and this folder is exactly one of them:
 
 ## The guides
 
-> Note: links marked *(coming in the next commits of this docs effort)* resolve as soon as their commit
-> lands; each is created in a dedicated commit (`manual-M1` … `manual-M6`).
+
 
 | Guide | English | 中文 | Status |
 |-------|---------|------|--------|
@@ -32,9 +31,9 @@ kinds, and this folder is exactly one of them:
 | **Writing a strategy from scratch** — `Strategy` base, descriptors, `customStages`, built-in examples | [writing-a-strategy-en.md](writing-a-strategy-en.md) | [writing-a-strategy-ch.md](writing-a-strategy-ch.md) | ✅ ready |
 | **Risk management** — the three default rules, `IRiskManager`, kill-switch, custom risk | [risk-management-en.md](risk-management-en.md) | [risk-management-ch.md](risk-management-ch.md) | ✅ ready |
 | **Custom data source** — `ITraditionalFinanceSourceDataService`, `DataSourceKind.Custom`, `Custom` vs new enum values | [custom-data-source-en.md](custom-data-source-en.md) | [custom-data-source-ch.md](custom-data-source-ch.md) | ✅ ready |
-| **Custom broker execution** — `IExecutionBroker`, adapters, the `customBroker` entry point | [custom-broker-en.md](custom-broker-en.md) | [custom-broker-ch.md](custom-broker-ch.md) | *coming (M5)* |
-| **Testing & deployment** — unit-testing your strategy, Backtest/Paper parity, long-running Paper/Live, crash recovery | [testing-and-deployment-en.md](testing-and-deployment-en.md) | [testing-and-deployment-ch.md](testing-and-deployment-ch.md) | *coming (M6)* |
-| **FAQ** — common failures and their intended behavior | [faq-en.md](faq-en.md) | [faq-ch.md](faq-ch.md) | *coming (M6)* |
+| **Custom broker execution** — `IExecutionBroker`, adapters, the `customBroker` entry point | [custom-broker-en.md](custom-broker-en.md) | [custom-broker-ch.md](custom-broker-ch.md) | ✅ ready |
+| **Testing & deployment** — unit-testing your strategy, Backtest/Paper parity, long-running Paper/Live, crash recovery | [testing-and-deployment-en.md](testing-and-deployment-en.md) | [testing-and-deployment-ch.md](testing-and-deployment-ch.md) | ✅ ready |
+| **FAQ** — common failures and their intended behavior | [faq-en.md](faq-en.md) | [faq-ch.md](faq-ch.md) | ✅ ready |
 
 ## Reading order suggestion
 
@@ -44,3 +43,4 @@ kinds, and this folder is exactly one of them:
    [Custom data source](custom-data-source-en.md), [Custom broker](custom-broker-en.md).
 4. Before you deploy anything: [Testing & deployment](testing-and-deployment-en.md) and
    [FAQ](faq-en.md).
+

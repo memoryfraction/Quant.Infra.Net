@@ -21,8 +21,6 @@
 
 ## 指南清单
 
-> 注：标注 *（M1–M6 陆续提交）* 的链接会在对应 commit 落地后即生效，每篇对应一次独立提交
-> （`manual-M1` … `manual-M6`）。
 
 | 指南 | 英文 | 中文 | 状态 |
 |------|------|------|------|
@@ -30,9 +28,9 @@
 | **从零写一个策略** — `Strategy` 基类、描述符、`customStages`、内置策略示例 | [writing-a-strategy-en.md](writing-a-strategy-en.md) | [writing-a-strategy-ch.md](writing-a-strategy-ch.md) | ✅ 就绪 |
 | **风控** — 三条默认规则、`IRiskManager`、kill-switch、自定义风控 | [risk-management-en.md](risk-management-en.md) | [risk-management-ch.md](risk-management-ch.md) | ✅ 就绪 |
 | **自定义数据源** — `ITraditionalFinanceSourceDataService`、`DataSourceKind.Custom`、何时该新增枚举值 | [custom-data-source-en.md](custom-data-source-en.md) | [custom-data-source-ch.md](custom-data-source-ch.md) | ✅ 已就绪 |
-| **自定义券商执行** — `IExecutionBroker`、适配器、`customBroker` 入口 | [custom-broker-en.md](custom-broker-en.md) | [custom-broker-ch.md](custom-broker-ch.md) | *（M5）* |
-| **测试与部署** — 给策略写单测、Backtest/Paper 一致性、Paper/Live 长跑、崩溃恢复 | [testing-and-deployment-en.md](testing-and-deployment-en.md) | [testing-and-deployment-ch.md](testing-and-deployment-ch.md) | *（M6）* |
-| **FAQ** — 常见报错与其"预期行为" | [faq-en.md](faq-en.md) | [faq-ch.md](faq-ch.md) | *（M6）* |
+| **自定义券商执行** — `IExecutionBroker`、适配器、`customBroker` 入口 | [custom-broker-en.md](custom-broker-en.md) | [custom-broker-ch.md](custom-broker-ch.md) | ✅ 就绪 |
+| **测试与部署** — 给策略写单测、Backtest/Paper 一致性、Paper/Live 长跑、崩溃恢复 | [testing-and-deployment-en.md](testing-and-deployment-en.md) | [testing-and-deployment-ch.md](testing-and-deployment-ch.md) | ✅ 就绪 |
+| **FAQ** — 常见报错与其"预期行为" | [faq-en.md](faq-en.md) | [faq-ch.md](faq-ch.md) | ✅ 就绪 |
 
 ## 建议阅读顺序
 
@@ -40,3 +38,4 @@
 2. [写策略](writing-a-strategy-ch.md) — 最常见的真实任务。
 3. 只有需要超出默认配置时，再看：[风控](risk-management-ch.md)、[自定义数据源](custom-data-source-ch.md)、[自定义券商](custom-broker-ch.md)。
 4. 部署之前：[测试与部署](testing-and-deployment-ch.md) 与 [FAQ](faq-ch.md)。
+

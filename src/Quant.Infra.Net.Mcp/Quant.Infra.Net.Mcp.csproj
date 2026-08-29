@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- MCP server host for Quant.Infra.Net: stdio-based, read-only + backtest + paper cycle only.
+         量化基础设施工具的 MCP 宿主（stdio 传输）：只读 / 回测 / 纸面模拟，绝不暴露 Testnet/Live 下单。 -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Official C# MCP SDK (Model Context Protocol). Pinned to the latest stable 2.x line —
+         verified on NuGet on 2026-08-29; do not use wildcards (reproducible builds).
+         官方 C# MCP SDK，锁定 2026-08-29 当日在 NuGet 上查到的最新稳定 2.x 版本（不用 * 通配）。 -->
+    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- MCP server is a CONSUMER of the unified runtime public API only (guardrail:
+         no edits inside Quant.Infra.Net / Runtime / Orchestration / Backtest source trees).
+         MCP 只作为统一运行时的消费者，仅引用其公共 API（护栏：不修改受保护项目源码）。 -->
+    <ProjectReference Include="..\Quant.Infra.Net.Runtime\Quant.Infra.Net.Runtime.csproj" />
+    <ProjectReference Include="..\Quant.Infra.Net.Backtest\Quant.Infra.Net.Backtest.csproj" />
+    <ProjectReference Include="..\Quant.Infra.Net.Orchestration\Quant.Infra.Net.Orchestration.csproj" />
+  </ItemGroup>
+
+</Project>

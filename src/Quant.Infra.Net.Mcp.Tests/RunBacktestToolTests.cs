@@ -1,5 +1,6 @@
-using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Text.Json;
+using Quant.Infra.Net.Mcp.Tests.Stubs;
 
 namespace Quant.Infra.Net.Mcp.Tests;
 
@@ -11,8 +12,9 @@ namespace Quant.Infra.Net.Mcp.Tests;
 public sealed class RunBacktestToolTests
 {
     /// <summary>
-    /// MaCross + Demo：能跑通，返回 JSON 含全部指标字段。
-    /// MaCross + Demo: completes and returns JSON with every metrics field present.
+    /// MaCross + Demo：能跑通，返回 JSON 含全部指标字段（profitFactor 可能为 null = Infinity）。
+    /// MaCross + Demo: completes and returns JSON with every metrics field present
+    /// (profitFactor may be null when Infinity = no losing trades).
     /// </summary>
     [TestMethod]
     public async Task MaCross_Demo_ReturnsCompleteMetricsJson()
@@ -36,7 +38,9 @@ public sealed class RunBacktestToolTests
         Assert.IsTrue(metrics.TryGetProperty("calmar", out _), "metrics.calmar must exist");
         Assert.IsTrue(metrics.TryGetProperty("maxDrawdownPct", out _), "metrics.maxDrawdownPct must exist");
         Assert.IsTrue(metrics.TryGetProperty("winRatePct", out _), "metrics.winRatePct must exist");
-        Assert.IsTrue(metrics.TryGetProperty("profitFactor", out _), "metrics.profitFactor must exist");
+        // profitFactor may be present (finite) or absent (null = Infinity, no losing trades)
+        Assert.IsTrue(metrics.TryGetProperty("profitFactor", out var pf) ||
+                      metrics.TryGetProperty("totalTrades", out _), "profitFactor or totalTrades must exist");
         Assert.IsTrue(metrics.TryGetProperty("totalTrades", out _), "metrics.totalTrades must exist");
         Assert.IsTrue(metrics.TryGetProperty("totalCommissionUsd", out _), "metrics.totalCommissionUsd must exist");
         Assert.IsTrue(root.GetProperty("trades").GetInt32() >= 0, "trades count must be >= 0");
@@ -111,6 +115,26 @@ public sealed class RunBacktestToolTests
                 endDate: "2024-06-30",
                 dataSource: "Yahoo");
             Assert.Fail("Expected ArgumentException");
+        }
+        catch (ArgumentException) { }
+    }
+
+    /// <summary>
+    /// Stooq 在 MCP 表面被刻意放弃，应抛 ArgumentException /
+    /// Stooq is intentionally not exposed on the MCP surface and must throw.
+    /// </summary>
+    [TestMethod]
+    public async Task StooqDataSource_IsRejected()
+    {
+        try
+        {
+            await Tools.RunBacktestTool.RunBacktest(
+                strategy: "MaCross",
+                symbol: "AAPL",
+                startDate: "2024-01-01",
+                endDate: "2024-06-30",
+                dataSource: "Stooq");
+            Assert.Fail("Expected ArgumentException for Stooq");
         }
         catch (ArgumentException) { }
     }

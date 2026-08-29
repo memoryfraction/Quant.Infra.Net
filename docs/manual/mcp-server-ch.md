@@ -119,7 +119,7 @@ dotnet run --project src/Quant.Infra.Net.Mcp
     "maxDrawdownPct": -15.1,
     "maxDrawdownDurationDays": 22,
     "winRatePct": 54.3,
-    "profitFactor": 0.0,
+    "profitFactor": 2.34,
     "totalTrades": 18,
     "totalCommissionUsd": 18.5
   },
@@ -128,9 +128,9 @@ dotnet run --project src/Quant.Infra.Net.Mcp
 }
 ```
 
-> **关于 `profitFactor`：** Runtime 在零笔亏损交易时会报告 `ProfitFactor = Infinity`，MCP 层
-> 目前把它序列化成 `0.0` 作为占位。`verdict` 字段（Agent 真正读的那个）已经考虑了交易次数，
-> 所以推荐结论仍然是正确的。后续会把这个序列化收紧。
+> **关于 `profitFactor`：** 当策略零笔亏损交易时，Runtime 报告 `ProfitFactor = Infinity`。
+> MCP 层现在把它序列化为 `null`（JSON 中省略该字段），而不是误导性的 `0.0`。这里的 `null`
+> 表示**完全没有亏损交易**，其实是最强的盈亏比。`interpretation` 字段已正确处理此情况。
 
 ---
 
@@ -272,6 +272,10 @@ dotnet run --project src/Quant.Infra.Net.Mcp
 > **护栏守住了：** MCP Server 是统一运行时**公共 API 的消费者**。
 > `src/Quant.Infra.Net/`、`src/Quant.Infra.Net.Runtime/`、`src/Quant.Infra.Net.Orchestration*/`、
 > `src/Quant.Infra.Net.Backtest*/`、`MyQuantApp/` 一个文件都没动。`git log --stat` 可验证。
+
+
+
+
 
 
 

@@ -124,7 +124,7 @@ Copy this into Claude Desktop (or any MCP client):
     "maxDrawdownPct": -15.1,
     "maxDrawdownDurationDays": 22,
     "winRatePct": 54.3,
-    "profitFactor": 0.0,
+    "profitFactor": 2.34,
     "totalTrades": 18,
     "totalCommissionUsd": 18.5
   },
@@ -133,13 +133,63 @@ Copy this into Claude Desktop (or any MCP client):
 }
 ```
 
-> **Note on `profitFactor`:** the runtime reports `ProfitFactor = Infinity` when there are zero
-> losing trades; the MCP layer currently serializes that as `0.0` as a placeholder. The `verdict`
-> field (which the agent reads) already accounts for trade count, so the recommendation is still
-> correct. We will tighten this serialization in a follow-up.
+> **Note on `profitFactor`:** when a strategy has zero losing trades, the runtime reports
+> `ProfitFactor = Infinity`. The MCP layer now serializes that as `null` (the JSON field is omitted)
+> rather than a misleading `0.0`. `null` here means **no losing trades at all** — the strongest
+> possible profit factor. The `interpretation` field accounts for this correctly.
 
 ---
 
+## 4.5 Tool reference (quick lookup)
+
+### list_strategies
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| *(none)* | — | — | Returns all built-in strategy names + parameter descriptions. Zero network. |
+
+**Returns:** JSON array of { "name": string, "description": string }.
+
+### run_backtest
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| strategy | string | ✅ | MaCross, MeanReversion, or PairTradingZScore (see list_strategies). |
+| startDate | string (UTC) | ✅ | Window start, e.g. 2024-01-01. |
+| ndDate | string (UTC) | ✅ | Window end, e.g. 2024-06-30. |
+| symbol | string | single-symbol strategies | E.g. AAPL. Required for MaCross / MeanReversion. |
+| symbolA / symbolB | string | PairTradingZScore | Two legs. |
+| dataSource | string | no | Demo (default) / Finnhub / Fmp / TwelveData / LocalFile. |
+| piKey | string | no | Override for Finnhub/Fmp/TwelveData (otherwise reads appsettings.json / env var). |
+| localFilePath | string | LocalFile only | CSV or JSON path (absolute or relative to AppContext.BaseDirectory). |
+| initialEquityUsd | int | no | Default 10000. |
+| commissionBps / slippageBps | int | no | Defaults 5 / 2. |
+| astPeriod / slowPeriod | int | MaCross only | MA periods. |
+| lookbackBars / ntryZ / xitZ | int/double | MeanReversion / PairTrading | Lookback + z-thresholds. |
+| llowShort | bool | no | Override short-allowance. |
+
+**Returns:** JSON { strategy, symbols, dataSource, window, metrics { cagrPct, sharpe, calmar, maxDrawdownPct, maxDrawdownDurationDays, winRatePct, profitFactor, totalTrades, totalCommissionUsd }, trades, interpretation }.
+
+### run_paper_cycle
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| strategy | string | ✅ | Same as un_backtest. |
+| symbol / symbolA / symbolB | string | per strategy | Same rules. |
+| astPeriod / slowPeriod / lookbackBars / ntryZ / xitZ | int/double | no | Strategy params. |
+
+**Returns:** JSON { events: [{ stage, message, timestampUtc }], errorCount: int }. Zero network.
+
+### fetch_ohlcv
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| symbol | string | ✅ | E.g. AAPL. |
+| startDate | string (UTC) | ✅ | E.g. 2024-01-01. |
+| ndDate | string (UTC) | ✅ | E.g. 2024-06-30. |
+| dataSource | string | no | Demo (default) / Finnhub / Fmp / TwelveData / LocalFile. |
+| piKey | string | no | Override for real providers. |
+| localFilePath | string | LocalFile only | CSV/JSON path. |
+
+**Returns:** JSON { symbol, bars: [{ date, open, high, low, close, volume }], truncated: bool, totalBars: int }. Hard-capped at 500 bars.
+
+---
 ## 5. Data sources — the thing people get wrong
 
 > **Data source is the #1 reason a quant project quietly dies.** The MCP server follows the
@@ -284,6 +334,10 @@ Use these as starting points. Adjust symbol / window / strategy / provider to yo
 > **Guardrail honored:** the MCP server is a *consumer* of the unified runtime's public API.
 > No files under `src/Quant.Infra.Net/`, `src/Quant.Infra.Net.Runtime/`, `src/Quant.Infra.Net.Orchestration*/`,
 > `src/Quant.Infra.Net.Backtest*/`, or `MyQuantApp/` were modified. See `git log --stat` for proof.
+
+
+
+
 
 
 

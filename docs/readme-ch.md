@@ -232,6 +232,16 @@ var result = await provider.GetRequiredService<BacktestRunner>().RunAsync(myHist
 
 ---
 
+## 资质认证
+
+![EPAT® 算法交易卓越证书](assets/credentials/epat-certificate.png)
+
+> **维护者已通过 QuantInsti 颁发的 EPAT® 算法交易认证（2024 年）。**
+>
+> 📝 EPAT 毕业论文：[加密永续合约配对交易](https://blog.quantinsti.com/crypto-perpetual-contract-pair-trading-project-rong-fan/)（QuantInsti 博客）。
+
+---
+
 ## 为什么要用这个库？
 
 ### 量化开发中的痛点

@@ -11,6 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Copy chart images into the pages deploy dir so the site is self-contained
+      # (no dependency on raw/main/... URLs resolving at view time).
+      - name: Copy chart assets into pages/
+        run: |
+          mkdir -p pages/assets
+          cp docs/assets/qqqm-reverse-dca-equity-curve.png  pages/assets/ 2>/dev/null || true
+          cp docs/assets/qqqm-reverse-dca-target-weight.png  pages/assets/ 2>/dev/null || true
+          ls -la pages/assets/
+
       - uses: actions/configure-pages@v5
         with:
           enablement: true

@@ -30,7 +30,7 @@ kinds, and this folder is exactly one of them:
 |-------|---------|------|--------|
 | **Configuration reference** — every field of `RuntimeOptions` / `OrchestrationOptions` / `BacktestOptions`, all enums | [configuration-reference-en.md](configuration-reference-en.md) | [configuration-reference-ch.md](configuration-reference-ch.md) | ✅ ready |
 | **Writing a strategy from scratch** — `Strategy` base, descriptors, `customStages`, built-in examples | [writing-a-strategy-en.md](writing-a-strategy-en.md) | [writing-a-strategy-ch.md](writing-a-strategy-ch.md) | ✅ ready |
-| **Risk management** — the three default rules, `IRiskManager`, kill-switch, custom risk | [risk-management-en.md](risk-management-en.md) | [risk-management-ch.md](risk-management-ch.md) | *coming (M3)* |
+| **Risk management** — the three default rules, `IRiskManager`, kill-switch, custom risk | [risk-management-en.md](risk-management-en.md) | [risk-management-ch.md](risk-management-ch.md) | ✅ ready |
 | **Custom data source** — `ITraditionalFinanceSourceDataService`, `DataSourceKind.Custom`, `Custom` vs new enum values | [custom-data-source-en.md](custom-data-source-en.md) | [custom-data-source-ch.md](custom-data-source-ch.md) | *coming (M4)* |
 | **Custom broker execution** — `IExecutionBroker`, adapters, the `customBroker` entry point | [custom-broker-en.md](custom-broker-en.md) | [custom-broker-ch.md](custom-broker-ch.md) | *coming (M5)* |
 | **Testing & deployment** — unit-testing your strategy, Backtest/Paper parity, long-running Paper/Live, crash recovery | [testing-and-deployment-en.md](testing-and-deployment-en.md) | [testing-and-deployment-ch.md](testing-and-deployment-ch.md) | *coming (M6)* |

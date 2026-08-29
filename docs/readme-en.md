@@ -232,6 +232,16 @@ Dependency chain: `Runtime 1.6.0` → `Backtest 1.6.0` + `Orchestration 1.6.0` �
 
 ---
 
+## Credentials
+
+![EPAT® Certificate of Excellence](assets/credentials/epat-certificate.png)
+
+> **Maintainer certified in Algorithmic Trading — EPAT®, QuantInsti (2024).**
+>
+> 📝 EPAT graduation project: [Crypto Perpetual Contract Pair Trading](https://blog.quantinsti.com/crypto-perpetual-contract-pair-trading-project-rong-fan/) (QuantInsti Blog).
+
+---
+
 ## Why Use This Library?
 
 ### Pain Points in Quant Development

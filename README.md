@@ -71,6 +71,16 @@
 
 ---
 
+## 🎓 Credentials / 资质认证
+
+![EPAT® Certificate of Excellence](images/credentials/epat-certificate.png)
+
+> **Maintainer certified in Algorithmic Trading — EPAT®, QuantInsti (2024).** / 维护者已通过 QuantInsti 颁发的 **EPAT® 算法交易认证**（2024 年）。
+>
+> 📝 EPAT graduation project / 毕业论文: [Crypto Perpetual Contract Pair Trading (QuantInsti Blog)](https://blog.quantinsti.com/crypto-perpetual-contract-pair-trading-project-rong-fan/) / [加密永续合约配对交易（QuantInsti 博客）](https://blog.quantinsti.com/crypto-perpetual-contract-pair-trading-project-rong-fan/)
+
+---
+
 ## 📡 Data Sources — the thing people get wrong / 数据来源——很多人踩坑的地方
 
 > **Data source is the #1 reason a quant project quietly dies.** The classic failure: you build on a .NET wrapper for Yahoo Finance, then Yahoo changes their API, the wrapper's author doesn't update for 3–6 months, and your whole pipeline is dead — for months. **This repo is designed so that can't be your single point of failure.**

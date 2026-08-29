@@ -52,20 +52,28 @@ public static class QqqmDocWalkthrough
 
         List<Ohlcv> bars;
         string sourceDesc;
-        try
+        var cached = LoadCachedQqqm();
+        if (cached.Count > 0)
         {
-            C.WriteLine("data source: Stooq (stooq.com free public daily bars; window 2021-01-04 -> now)");
-            var ohlcvs = sp.GetRequiredService<ITraditionalFinanceSourceDataService>()
-                .DownloadOhlcvListAsync(Symbol, t0, DateTime.UtcNow).GetAwaiter().GetResult();
-            bars = ohlcvs.OhlcvSet.OrderBy(b => b.OpenDateTime).ToList();
-            sourceDesc = "Stooq (stooq.com free public daily bars)";
+            bars = cached;
+            sourceDesc = "local cached real QQQM daily closes (docs/assets/_qqqm_yfinance.json; refresh with docs/assets/qqqm_fetch_data.js)";
         }
-        catch (Exception ex)
+        else
         {
-            C.WriteLine("data source: stooq.com unreachable/blocked for this run — " + ex.Message.Split('\n')[0]);
-            bars = LoadCachedQqqm();
-            sourceDesc = "cached real QQQM daily closes (docs/assets/_qqqm_yfinance.json; refresh with docs/assets/qqqm_fetch_data.js)";
-            if (bars.Count == 0) { C.WriteLine("FATAL: no data (stooq blocked and no local cache). Run docs/assets/qqqm_fetch_data.js first."); return 1; }
+            C.WriteLine("local cache not found — trying Stooq (stooq.com free public daily bars)");
+            try
+            {
+                var ohlcvs = sp.GetRequiredService<ITraditionalFinanceSourceDataService>()
+                    .DownloadOhlcvListAsync(Symbol, t0, DateTime.UtcNow).GetAwaiter().GetResult();
+                bars = ohlcvs.OhlcvSet.OrderBy(b => b.OpenDateTime).ToList();
+                sourceDesc = "Stooq (stooq.com free public daily bars)";
+            }
+            catch (Exception ex)
+            {
+                C.WriteLine("FATAL: no data (no local cache and stooq.com unreachable: " + ex.Message.Split('\n')[0] + ")");
+                C.WriteLine("Fix: run `node docs/assets/qqqm_fetch_data.js` to create the local cache, then re-run.");
+                return 1;
+            }
         }
         C.WriteLine($"data source (resolved): {sourceDesc}");
         var closes = bars.Select(b => (double)b.Close).ToList();

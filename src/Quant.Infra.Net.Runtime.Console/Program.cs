@@ -6,6 +6,8 @@ using Quant.Infra.Net.Orchestration.Models;
 using Quant.Infra.Net.Orchestration.Pipeline;
 using Quant.Infra.Net.Runtime;
 using Quant.Infra.Net.Runtime.Models;
+using Quant.Infra.Net.Runtime.Console;
+using Quant.Infra.Net.Runtime.Console.Strategies;
 using Quant.Infra.Net.SourceData.Model;
 using Quant.Infra.Net.SourceData.Service;
 
@@ -19,6 +21,11 @@ services.AddQuantInfraNet(
     b => config.GetSection("Backtest").Bind(b),
     strategyAssemblies: typeof(Program).Assembly);
 using var sp = services.BuildServiceProvider();
+if (args.Length > 0 && args[0] == "QqqmDoc")
+{
+    return QqqmDocWalkthrough.RunAsync().GetAwaiter().GetResult();
+}
+
 if (sp.GetRequiredService<RuntimeOptions>().RunMode == RunMode.Backtest)
 {
     var t0 = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc); // 固定窗口起点（Demo 数据源确定性输出）/ fixed window origin (deterministic Demo source)
@@ -37,4 +44,6 @@ else
     Console.WriteLine($"runId={ctx.RunId} strategy={ctx.GetParameter("Strategy") ?? "-"}");
     foreach (var e in ctx.Events) { Console.WriteLine($"{e.TimestampUtc:HH:mm:ss} INF [{e.Stage}] {e.Message}"); }
     Console.WriteLine($"cycle complete: events={ctx.Events.Count} errors={ctx.Errors.Count}");
+    return 0;
 }
+return 0;

@@ -25,14 +25,18 @@ public static class DataSourceFactory
     /// <param name="kind">数据源种类 / Data source kind.</param>
     /// <param name="serviceProvider">统一容器（Csv/Yahoo 种类缺省 HistoricalDataSourceServiceCsv；Binance 种类需 IBinanceUsdFutureService）/ Unified container (Csv/Yahoo default to HistoricalDataSourceServiceCsv; Binance requires IBinanceUsdFutureService).</param>
     /// <param name="customDataSource">Custom 种类的自定义实例（其他种类忽略）/ Custom kind instance (ignored otherwise).</param>
+    /// <param name="alpacaApiKey">Alpaca 种类所需的 API Key（其他种类忽略）/ API key required by the Alpaca kind (ignored otherwise).</param>
+    /// <param name="alpacaApiSecret">Alpaca 种类所需的 API Secret（其他种类忽略）/ API secret required by the Alpaca kind (ignored otherwise).</param>
     /// <returns>对应种类的数据源实例 / The data source instance for the kind.</returns>
     /// <exception cref="ArgumentNullException">serviceProvider 为 null 时抛出 / Thrown when serviceProvider is null.</exception>
-    /// <exception cref="ArgumentException">kind 为 Custom 且 customDataSource 未提供时抛出（fail-fast，不静默回退）/ Thrown when kind is Custom without customDataSource (fail-fast, never silent fallback).</exception>
+    /// <exception cref="ArgumentException">kind 为 Custom 且 customDataSource 未提供，或 kind 为 Alpaca 且凭据缺失时抛出（fail-fast，不静默回退）/ Thrown when kind is Custom without customDataSource, or Alpaca without credentials (fail-fast, never silent fallback).</exception>
     /// <exception cref="InvalidOperationException">未知种类 / Unknown kind.</exception>
     public static ITraditionalFinanceSourceDataService Create(
         Models.DataSourceKind kind,
         IServiceProvider serviceProvider,
-        ITraditionalFinanceSourceDataService? customDataSource)
+        ITraditionalFinanceSourceDataService? customDataSource,
+        string? alpacaApiKey = null,
+        string? alpacaApiSecret = null)
     {
         if (serviceProvider is null)
         {
@@ -53,6 +57,13 @@ public static class DataSourceFactory
                 serviceProvider.GetRequiredService<IBinanceUsdFutureService>()),
 
             Models.DataSourceKind.Stooq => new StooqTraditionalFinanceSourceDataService(),
+
+            Models.DataSourceKind.Alpaca => !string.IsNullOrWhiteSpace(alpacaApiKey) && !string.IsNullOrWhiteSpace(alpacaApiSecret)
+                ? new AlpacaTraditionalFinanceSourceDataService(alpacaApiKey!, alpacaApiSecret!)
+                : throw new ArgumentException(
+                    "DataSourceKind.Alpaca requires RuntimeOptions.AlpacaApiKey/AlpacaApiSecret " +
+                    "(free tier: sign up at https://alpaca.markets — fail-fast by design, never silently falls back).",
+                    nameof(alpacaApiKey)),
 
             Models.DataSourceKind.Custom => customDataSource ?? throw new ArgumentException(
                 "DataSourceKind.Custom requires a custom ITraditionalFinanceSourceDataService instance " +

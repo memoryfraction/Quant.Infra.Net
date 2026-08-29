@@ -132,7 +132,9 @@ public static class DependencyInjection
             }
 
             using var dsProvider = dsServices.BuildServiceProvider();
-            dataSource = DataSourceFactory.Create(runtimeOptions.DataSource, dsProvider, customDataSource);
+            dataSource = DataSourceFactory.Create(
+                runtimeOptions.DataSource, dsProvider, customDataSource,
+                runtimeOptions.AlpacaApiKey, runtimeOptions.AlpacaApiSecret);
         }
 
         // —— 策略实例：临时容器解析（仅类型解析 + 实例构造，§11 护栏第 3 条；不掺入任何 RunMode 逻辑）

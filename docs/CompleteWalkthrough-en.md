@@ -308,10 +308,14 @@ In the host's `appsettings.json`:
 {
   "Runtime": {
     "RunMode": "Paper",
-    "DataSource": "Stooq"
+    "DataSource": "Alpaca",
+    "AlpacaApiKey": "<your-key>",
+    "AlpacaApiSecret": "<your-secret>"
   }
 }
 ```
+
+`Paper` mode needs a data feed that's actually available every time it runs — `Alpaca` (free IEX tier, officially maintained SDK, sign up at [alpaca.markets](https://alpaca.markets)) is the recommended choice here, not `Stooq`/`Yahoo` (unofficial, best-effort feeds better suited to one-off research runs like the Backtest example above). Missing `AlpacaApiKey`/`AlpacaApiSecret` fail fast at startup rather than silently falling back to another source.
 
 `Paper` mode drives the **same** 8-stage pipeline once per wall-clock cycle, against `PaperBinanceUsdFutureService` (pure in-memory, zero network at execution). The strategy code, risk gate, and execution model are **byte-for-byte identical** to Backtest — that is the R4 parity guarantee, pinned by `ParityRegressionTests`.
 

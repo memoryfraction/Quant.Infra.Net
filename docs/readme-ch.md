@@ -50,15 +50,16 @@ dotnet run --project src/Quant.Infra.Net.Runtime.Console -- QqqmDoc
 
 **核心思想：数据源是*可替换的接口*，不是硬依赖。** 契约是 `ITraditionalFinanceSourceDataService` / `ICryptoSourceDataService`，背后的实现是一个配置值（`Runtime:DataSource`）。某个源坏了或过期了，你**换数据源，而不是改策略**。
 
-**三层，按优先级：**
+**首推默认，其余为兜底，按优先级：**
 
-| # | 数据源 | 机制 | 为什么对".NET 封装库过期"问题有韧性 |
-|---|--------|-----------|----------------------------------------------------------|
-| 1 | **Yahoo Finance via `yfinance`**（Python） | `pythonnet` 直接运行**维护良好的 Python `yfinance`** | `yfinance` 是社区维护的流行 Python 包——Yahoo 一变更，通常几天内就修好，而不是几个月。你拿到同样的 Yahoo 数据，但走的是*活跃维护的*封装，而不是被弃用的 .NET 重写。 |
-| 2 | **Yahoo Finance Chart API**（直接 HTTP） | 仓库内的精简 C# 客户端（`query1.finance.yahoo.com/v8/finance/chart`） | 若 `yfinance` 本身坏了，退到原始公共 Chart API——一个约 50 行的端点，因为是*你的代码*而非第三方黑盒，你**几小时内就能自己修好**。 |
-| 3 | **Stooq**（免费公共日线） | 直接 HTTP 到 `stooq.com` | **完全独立**的免费行情。即使*整条 Yahoo 路径*不可用，Stooq 仍给你真实日线做回测。 |
+| # | 数据源 | 机制 | 为什么 |
+|---|--------|-----------|--------|
+| ⭐ | **Alpaca Market Data**（免费 IEX 层）—— `DataSourceKind.Alpaca` | 核心库 `AlpacaClient`，基于**官方维护**的 `Alpaca.Markets` .NET SDK | 唯一一个有真正 SDK 维护方兜底的数据源，不是逆向工程出来的端点。免费 API Key，不需要信用卡。这是"一分钟跑通"过了零网络 demo 之后应该指向的地方。 |
+| 2 | **Yahoo Finance via `yfinance`**（Python） | `pythonnet` 直接运行 Python `yfinance` | 社区维护，Yahoo 一变更修得快——但终究是个针对未公开端点的非官方封装。研究用没问题。 |
+| 3 | **Yahoo Finance Chart API**（直接 HTTP） | 仓库内的精简 C# 客户端（`query1.finance.yahoo.com/v8/finance/chart`） | 若 `yfinance` 坏了，这个约 50 行的端点是*你自己的代码*，能自己修。仍然是非官方/未公开端点。 |
+| 4 | **Stooq**（免费公共日线） | 直接 HTTP 到 `stooq.com` | 最后的独立兜底免费源；曾间歇性触发浏览器反爬验证——按 best-effort 对待，不要当作可依赖的数据源。 |
 
-> **一句话：** .NET 生态"封装库过期"的风险是真实的——而这正就是这个库把流行免费源路由到维护良好的 Python `yfinance`、并保留两条独立后备的原因。**你只写一次策略；当行情管道的实现变了，你只需换配置就能换数据源。** 免费公共数据仅供**研究/回测**——实盘请让同一接口指向券商行情（Binance/Alpaca/Schwab/IB），策略代码不变。
+> **一句话：** Yahoo/Stooq 这类".NET 生态非官方封装"的风险是真实的——所以*推荐路径*是 Alpaca 官方维护的 SDK，Yahoo/`yfinance`/Stooq 作为免注册的研究用兜底保留。**你只写一次策略；换数据源只是改配置。** 以上均仅供**研究/回测**——实盘请让同一接口指向券商行情（Binance/Alpaca/Schwab/IB），策略代码不变。
 
 ---
 

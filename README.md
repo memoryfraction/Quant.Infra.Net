@@ -78,32 +78,33 @@
 **The core idea: data source is a *swappable interface*, not a hard dependency.** `ITraditionalFinanceSourceDataService` / `ICryptoSourceDataService` are the contract; the implementation behind them is a config value (`Runtime:DataSource`). When one source breaks or gets stale, you **swap the source, not the strategy** — your signal/risk/execution code doesn't change a line.
 > **核心思想：数据源是*可替换的接口*，不是硬依赖。** 契约是 `ITraditionalFinanceSourceDataService` / `ICryptoSourceDataService`，背后的实现是一个配置值（`Runtime:DataSource`）。某个源坏了或过期了，你**换数据源，而不是改策略**——信号/风控/执行代码一行不动。
 
-**Three layers, in order of preference / 三层，按优先级：**
+**Recommended default, then fallbacks, in order of preference / 首推默认，其余为兜底，按优先级：**
 
-| # | Source | Mechanism | Why it's resilient to the "stale .NET wrapper" problem |
-|---|--------|-----------|----------------------------------------------------------|
-| 1 | **Yahoo Finance via `yfinance`** (Python) | `pythonnet` runs the **well-maintained Python `yfinance` library** directly | `yfinance` is a popular, community-maintained Python package — when Yahoo changes, it's typically patched in *days*, not months. You get the same "Yahoo data" but through the *actively-maintained* wrapper, not an abandoned .NET reimplementation. |
-| 2 | **Yahoo Finance Chart API** (direct HTTP) | Thin in-repo C# client (`query1.finance.yahoo.com/v8/finance/chart`) | If `yfinance` itself breaks, you drop to the raw public Chart API — a ~50-line endpoint you can **fix yourself in hours** because it's your code, not a third-party black box. |
-| 3 | **Stooq** (free public daily bars) | Plain HTTP to `stooq.com` | A **completely independent** free feed. If the *entire Yahoo path* is unavailable, Stooq still gives you real daily closes for backtesting. |
+| # | Source | Mechanism | Why |
+|---|--------|-----------|-----|
+| ⭐ | **Alpaca Market Data** (free IEX tier) — `DataSourceKind.Alpaca` | Core library's `AlpacaClient`, built on the **officially maintained** `Alpaca.Markets` .NET SDK (already a core dependency) | This is the one with an actual maintainer on the hook — not a reverse-engineered endpoint. Free API key, no credit card, real historical bars. **This is what "run in 60s" points at once you're past the zero-network demo.** |
+| 2 | **Yahoo Finance via `yfinance`** (Python) | `pythonnet` runs the Python `yfinance` library directly | Community-maintained, patched fast when Yahoo changes — but it's still an unofficial wrapper around an undocumented endpoint. Fine for research; don't build a business on it alone. |
+| 3 | **Yahoo Finance Chart API** (direct HTTP) | Thin in-repo C# client (`query1.finance.yahoo.com/v8/finance/chart`) | If `yfinance` breaks, this ~50-line endpoint is *your* code — you can patch it yourself in hours. Still unofficial/undocumented. |
+| 4 | **Stooq** (free public daily bars) | Plain HTTP to `stooq.com` | A last-resort, completely independent free feed for when the whole Yahoo path is down. Has intermittently required browser verification (anti-bot) — treat as best-effort, not a dependency to build on. |
 
-**Why this directly answers "the .NET Yahoo wrapper goes stale for 3–6 months" / 为什么这直接回应了"`.NET` Yahoo 封装库 3–6 个月不更新"：**
+**Why lead with Alpaca / 为什么首推 Alpaca：**
 
-1. **You're not stuck with one .NET wrapper.** The default Yahoo path goes through `yfinance` (Python, actively maintained). A stale *C#* wrapper is bypassed entirely.
-2. **You own the fallback.** Layer 2 is *your* code — when Yahoo changes the endpoint, you update 50 lines and ship. You don't wait for a third-party maintainer.
-3. **You have a non-Yahoo escape hatch.** Layer 3 (Stooq) means "Yahoo is down" ≠ "I can't backtest."
-4. **Your strategy never knows which source is active.** Backtest/Paper/Live all consume the same interface, so a source swap is a config change, not a rewrite.
+1. **It's the only layer with an actual SDK maintainer.** `Alpaca.Markets` is officially published and versioned; Yahoo/Stooq here are unofficial HTTP clients against endpoints nobody promises to keep stable.
+2. **Free tier, no scraping risk.** IEX-fed historical bars via a real API key — not a JS anti-bot page, not an undocumented chart endpoint.
+3. **The rest are still there as fallbacks.** Yahoo/Stooq stay in the codebase for zero-signup research use — just not the thing to depend on for anything beyond that.
+4. **Your strategy never knows which source is active.** Backtest/Paper/Live all consume the same interface, so a source swap is one config value, not a rewrite.
 
-> **Bottom line / 结论:** the .NET-ecosystem "stale wrapper" risk is real — and it's precisely why this library routes the popular free source through the well-maintained Python `yfinance` and keeps two independent fallbacks. **You write the strategy once; you swap data sources by config when the market's plumbing changes.**
-> **一句话：** .NET 生态"封装库过期"的风险是真实的——而这正就是这个库把流行免费源路由到维护良好的 Python `yfinance`、并保留两条独立后备的原因。**你只写一次策略；当行情管道的实现变了，你只需换配置就能换数据源。**
+> **Bottom line / 结论:** the .NET-ecosystem "unofficial wrapper" risk is real for Yahoo/Stooq — which is why the *recommended* path is Alpaca's officially maintained SDK, with Yahoo/`yfinance`/Stooq kept as free, zero-signup fallbacks for research. **You write the strategy once; you swap data sources by config.**
+> **一句话：** .NET 生态里 Yahoo/Stooq 这类"非官方封装"的风险是真实的——所以*推荐路径*是 Alpaca 官方维护的 SDK，Yahoo/`yfinance`/Stooq 作为免注册的研究用兜底保留。**你只写一次策略；换数据源只是改配置。**
 
 
 
 **Going beyond free feeds / 免费源之外：**
-The same `ITraditionalFinanceSourceDataService` interface accepts **any** data provider - including professional paid feeds (Alpaca, Polygon, IEX, Databento, your broker feed, a local CSV file, etc.). The pattern is the same: implement the interface, register it in DI, set `Runtime:DataSource` to your provider. Your strategy, pipeline, and backtest runner code do not change.
-> 免费源之外：同一个 `ITraditionalFinanceSourceDataService` 接口可以对接**任意**数据供应商——包括付费专业数据源（Alpaca、Polygon、IEX、Databento、券商自有行情、本地 CSV 文件等）。做法完全一致：实现接口 → 注册到 DI → 配置 `Runtime:DataSource`。策略、管线、回测运行器代码零改动。
+The same `ITraditionalFinanceSourceDataService` interface accepts **any** data provider - including other professional paid feeds (Polygon, IEX direct, Databento, your broker feed, a local CSV file, etc.). The pattern is the same: implement the interface, register it in DI, set `Runtime:DataSource` to your provider. Your strategy, pipeline, and backtest runner code do not change.
+> 免费源之外：同一个 `ITraditionalFinanceSourceDataService` 接口可以对接**任意**数据供应商——包括其他付费专业数据源（Polygon、IEX 直连、Databento、券商自有行情、本地 CSV 文件等）。做法完全一致：实现接口 → 注册到 DI → 配置 `Runtime:DataSource`。策略、管线、回测运行器代码零改动。
 
-> ⚠️ **Free public data, research use only / 免费公共数据，仅供研究** — Yahoo/`yfinance` and Stooq are free public feeds with **no SLA** and are intended for **research/backtesting**, not production order flow. For live trading, point the same interface at your broker's data feed (Binance Futures, Alpaca, Schwab, IB) — the strategy code is unchanged.
-> ⚠️ **免费公共数据，仅供研究** —— Yahoo/`yfinance` 与 Stooq 是**无 SLA** 的免费公共行情，仅供**研究/回测**，不应用于生产下单。实盘请让同一接口指向你的券商行情（Binance Futures、Alpaca、Schwab、IB）——策略代码不变。
+> ⚠️ **Free public data, research use only / 免费公共数据，仅供研究** — Alpaca's free IEX tier, Yahoo/`yfinance`, and Stooq are all **no-SLA** feeds intended for **research/backtesting**, not production order flow. For live trading, point the same interface at your broker's data feed (Binance Futures, Alpaca, Schwab, IB) — the strategy code is unchanged.
+> ⚠️ **免费公共数据，仅供研究** —— Alpaca 免费 IEX 层、Yahoo/`yfinance`、Stooq 均为**无 SLA** 的免费行情，仅供**研究/回测**，不应用于生产下单。实盘请让同一接口指向你的券商行情（Binance Futures、Alpaca、Schwab、IB）——策略代码不变。
 
 ---
 
@@ -142,6 +143,20 @@ MaxDrawdown=-18.97%  WinRate=53.3%  ProfitFactor=1.16  Commission=0 USD
 | `Paper` | full event trail on a simulated broker, zero real orders | live feed | in-memory Paper broker |
 | `Testnet` | real broker API, testnet sandbox | live feed | Binance testnet |
 | `Live` | real broker API, production | live feed | Binance live |
+
+**Want live-fetched data instead of the cached snapshot?** Set `DataSource: Alpaca` and provide a free API key (sign up at [alpaca.markets](https://alpaca.markets), no credit card, IEX tier is free):
+
+```json
+{
+  "Runtime": {
+    "RunMode": "Backtest",
+    "DataSource": "Alpaca",
+    "AlpacaApiKey": "<your-key>",
+    "AlpacaApiSecret": "<your-secret>"
+  }
+}
+```
+> **想要实时拉取数据而不是用缓存快照？** 把 `DataSource` 设为 `Alpaca`，提供一个免费 API Key（在 [alpaca.markets](https://alpaca.markets) 注册，无需信用卡，IEX 层免费）。缺 Key/Secret 时会 fail-fast 报错，不会静默退回其他数据源。
 
 ---
 

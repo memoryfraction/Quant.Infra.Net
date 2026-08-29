@@ -37,5 +37,13 @@ public enum DataSourceKind
     /// stooq.com 免费日线 CSV，无需 API Key，社区数据源非 SLA 保证 /
     /// Free daily CSV from stooq.com, no API key, community data source with no SLA guarantee.
     /// </summary>
-    Stooq = 5
+    Stooq = 5,
+
+    /// <summary>
+    /// Alpaca Market Data（核心库 AlpacaClient，IEX 免费层，官方维护 SDK，需要免费 API Key）/
+    /// Alpaca Market Data (core library's AlpacaClient, free IEX tier, officially maintained SDK,
+    /// requires a free API key). Recommended default for real (non-demo) historical data — see
+    /// RuntimeOptions.AlpacaApiKey / AlpacaApiSecret.
+    /// </summary>
+    Alpaca = 6
 }

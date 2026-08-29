@@ -95,6 +95,25 @@ public class DataSourceFactoryTests
         => Assert.ThrowsException<ArgumentNullException>(
             () => DataSourceFactory.Create(DataSourceKind.Demo, null!, null));
 
+    /// <summary>Alpaca Kind 缺凭据 → ArgumentException（fail-fast，绝不静默回退到其他数据源）/ Alpaca kind without credentials throws ArgumentException (fail-fast, never silently falls back).</summary>
+    [TestMethod]
+    public void Alpaca_Kind_Without_Credentials_Throws_ArgumentException()
+        => Assert.ThrowsException<ArgumentException>(
+            () => DataSourceFactory.Create(DataSourceKind.Alpaca, Provider(), null, null, null));
+
+    /// <summary>Alpaca Kind 缺 Secret（Key 有值）同样 fail-fast / Alpaca kind with only the key set (no secret) still fails fast.</summary>
+    [TestMethod]
+    public void Alpaca_Kind_Missing_Secret_Throws_ArgumentException()
+        => Assert.ThrowsException<ArgumentException>(
+            () => DataSourceFactory.Create(DataSourceKind.Alpaca, Provider(), null, "fake-key", null));
+
+    /// <summary>Alpaca Kind 提供凭据 → 解析到 AlpacaTraditionalFinanceSourceDataService（构造不发网络请求）/ Alpaca kind with credentials resolves to AlpacaTraditionalFinanceSourceDataService (construction makes no network call).</summary>
+    [TestMethod]
+    public void Alpaca_Kind_With_Credentials_Resolves_To_Expected_Type()
+        => Assert.IsInstanceOfType(
+            DataSourceFactory.Create(DataSourceKind.Alpaca, Provider(), null, "fake-key", "fake-secret"),
+            typeof(AlpacaTraditionalFinanceSourceDataService));
+
     private static IServiceProvider Provider()
         => new ServiceCollection()
             .AddSingleton<IHistoricalDataSourceService, HistoricalDataSourceServiceCsv>()

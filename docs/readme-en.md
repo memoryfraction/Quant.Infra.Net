@@ -50,15 +50,16 @@ Full walkthrough with the verbatim console output, both charts, and how to modif
 
 **The core idea: data source is a *swappable interface*, not a hard dependency.** `ITraditionalFinanceSourceDataService` / `ICryptoSourceDataService` are the contract; the implementation is a config value (`Runtime:DataSource`). When one source breaks or goes stale, you **swap the source, not the strategy**.
 
-**Three layers, in order of preference:**
+**Recommended default, then fallbacks, in order of preference:**
 
-| # | Source | Mechanism | Why it's resilient to the "stale .NET wrapper" problem |
-|---|--------|-----------|----------------------------------------------------------|
-| 1 | **Yahoo Finance via `yfinance`** (Python) | `pythonnet` runs the **well-maintained Python `yfinance`** directly | `yfinance` is a popular, community-maintained Python package — when Yahoo changes, it's typically patched in *days*, not months. You get the same Yahoo data through the *actively-maintained* wrapper, not an abandoned .NET reimplementation. |
-| 2 | **Yahoo Finance Chart API** (direct HTTP) | Thin in-repo C# client (`query1.finance.yahoo.com/v8/finance/chart`) | If `yfinance` breaks, drop to the raw public Chart API — a ~50-line endpoint you can **fix yourself in hours** because it's your code, not a third-party black box. |
-| 3 | **Stooq** (free public daily bars) | Plain HTTP to `stooq.com` | A **completely independent** free feed. If the *entire Yahoo path* is unavailable, Stooq still gives you real daily closes for backtesting. |
+| # | Source | Mechanism | Why |
+|---|--------|-----------|-----|
+| ⭐ | **Alpaca Market Data** (free IEX tier) — `DataSourceKind.Alpaca` | Core library's `AlpacaClient`, on the **officially maintained** `Alpaca.Markets` .NET SDK | The only layer with an actual SDK maintainer, not a reverse-engineered endpoint. Free API key, no credit card. This is what "run in 60s" points at once you're past the zero-network demo. |
+| 2 | **Yahoo Finance via `yfinance`** (Python) | `pythonnet` runs the Python `yfinance` directly | Community-maintained, patched fast — but still an unofficial wrapper. Fine for research. |
+| 3 | **Yahoo Finance Chart API** (direct HTTP) | Thin in-repo C# client (`query1.finance.yahoo.com/v8/finance/chart`) | If `yfinance` breaks, this ~50-line endpoint is *your* code to patch. Still unofficial/undocumented. |
+| 4 | **Stooq** (free public daily bars) | Plain HTTP to `stooq.com` | Last-resort independent free feed; has intermittently required browser verification (anti-bot) — best-effort, not a dependency to build on. |
 
-> **Bottom line:** the .NET-ecosystem "stale wrapper" risk is real — and it's precisely why this library routes the popular free source through the well-maintained Python `yfinance` and keeps two independent fallbacks. **You write the strategy once; you swap data sources by config when the market's plumbing changes.** Free public data is for **research/backtesting only** — for live trading, point the same interface at your broker's feed (Binance/Alpaca/Schwab/IB); the strategy code is unchanged.
+> **Bottom line:** the .NET-ecosystem "unofficial wrapper" risk is real for Yahoo/Stooq — which is why the *recommended* path is Alpaca's officially maintained SDK, with Yahoo/`yfinance`/Stooq kept as free, zero-signup fallbacks for research. **You write the strategy once; you swap data sources by config.** All of these are for **research/backtesting only** — for live trading, point the same interface at your broker's feed (Binance/Alpaca/Schwab/IB); the strategy code is unchanged.
 
 ---
 

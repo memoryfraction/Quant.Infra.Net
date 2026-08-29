@@ -308,10 +308,14 @@ done.
 {
   "Runtime": {
     "RunMode": "Paper",
-    "DataSource": "Stooq"
+    "DataSource": "Alpaca",
+    "AlpacaApiKey": "<your-key>",
+    "AlpacaApiSecret": "<your-secret>"
   }
 }
 ```
+
+`Paper` 模式需要一个每次跑都真正可用的数据源——推荐用 `Alpaca`（免费 IEX 层，官方维护 SDK，在 [alpaca.markets](https://alpaca.markets) 免费注册），而不是 `Stooq`/`Yahoo`（非官方、best-effort 的行情，更适合上面 Backtest 示例那种一次性研究场景）。缺 `AlpacaApiKey`/`AlpacaApiSecret` 会在启动时 fail-fast 报错，不会静默退回其他数据源。
 
 `Paper` 模式驱动**同一条** 8 阶段管道，每个墙钟周期跑一次，对接 `PaperBinanceUsdFutureService`（纯内存，执行时零网络）。策略代码、风控闸门、执行模型与 Backtest **逐字节一致**——这是 R4 parity 保证，由 `ParityRegressionTests` 钉住。
 

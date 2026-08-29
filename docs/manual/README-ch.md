@@ -27,7 +27,7 @@
 | 指南 | 英文 | 中文 | 状态 |
 |------|------|------|------|
 | **配置参考** — `RuntimeOptions` / `OrchestrationOptions` / `BacktestOptions` 全字段、全部枚举 | [configuration-reference-en.md](configuration-reference-en.md) | [configuration-reference-ch.md](configuration-reference-ch.md) | ✅ 就绪 |
-| **从零写一个策略** — `Strategy` 基类、描述符、`customStages`、内置策略示例 | [writing-a-strategy-en.md](writing-a-strategy-en.md) | [writing-a-strategy-ch.md](writing-a-strategy-ch.md) | *（M2）* |
+| **从零写一个策略** — `Strategy` 基类、描述符、`customStages`、内置策略示例 | [writing-a-strategy-en.md](writing-a-strategy-en.md) | [writing-a-strategy-ch.md](writing-a-strategy-ch.md) | ✅ 就绪 |
 | **风控** — 三条默认规则、`IRiskManager`、kill-switch、自定义风控 | [risk-management-en.md](risk-management-en.md) | [risk-management-ch.md](risk-management-ch.md) | *（M3）* |
 | **自定义数据源** — `ITraditionalFinanceSourceDataService`、`DataSourceKind.Custom`、何时该新增枚举值 | [custom-data-source-en.md](custom-data-source-en.md) | [custom-data-source-ch.md](custom-data-source-ch.md) | *（M4）* |
 | **自定义券商执行** — `IExecutionBroker`、适配器、`customBroker` 入口 | [custom-broker-en.md](custom-broker-en.md) | [custom-broker-ch.md](custom-broker-ch.md) | *（M5）* |

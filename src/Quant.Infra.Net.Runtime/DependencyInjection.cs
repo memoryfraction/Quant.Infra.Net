@@ -51,6 +51,7 @@ public static class DependencyInjection
     /// <param name="customDataSource">Custom 数据种类的自定义实例（其他种类忽略；Custom 种类缺省 → fail-fast）/ Custom data source instance (ignored otherwise; Custom kind without it → fail-fast).</param>
     /// <param name="strategyAssemblies">要扫描发现 IStrategyDescriptor 的程序集（通常是 typeof(Program).Assembly）/ Assemblies to scan for IStrategyDescriptors (typically typeof(Program).Assembly).</param>
     /// <param name="customStages">自定义阶段序列（提供后完全替代默认八阶段；缺省 null 保持默认八阶段）/ Custom stage sequence (replaces the default eight stages; default null keeps the eight).</param>
+    /// <param name="customBroker">券商无关的执行接口（提供后替代默认 Binance 适配器；接入 IB/Schwab 等其他券商的唯一入口；Backtest 模式下忽略，始终用 BacktestBrokerService）/ Broker-agnostic execution surface (overrides the default Binance adapter; the entry point for wiring IB/Schwab/other brokers; ignored in Backtest mode, which always uses BacktestBrokerService).</param>
     /// <returns>服务集合（链式）/ The same service collection for chaining.</returns>
     /// <exception cref="ArgumentNullException">services / configureRuntime 为 null / Thrown when services / configureRuntime is null.</exception>
     /// <exception cref="NotSupportedException">RunMode 为 Testnet/Live 但未配置 BinanceApiKey/BinanceApiSecret（fail-fast，绝不静默退化为 Paper）/ Thrown when Testnet/Live is selected without credentials (fail-fast; never silently degrades to Paper).</exception>
@@ -63,6 +64,7 @@ public static class DependencyInjection
         Action<BacktestOptions>? configureBacktest = null,
         ITraditionalFinanceSourceDataService? customDataSource = null,
         IEnumerable<IPipelineStage>? customStages = null,
+        IExecutionBroker? customBroker = null,
         params Assembly[] strategyAssemblies)
     {
         if (services == null)
@@ -155,6 +157,19 @@ public static class DependencyInjection
         services.TryAddSingleton<IAnalysisService, AnalysisService>();
         services.TryAddSingleton<ITraditionalFinanceSourceDataService>(_ => dataSource);
         services.TryAddSingleton<ISignalGenerator>(_ => generator);
+
+        // —— 券商执行接口：customBroker 优先（Backtest 除外——见下方 D1 说明）；否则让编排层/回测层的默认
+        //    BinanceUsdFutureExecutionBrokerAdapter（TryAdd）接管，行为不变。这是把 IB/Schwab 等其他券商接入
+        //    RunMode 统一开关的唯一入口——实现 IExecutionBroker，传给 customBroker，其余代码零改动。
+        // —— Broker execution surface: customBroker wins when supplied (except in Backtest — see the D1 note
+        //    below); otherwise the orchestration/backtest layer's default BinanceUsdFutureExecutionBrokerAdapter
+        //    (TryAdd) takes over, behavior unchanged. This is the single entry point for wiring another broker
+        //    (IB, Schwab, ...) into the unified RunMode switch: implement IExecutionBroker, pass it as
+        //    customBroker — nothing else in the pipeline changes.
+        if (customBroker != null && runtimeOptions.RunMode != RunMode.Backtest)
+        {
+            services.AddSingleton(customBroker);
+        }
 
         return runtimeOptions.RunMode switch
         {

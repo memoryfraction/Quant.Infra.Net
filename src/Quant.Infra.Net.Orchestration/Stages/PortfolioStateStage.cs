@@ -1,4 +1,3 @@
-using Quant.Infra.Net.Broker.Interfaces;
 using Quant.Infra.Net.Orchestration.Abstractions;
 using Quant.Infra.Net.Orchestration.Models;
 using Quant.Infra.Net.Orchestration.Pipeline;
@@ -12,17 +11,17 @@ namespace Quant.Infra.Net.Orchestration.Stages;
 /// </summary>
 public sealed class PortfolioStateStage : IPipelineStage
 {
-    private readonly IBinanceUsdFutureService _broker;
+    private readonly IExecutionBroker _broker;
     private readonly IPortfolioStateStore _store;
 
     /// <summary>
     /// 创建组合状态阶段。
     /// Creates the portfolio-state stage.
     /// </summary>
-    /// <param name="broker">券商服务（不得为 null）/ Broker service (must not be null).</param>
+    /// <param name="broker">券商无关的执行接口（不得为 null）/ Broker-agnostic execution surface (must not be null).</param>
     /// <param name="store">状态存储（不得为 null）/ State store (must not be null).</param>
     /// <exception cref="ArgumentNullException">入参为 null 时抛出 / Thrown when null.</exception>
-    public PortfolioStateStage(IBinanceUsdFutureService broker, IPortfolioStateStore store)
+    public PortfolioStateStage(IExecutionBroker broker, IPortfolioStateStore store)
     {
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));
         _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -43,9 +42,9 @@ public sealed class PortfolioStateStage : IPipelineStage
 
         StageMarketData.ApplyPaperMarks(context, _broker);
 
-        var positions = (await _broker.GetHoldingPositionAsync().ConfigureAwait(false)).ToList();
-        var equity = await _broker.GetusdFutureAccountBalanceAsync().ConfigureAwait(false);
-        var unrealizedRate = await _broker.GetusdFutureUnrealizedProfitRateAsync().ConfigureAwait(false);
+        var positions = (await _broker.GetPositionsAsync().ConfigureAwait(false)).ToList();
+        var equity = await _broker.GetAccountEquityUsdAsync().ConfigureAwait(false);
+        var unrealizedRate = await _broker.GetUnrealizedProfitRateAsync().ConfigureAwait(false);
 
         var actualWeights = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         foreach (var position in positions)

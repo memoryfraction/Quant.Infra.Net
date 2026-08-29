@@ -102,6 +102,16 @@ public static class DependencyInjection
             return new PaperBinanceUsdFutureService(options);
         });
 
+        // —— 券商无关执行接口：默认包装上面解析出的 IBinanceUsdFutureService（TryAdd 语义 ⇒
+        //    调用方可预注册其他 IExecutionBroker 实现——比如 Runtime 层的 IB 适配器，或 Pro 仓库的
+        //    Schwab 适配器——本注册自动让位，管道行为不变。
+        // —— Broker-agnostic execution surface: default wraps the IBinanceUsdFutureService resolved above
+        //    (TryAdd semantics ⇒ callers may pre-register another IExecutionBroker — e.g. the Runtime layer's
+        //    IB adapter, or a Pro-repo Schwab adapter — and this default steps aside; pipeline behavior for
+        //    Binance is unchanged).
+        services.TryAddSingleton<IExecutionBroker>(sp =>
+            new BinanceUsdFutureExecutionBrokerAdapter(sp.GetRequiredService<IBinanceUsdFutureService>()));
+
         // —— 信号生成器：自定义优先，否则按 Parameters["Strategy"] 解析（未知值 fail-fast）
         //    Signal generator: custom wins; otherwise resolved by Parameters["Strategy"] (unknown value fails fast)
         services.TryAddSingleton<ISignalGenerator>(sp =>
@@ -131,7 +141,7 @@ public static class DependencyInjection
         // —— 执行模型 / Execution model
         services.TryAddSingleton<IExecutionModel>(sp => customExecutionModel
             ?? new RebalanceExecutionModel(
-                sp.GetRequiredService<IBinanceUsdFutureService>(),
+                sp.GetRequiredService<IExecutionBroker>(),
                 sp.GetRequiredService<IOptions<OrchestrationOptions>>().Value));
 
         // —— 策略管道：自定义阶段或默认八阶段（固定顺序，Notification 必须最后）
@@ -156,9 +166,9 @@ public static class DependencyInjection
                     sp.GetRequiredService<IPortfolioStateStore>()),
                 new ExecutionStage(
                     sp.GetRequiredService<IExecutionModel>(),
-                    sp.GetRequiredService<IBinanceUsdFutureService>()),
+                    sp.GetRequiredService<IExecutionBroker>()),
                 new PortfolioStateStage(
-                    sp.GetRequiredService<IBinanceUsdFutureService>(),
+                    sp.GetRequiredService<IExecutionBroker>(),
                     sp.GetRequiredService<IPortfolioStateStore>()),
                 new NotificationStage(sp.GetRequiredService<INotificationHub>())
             }));

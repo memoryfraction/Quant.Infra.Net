@@ -211,8 +211,11 @@ public static class QqqmDocWalkthrough
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null)
         {
-            if (File.Exists(Path.Combine(dir.FullName, "Quant.Infra.Net.sln")) ||
-                Directory.Exists(Path.Combine(dir.FullName, ".github")))
+            // The true repo root is the directory that contains BOTH docs/ and src/.
+            // (src/ itself holds Quant.Infra.Net.sln, so matching on the .sln alone
+            // would stop one level too early and break the docs/assets/... cache path.)
+            if (Directory.Exists(Path.Combine(dir.FullName, "docs")) &&
+                Directory.Exists(Path.Combine(dir.FullName, "src")))
             {
                 return dir.FullName;
             }

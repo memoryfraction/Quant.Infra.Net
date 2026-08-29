@@ -28,7 +28,7 @@ kinds, and this folder is exactly one of them:
 
 | Guide | English | 中文 | Status |
 |-------|---------|------|--------|
-| **Configuration reference** — every field of `RuntimeOptions` / `OrchestrationOptions` / `BacktestOptions`, all enums | [configuration-reference-en.md](configuration-reference-en.md) | [configuration-reference-ch.md](configuration-reference-ch.md) | *coming (M1)* |
+| **Configuration reference** — every field of `RuntimeOptions` / `OrchestrationOptions` / `BacktestOptions`, all enums | [configuration-reference-en.md](configuration-reference-en.md) | [configuration-reference-ch.md](configuration-reference-ch.md) | ✅ ready |
 | **Writing a strategy from scratch** — `Strategy` base, descriptors, `customStages`, built-in examples | [writing-a-strategy-en.md](writing-a-strategy-en.md) | [writing-a-strategy-ch.md](writing-a-strategy-ch.md) | *coming (M2)* |
 | **Risk management** — the three default rules, `IRiskManager`, kill-switch, custom risk | [risk-management-en.md](risk-management-en.md) | [risk-management-ch.md](risk-management-ch.md) | *coming (M3)* |
 | **Custom data source** — `ITraditionalFinanceSourceDataService`, `DataSourceKind.Custom`, `Custom` vs new enum values | [custom-data-source-en.md](custom-data-source-en.md) | [custom-data-source-ch.md](custom-data-source-ch.md) | *coming (M4)* |

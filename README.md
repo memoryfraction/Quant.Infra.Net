@@ -37,14 +37,14 @@
 | Final equity | **$14,556** | **+45.6%** over ~5.7 years |
 | CAGR | **8.0%** | annualized return (1,241 tradable bars, post-warmup) |
 | Max Drawdown | **−18.82%** | worst peak-to-trough (2022 bear market) |
-| Sharpe \| **0.67** | lower than buy-and-hold (0.72) — a drawdown-reducing DCA, not a return-maximizer |
+| Sharpe \| **0.67** | buy-and-hold over the same window: 0.72 — a *different* risk/return trade-off, not better or worse |
 | Win Rate | **52.9%** | |
 | Trades | **684** | daily rebalancing decisions |
 | Bars | **1,241** | (after 200-bar warmup) |
 
-> **Read the Sharpe honestly:** this is a *contrarian DCA* — it deliberately holds more when price is below the SMA200 and trims when above. It is not designed to be a high-Sharpe momentum strategy; it is a **risk-managed, buy-the-dip accumulation** strategy. It trades ~half the buy-and-hold return (Sharpe 0.66 vs 0.72) for a max drawdown that is half as deep (−18.8% vs −35%). The honest profile: lower return, lower Sharpe, far less peak-to-trough pain.
+> **This is a comparison, not a verdict.** Reverse-DCA deliberately holds more when price is below the SMA200 and trims when above. Versus buy-and-hold over the same window (Sharpe 0.72, max drawdown ≈ −35%), it shows a *different* profile (Sharpe 0.66, max drawdown ≈ −18.8%). **Neither is objectively better or worse** — the right choice depends on *your* risk tolerance, your income, and your stage of life. Quant.Infra.Net is a tool: it produces the numbers, **you** make the decision.
 >
-> **如何理解 Sharpe：** 这是一个*逆向定投*——价格低于 SMA200 时加仓、高于时减仓。它不是高 Sharpe 动量策略，而是**带风控的"越跌越买"积累策略**。它用约一半的买入持有收益（Sharpe 0.66 vs 0.72）换来了减半的最大回撤（−18.8% vs −35%）。真实画像：收益更低、夏普更低、但峰谷之间的痛小得多。
+> **这是一次对比，而不是好坏判断。** 逆向定会在价格低于 SMA200 时加仓、高于时减仓。相比同一窗口的买入持有（Sharpe 0.72、最大回撤 ≈ −35%），它呈现的是**另一种**风险/收益画像（Sharpe 0.66、最大回撤 ≈ −18.8%）。**两者并不存在客观的好坏**——哪个更适合，取决于*你*的风险偏好、你的收入、以及你人生的阶段。Quant.Infra.Net 只是工具：它给出数字，**判断由你来做**。
 
 **The strategy, in one sentence / 一句话策略:** every day, compute `SMA200` of QQQM closes — if price is *below* the MA (cheap), increase target weight; if *above* (expensive), reduce it. The full 30-line strategy code is in [Section 4](#-3-modify-the-strategy--改一下策略验证自己的想法).
 > 每天算 QQQM 收盘价的 `SMA200`——价格在均线**下方**（便宜）时加仓，在**上方**（贵）时减仓。完整的 30 行策略代码见[第 4 节](#-3-modify-the-strategy--改一下策略验证自己的想法)。

@@ -26,11 +26,11 @@
 | Final equity | **$14,435** | **+44.4%** over ~5.7 years |
 | CAGR | **7.73%** | annualized return |
 | Max Drawdown | **−18.97%** | worst peak-to-trough (2022 bear market) |
-| Sharpe | **0.04** | low — this is a "buy the dip" DCA, not a high-alpha system |
+| Sharpe | **0.04** | a different risk/return trade-off than buy-and-hold — not better or worse; depends on your risk tolerance, income, and stage of life |
 | Win Rate | **53.3%** | |
 | Trades | **673** | daily rebalancing decisions |
 
-> **Read the Sharpe honestly:** this is a *contrarian DCA* — it deliberately holds more when price is below the SMA200 and trims when above. A low Sharpe with a −19% max drawdown and a +44% total return over a window that *included the 2022 bear market* is the honest, expected profile.
+> **This is a comparison, not a verdict.** Reverse-DCA holds more when price is below the SMA200 and trims when above. Over the same window it shows a *different* risk/return profile (shallower drawdown, lower return). **Neither is objectively better or worse** — the right fit depends on *your* risk tolerance, your income, and your stage of life. Quant.Infra.Net is a tool: it produces the numbers, **you** make the decision.
 
 **Run it yourself (offline, no API keys):**
 

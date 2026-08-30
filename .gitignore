@@ -413,3 +413,6 @@ tools
 /nupkg-local/
 /docs/articles
 /docs/assets/_deprecated_python_charts
+
+# transient browser/snapshot artifacts
+.playwright-cli/

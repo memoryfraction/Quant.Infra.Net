@@ -1,0 +1,19 @@
+# Keep dependencies up to date so the Security & Quality tab stays clean.
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "security"
+
+  # GitHub Actions used by .github/workflows (checkout, setup-dotnet, etc.)
+  - package-ecosystem: "github-actions"
+    directory: "/.github"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "github-actions"

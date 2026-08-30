@@ -401,6 +401,27 @@ This project follows the coding standards defined in [CodeStandard.md](CodeStand
 
 [MIT](LICENSE) — © 2024–2026 Rong (Rex) Fan
 
+
+
+## 💼 Business Inquiries
+
+Using Quant.Infra.Net in a commercial product or team?
+
+| Option | What you get | Start |
+|---|---|---|
+| **1 · Consulting** | 30–60 min: architecture / data / execution / backtest design | [Book 30 min](https://calendly.com/rex-fan18/30min) |
+| **2 · Integration** | Wire it into your broker/data stack; backtest → paper → live | [Email](mailto:rex.fan18@gmail.com) |
+| **3 · Bespoke** | Custom modules scoped to your product needs | [Email](mailto:rex.fan18@gmail.com) |
+| **4 · E-book** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | Xiaohongshu (小红书): **memoryfraction / Rex Fan** |
+
+- **Email**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
+- **Book a call**: [https://calendly.com/rex-fan18/30min](https://calendly.com/rex-fan18/30min)
+
+> The open source release is MIT-licensed and free for commercial use. Paid services cover consulting, onboarding, and bespoke development.
+
+> Full service & pricing details: [Commercial.md](Commercial.md).
+---
+
 > **Disclaimer**: See [DISCLAIMER.md](Disclaimer.md) for full disclaimer and limitation of liability / 详见 [免责声明](Disclaimer.md) 了解完整免责条款与责任限制。
 
 

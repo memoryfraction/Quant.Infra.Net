@@ -48,6 +48,8 @@
     </style>
 </head>
 <body>
+    <a href="#for-teams" class="btn" style="position:fixed; top:12px; right:12px; z-index:9999; background:#e0a020; color:#1a1a1a; text-decoration:none; padding:0.5rem 0.9rem; border-radius:8px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,0.2);" data-lang="en">💼 For Teams</a>
+    <a href="#for-teams" class="btn" style="position:fixed; top:12px; right:12px; z-index:9999; background:#e0a020; color:#1a1a1a; text-decoration:none; padding:0.5rem 0.9rem; border-radius:8px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,0.2);" data-lang="zh">💼 商务合作</a>
 
 <!-- Language Toggle -->
 <div class="lang-toggle">
@@ -182,6 +184,47 @@
                 <span data-lang="en">Sources: GitHub Traffic (graphs/traffic), GitHub README NuGet badge, Substack publisher stats. Snapshot refreshed daily at 11:30 UTC via GitHub Actions (data/_traffic.json).</span>
                 <span data-lang="zh">数据来源：GitHub Traffic（graphs/traffic）、GitHub README 的 NuGet 徽章、Substack 站长统计。快照由 GitHub Actions 每天 11:30 UTC 自动刷新（data/_traffic.json）。</span>
             </p>
+        </div>
+    </section>
+
+    <!-- Business inquiries + e-book (commercial entry point) -->
+    <section id="for-teams">
+        <div class="card">
+            <h2 data-lang="en">💼 For Teams / 商务合作</h2>
+            <h2 data-lang="zh">💼 团队版 / 商务合作</h2>
+            <p data-lang="en">Using Quant.Infra.Net in a product or team? I offer paid consulting, integration/onboarding, and bespoke development on top of the MIT-licensed core. Or read the companion e-book <strong>《区块链量化投资实战 / Blockchain Quant Trading in Practice》</strong>.</p>
+            <p data-lang="zh">在团队或商业产品中使用 Quant.Infra.Net？我提供付费咨询、集成落地、定制开发（基于 MIT 开源核心）。也可阅读配套电子书 <strong>《区块链量化投资实战 / Blockchain Quant Trading in Practice》</strong>。</p>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:0.75rem; margin:1rem 0;">
+                <div style="padding:1rem; border:1px solid rgba(128,128,127,0.3); border-radius:8px;">
+                    <h3 style="margin:0 0 0.5rem;" data-lang="en">1 · Consulting 咨询</h3>
+                    <h3 style="margin:0 0 0.5rem;" data-lang="zh">1 · 付费咨询</h3>
+                    <p style="font-size:0.9rem; margin:0 0 0.75rem;" data-lang="en">Architecture review, data/execution strategy, backtest design — 30–60 min.</p>
+                    <p style="font-size:0.9rem; margin:0 0 0.75rem;" data-lang="zh">架构评审、数据/执行策略、回测设计 — 30–60 分钟。</p>
+                    <a class="btn" href="https://calendly.com/rex-fan18/30min" target="_blank"><span data-lang="en">Book 30 min</span><span data-lang="zh">预约 30 分钟</span></a>
+                </div>
+                <div style="padding:1rem; border:1px solid rgba(128,128,127,0.3); border-radius:8px;">
+                    <h3 style="margin:0 0 0.5rem;" data-lang="en">2 · Integration 集成落地</h3>
+                    <h3 style="margin:0 0 0.5rem;" data-lang="zh">2 · 集成落地</h3>
+                    <p style="font-size:0.9rem; margin:0 0 0.75rem;" data-lang="en">Wire Quant.Infra.Net into your broker/data stack; go from backtest to live.</p>
+                    <p style="font-size:0.9rem; margin:0 0 0.75rem;" data-lang="zh">把 Quant.Infra.Net 接入你的券商/数据栈；从回测到实盘。</p>
+                    <a class="btn" href="mailto:rex.fan18@gmail.com"><span data-lang="en">Discuss 详谈</span><span data-lang="zh">邮件详谈</span></a>
+                </div>
+                <div style="padding:1rem; border:1px solid rgba(128,128,127,0.3); border-radius:8px;">
+                    <h3 style="margin:0 0 0.5rem;" data-lang="en">3 · E-book 电子书</h3>
+                    <h3 style="margin:0 0 0.5rem;" data-lang="zh">3 · 电子书</h3>
+                    <p style="font-size:0.9rem; margin:0 0 0.75rem;" data-lang="en">《区块链量化投资实战》— end-to-end: data → backtest → execution, on real .NET code.</p>
+                    <p style="font-size:0.9rem; margin:0 0 0.75rem;" data-lang="zh">《区块链量化投资实战》——数据 → 回测 → 执行，配套真实 .NET 代码。</p>
+                    <a class="btn" href="#" id="ebook-cta"><span data-lang="en">Get the e-book</span><span data-lang="zh">获取电子书</span></a>
+                </div>
+            </div>
+
+            <p style="font-size:0.85rem; margin:0.5rem 0 0.75rem;">
+              <span data-lang="en">Prefer email? <a href="mailto:rex.fan18@gmail.com">rex.fan18@gmail.com</a> · Open source is MIT-licensed and free for commercial use.</span>
+              <span data-lang="zh">邮箱联系？<a href="mailto:rex.fan18@gmail.com">rex.fan18@gmail.com</a> · 开源版本 MIT 许可，可免费商用。</span>
+            </p>
+            <p id="ebook-note" style="font-size:0.8rem; opacity:0.7; margin:0.25rem 0 0;" data-lang="en">E-book ships via Xiaohongshu (小红书) — search the author "memoryfraction / Rex Fan".</p>
+            <p id="ebook-note" style="font-size:0.8rem; opacity:0.7; margin:0.25rem 0 0;" data-lang="zh">电子书通过小红书上架——搜索作者「memoryfraction / Rex Fan」。</p>
         </div>
     </section>
 
@@ -541,6 +584,29 @@ function switchLang(lang) {
     });
   }
 })();
+</script>
+
+
+<script>
+// Business/e-book CTA behavior
+document.addEventListener('DOMContentLoaded', function(){
+  // Ensure a default language is active so [data-lang] content shows.
+  if (!document.querySelector('[data-lang].active')) {
+    (document.querySelectorAll('.active') ? null : document.querySelectorAll('[data-lang="en"]')).forEach ? null : null;
+    document.querySelectorAll('[data-lang="en"]').forEach(function(el){ el.classList.add('active'); });
+  }
+  var eb = document.getElementById('ebook-cta');
+  if (eb) {
+    eb.addEventListener('click', function(e){
+      e.preventDefault();
+      var msg = "《区块链量化投资实战 / Blockchain Quant Trading in Practice》\n" +
+        "通过小红书（Xiaohongshu / RED）上架。\n" +
+        "Search on Xiaohongshu: author \"memoryfraction / Rex Fan\".\n\n" +
+        "Or email: rex.fan18@gmail.com";
+      if (confirm(msg + "\n\n(Open email?)")) { window.location.href = "mailto:rex.fan18@gmail.com?subject=E-book%20%E5%8C%BA%E5%9D%97%E9%93%BE%E9%87%8F%E5%8C%96%E6%8A%95%E8%B5%84%E5%AE%9E%E6%88%98"; }
+    });
+  }
+});
 </script>
 
 </body>

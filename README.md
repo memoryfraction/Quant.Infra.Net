@@ -340,5 +340,27 @@ Set them in `appsettings.json` under `Orchestration:Parameters`, or pass them in
 
 ---
 
+
+
+## 💼 Business Inquiries / 商务合作
+
+Using Quant.Infra.Net in a commercial product or team? / 想在商业产品或团队中使用 Quant.Infra.Net？
+
+| Option | What you get | Start |
+|---|---|---|
+| **1 · Consulting 咨询** | 30–60 min: architecture / data / execution / backtest design | [Book 30 min](https://calendly.com/rex-fan18/30min) |
+| **2 · Integration 集成落地** | Wire it into your broker/data stack; backtest → paper → live | [Email](mailto:rex.fan18@gmail.com) |
+| **3 · Bespoke 定制开发** | Custom modules scoped to your product needs | [Email](mailto:rex.fan18@gmail.com) |
+| **4 · E-book 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | 小红书: **memoryfraction / Rex Fan** |
+
+- **Email / 邮箱**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
+- **Book a call / 预约会议**: [https://calendly.com/rex-fan18/30min](https://calendly.com/rex-fan18/30min)
+
+> Open source is MIT-licensed and free for commercial use. Paid services cover consulting, onboarding, and bespoke development.
+> 开源版本遵循 MIT 许可，可免费商用；付费服务覆盖咨询、落地接入与定制开发。
+
+> 完整服务与报价说明见 [docs/Commercial.md](docs/Commercial.md)。
+---
+
 > **Disclaimer**: See [DISCLAIMER](docs/Disclaimer.md) for full disclaimer and limitation of liability. Backtest performance is not indicative of future results. **Not investment advice.** / 详见免责声明了解完整免责条款与责任限制。回测表现不代表未来收益。**非投资建议。**
 

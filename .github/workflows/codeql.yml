@@ -1,0 +1,47 @@
+# Code scanning (CodeQL) for C#/.NET — feeds GitHub's "Security and quality" tab.
+# Follows the official .NET CodeQL setup (init -> dotnet build -> analyze in log mode).
+name: CodeQL
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '30 1 * * 0'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze (C#)
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          build-mode: log
+
+      # Emit a build so CodeQL (log mode) can extract C# dataflow from compiler output.
+      - name: Build (for CodeQL extraction)
+        run: dotnet build src/Quant.Infra.Net.sln -c Release
+        continue-on-error: true
+
+      - name: Run CodeQL analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:csharp'

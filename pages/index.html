@@ -215,7 +215,7 @@
                     <h3 style="margin:0 0 0.5rem;" data-lang="zh">3 · 电子书</h3>
                     <p style="font-size:0.9rem; margin:0 0 0.75rem;" data-lang="en">《区块链量化投资实战》— end-to-end: data → backtest → execution, on real .NET code.</p>
                     <p style="font-size:0.9rem; margin:0 0 0.75rem;" data-lang="zh">《区块链量化投资实战》——数据 → 回测 → 执行，配套真实 .NET 代码。</p>
-                    <a class="btn" href="#" id="ebook-cta"><span data-lang="en">Get the e-book</span><span data-lang="zh">获取电子书</span></a>
+                    <a class="btn" href="https://www.amazon.com/dp/B0D7W89ZQD" id="ebook-cta" target="_blank" rel="noopener" style="text-decoration:none;"><span data-lang="en">Get the e-book</span><span data-lang="zh">获取电子书</span></a>
                 </div>
             </div>
 
@@ -223,8 +223,8 @@
               <span data-lang="en">Prefer email? <a href="mailto:rex.fan18@gmail.com">rex.fan18@gmail.com</a> · Open source is MIT-licensed and free for commercial use.</span>
               <span data-lang="zh">邮箱联系？<a href="mailto:rex.fan18@gmail.com">rex.fan18@gmail.com</a> · 开源版本 MIT 许可，可免费商用。</span>
             </p>
-            <p id="ebook-note" style="font-size:0.8rem; opacity:0.7; margin:0.25rem 0 0;" data-lang="en">E-book ships via Xiaohongshu (小红书) — search the author "memoryfraction / Rex Fan".</p>
-            <p id="ebook-note" style="font-size:0.8rem; opacity:0.7; margin:0.25rem 0 0;" data-lang="zh">电子书通过小红书上架——搜索作者「memoryfraction / Rex Fan」。</p>
+            <p id="ebook-note" style="font-size:0.8rem; opacity:0.7; margin:0.25rem 0 0;" data-lang="en">Available on <a href="https://www.amazon.com/dp/B0D7W89ZQD" target="_blank" rel="noopener">Amazon</a>. Also discover via Xiaohongshu (小红书) — author "memoryfraction / Rex Fan".</p>
+            <p id="ebook-note" style="font-size:0.8rem; opacity:0.7; margin:0.25rem 0 0;" data-lang="zh">电子书已在 <a href="https://www.amazon.com/dp/B0D7W89ZQD" target="_blank" rel="noopener">Amazon</a> 上架；小红书（RED）搜索作者「memoryfraction / Rex Fan」可发现。</p>
         </div>
     </section>
 
@@ -595,17 +595,7 @@ document.addEventListener('DOMContentLoaded', function(){
     (document.querySelectorAll('.active') ? null : document.querySelectorAll('[data-lang="en"]')).forEach ? null : null;
     document.querySelectorAll('[data-lang="en"]').forEach(function(el){ el.classList.add('active'); });
   }
-  var eb = document.getElementById('ebook-cta');
-  if (eb) {
-    eb.addEventListener('click', function(e){
-      e.preventDefault();
-      var msg = "《区块链量化投资实战 / Blockchain Quant Trading in Practice》\n" +
-        "通过小红书（Xiaohongshu / RED）上架。\n" +
-        "Search on Xiaohongshu: author \"memoryfraction / Rex Fan\".\n\n" +
-        "Or email: rex.fan18@gmail.com";
-      if (confirm(msg + "\n\n(Open email?)")) { window.location.href = "mailto:rex.fan18@gmail.com?subject=E-book%20%E5%8C%BA%E5%9D%97%E9%93%BE%E9%87%8F%E5%8C%96%E6%8A%95%E8%B5%84%E5%AE%9E%E6%88%98"; }
-    });
-  }
+  // e-book CTA links directly to Amazon.
 });
 </script>
 

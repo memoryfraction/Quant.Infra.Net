@@ -403,12 +403,21 @@ await dingTalk.SendStrategyAlert("AAPL/MSFT 价差均值回归触发");
 
 ## 商务合作
 
-对 Quant.Infra.Net 的商业使用感兴趣？需要付费咨询、集成支持或定制开发？
+想在商业产品或团队中使用 Quant.Infra.Net？
+
+| 选项 | 内容 | 入口 |
+|---|---|---|
+| **1 · 付费咨询** | 30–60 分钟：架构 / 数据 / 执行 / 回测设计 | [预约 30 分钟](https://calendly.com/rex-fan18/30min) |
+| **2 · 集成落地** | 接入你的券商/数据栈；回测 → 模拟 → 实盘 | [邮箱](mailto:rex.fan18@gmail.com) |
+| **3 · 定制开发** | 按产品需求定制模块 | [邮箱](mailto:rex.fan18@gmail.com) |
+| **4 · 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) |
 
 - **邮箱**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
-- **GitHub**: [memoryfraction](https://github.com/memoryfraction)
+- **预约会议**: [https://calendly.com/rex-fan18/30min](https://calendly.com/rex-fan18/30min)
 
-> 开源版本遵循 MIT 许可，可免费用于商业用途；付费服务覆盖咨询、接入支持与定制开发。
+> 开源版本遵循 MIT 许可，可免费商用；付费服务覆盖咨询、落地接入与定制开发。
+
+> 完整服务与报价说明见 [Commercial.md](Commercial.md)。
 
 ---
 

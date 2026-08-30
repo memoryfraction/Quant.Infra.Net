@@ -13,7 +13,7 @@ Open source is **MIT-licensed and free for commercial use**. Beyond the free cor
 | **1 · Consulting 付费咨询** | 30–60 min: architecture review, data/execution strategy, backtest design | Teams evaluating the stack, choosing a broker/data path | [Book 30 min](https://calendly.com/rex-fan18/30min) |
 | **2 · Integration 集成落地** | Wire Quant.Infra.Net into your broker/data stack; backtest → paper → live; runbooks & handover | Companies shipping a trading product on .NET | [Email](mailto:rex.fan18@gmail.com) |
 | **3 · Bespoke 定制开发** | Custom modules (alerting rules, multi-strategy analytics, audit logging, white-label reporting) scoped to your needs | Product teams needing differentiators | [Email](mailto:rex.fan18@gmail.com) |
-| **4 · E-book 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》— end-to-end on real .NET code | Self-serve learning | 小红书 (Xiaohongshu): author **memoryfraction / Rex Fan** |
+| **4 · E-book 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》— end-to-end on real .NET code | Self-serve learning | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) |
 
 ---
 

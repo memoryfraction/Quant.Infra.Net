@@ -410,7 +410,7 @@ await dingTalk.SendStrategyAlert("AAPL/MSFT 价差均值回归触发");
 | **1 · 付费咨询** | 30–60 分钟：架构 / 数据 / 执行 / 回测设计 | [预约 30 分钟](https://calendly.com/rex-fan18/30min) |
 | **2 · 集成落地** | 接入你的券商/数据栈；回测 → 模拟 → 实盘 | [邮箱](mailto:rex.fan18@gmail.com) |
 | **3 · 定制开发** | 按产品需求定制模块 | [邮箱](mailto:rex.fan18@gmail.com) |
-| **4 · 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) |
+| **4 · 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) · [小红书笔记](https://www.xiaohongshu.com/discovery/item/6a9366b4000000002102fbff) |
 
 - **邮箱**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
 - **预约会议**: [https://calendly.com/rex-fan18/30min](https://calendly.com/rex-fan18/30min)

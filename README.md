@@ -351,7 +351,7 @@ Using Quant.Infra.Net in a commercial product or team? / 想在商业产品或�
 | **1 · Consulting 咨询** | 30–60 min: architecture / data / execution / backtest design | [Book 30 min](https://calendly.com/rex-fan18/30min) |
 | **2 · Integration 集成落地** | Wire it into your broker/data stack; backtest → paper → live | [Email](mailto:rex.fan18@gmail.com) |
 | **3 · Bespoke 定制开发** | Custom modules scoped to your product needs | [Email](mailto:rex.fan18@gmail.com) |
-| **4 · E-book 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | 小红书: **memoryfraction / Rex Fan** |
+| **4 · E-book 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) |
 
 - **Email / 邮箱**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
 - **Book a call / 预约会议**: [https://calendly.com/rex-fan18/30min](https://calendly.com/rex-fan18/30min)

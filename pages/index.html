@@ -493,7 +493,7 @@ function switchLang(lang) {
     updatedAt: "2026-08-30 12:22 UTC"
   };
   if (window.fetch) {
-    fetch("../data/_traffic.json", {cache:"no-store"}).then(function(r){ if(r.ok){ return r.json(); } return null; })
+    fetch("data/_traffic.json", {cache:"no-store"}).then(function(r){ if(r.ok){ return r.json(); } return null; })
       .then(function(d){
         if (d && d.updatedAt) raw.updatedAt = String(d.updatedAt).slice(0,16).replace("T"," ") + " UTC";
       }).catch(function(){}).finally(function(){ render(); });

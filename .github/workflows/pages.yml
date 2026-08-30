@@ -24,6 +24,12 @@ jobs:
       - uses: actions/configure-pages@v5
         with:
           enablement: true
+      # Publish the fresher traffic snapshot next to the site so pages can fetch it
+      - name: Publish traffic snapshot into pages/
+        run: |
+          mkdir -p pages/data
+          cp data/_traffic.json pages/data/_traffic.json
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./pages

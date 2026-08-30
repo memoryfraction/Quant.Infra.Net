@@ -401,4 +401,16 @@ await dingTalk.SendStrategyAlert("AAPL/MSFT 价差均值回归触发");
 
 [MIT](LICENSE) — © 2024–2026 Rong (Rex) Fan
 
+## 商务合作
+
+对 Quant.Infra.Net 的商业使用感兴趣？需要付费咨询、集成支持或定制开发？
+
+- **邮箱**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
+- **GitHub**: [memoryfraction](https://github.com/memoryfraction)
+
+> 开源版本遵循 MIT 许可，可免费用于商业用途；付费服务覆盖咨询、接入支持与定制开发。
+
+---
+
+
 > **免责声明**：详见 [免责声明](docs/DISCLAIMER.md) 了解完整免责条款与责任限制。

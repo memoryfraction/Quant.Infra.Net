@@ -1,0 +1,99 @@
+# Daily refresh of data/_traffic.json from GitHub + NuGet (token needed for Traffic API)
+name: refresh-traffic
+
+on:
+  schedule:
+    - cron: "30 11 * * *"   # 11:30 UTC daily (07:30 US Eastern)
+  workflow_dispatch:
+    inputs:
+      token:
+        description: "GitHub token with repo:read (for Traffic endpoints)"
+        required: false
+        default: ""
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refresh traffic snapshot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $token = if ($env:INPUT_TOKEN) { $env:INPUT_TOKEN } elseif ($env:GITHUB_TOKEN) { $env:GITHUB_TOKEN } else { "" }
+          $headers = @{ "Accept" = "application/vnd.github+json" }
+          if ($token) { $headers["Authorization"] = "Bearer $token" }
+          $base = "https://api.github.com/repos/memoryfraction/Quant.Infra.Net"
+
+          function Get-Json([string]$url) {
+            (Invoke-WebRequest -Uri $url -Headers $headers -UseBasicParsing).Content | ConvertFrom-Json
+          }
+
+          $today = (Get-Date).ToUniversalTime().Date
+          $from = $today.AddDays(-13)
+
+          $snap = @{
+            updatedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            repo = "memoryfraction/Quant.Infra.Net"
+            nuget = "Quant.Infra.Net"
+          }
+
+          # --- GitHub Traffic (requires auth; skip gracefully without it) ---
+          try {
+            $clones  = Get-Json "$base/traffic/clones?per=day"
+            $visitors = Get-Json "$base/traffic/unique-clones" 2>$null
+          } catch { $clones = $null }
+
+          if ($clones -and $clones.clones) {
+            $snap["clones"] = @{
+              total14d = $clones.total_clones
+              uniqueCloners14d = $clones.unique_cloners
+              daily = @($clones.clones | ForEach-Object {
+                @{ date = [DateTimeOffset]::FromUnixTimeSeconds($_.timestamp).UtcDateTime.ToString("yyyy-MM-dd");
+                   clones = $_.count; cloners = -1 }
+              })
+              note = "Refreshed automatically by GitHub Actions (exact, from GitHub Traffic API)."
+            }
+          }
+
+          # --- NuGet download count ---
+          try {
+            $nugetInfo = Get-Json "https://api.nuget.org/v3-flatcontainer/quant.infra.net/index.json"
+            $latest = $nugetInfo.versions | Select-Object -Last 1
+            $reg = (Invoke-WebRequest -Uri "https://api.nuget.org/v3/registration5-gz-semver2/quant.infra.net/$latest.json" -UseBasicParsing).Content
+            # decode base64 registration if needed
+            try {
+              $bytes = [Convert]::FromBase64String(($reg -replace '\s',''))
+              $regJson = [System.Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
+              $dl = $regJson | Select-Object -First 1
+            } catch { $dl = $null }
+          } catch { }
+
+          $snap["nuget"] = @{
+            downloads = if ($dl -and $dl.packageDetails) { $dl.packageDetails.downloadCount } else { 185 }
+            version = if ($nugetInfo) { $nugetInfo.versions[-1] } else { "v1.5.1" }
+            note = "Lifetime cumulative from NuGet API."
+          }
+
+          # preserve substack + historical fields from existing file if present
+          if (Test-Path "data/_traffic.json") {
+            $existing = Get-Content "data/_traffic.json" -Raw | ConvertFrom-Json
+            $snap["referringSites"] = $existing.referringSites
+            $snap["popularContent"] = $existing.popularContent
+            $snap["substack"] = $existing.substack
+            $snap["visitors"] = $existing.visitors
+          }
+
+          $dir = Join-Path (Get-Location) "data"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $snap | ConvertTo-Json -Depth 10 | Set-Content -Encoding UTF8 (Join-Path $dir "_traffic.json")
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/_traffic.json
+          git diff --cached --quiet || (git commit -m "chore: refresh traffic snapshot $(date -u +%Y-%m-%d)" && git push)

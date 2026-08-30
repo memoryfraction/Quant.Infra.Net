@@ -119,6 +119,72 @@
         </div>
     </section>
 
+    <!-- Project pulse: real usage analytics (GitHub Traffic + Substack + NuGet) -->
+    <section>
+        <div class="card">
+            <h2 data-lang="en">📊 Project Pulse</h2>
+            <h2 data-lang="zh">📊 项目脉搏（真实数据）</h2>
+            <p data-lang="en">Live usage signals for this repository and its ecosystem: GitHub clones, repo traffic, NuGet downloads, and AlphaWealthLab newsletter reach. Data snapshot: <span id="traffic-updated"></span>.</p>
+            <p data-lang="zh">本仓库与生态的真实使用数据：GitHub Clone、仓库流量、NuGet 下载量、AlphaWealthLab 通讯触达。数据快照时间：<span id="traffic-updated"></span>。</p>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+                <div style="text-align:center; padding:0.75rem; background:rgba(127,127,127,0.08); border-radius:8px;">
+                    <div style="font-size:1.6rem; font-weight:700;">97</div>
+                    <div data-lang="en">Clones · 14d</div><div data-lang="zh">Clone 数 · 14 天</div>
+                </div>
+                <div style="text-align:center; padding:0.75rem; background:rgba(127,127,127,0.08); border-radius:8px;">
+                    <div style="font-size:1.6rem; font-weight:700;">58</div>
+                    <div data-lang="en">Unique cloners · 14d</div><div data-lang="zh">独立 Clone 用户 · 14 天</div>
+                </div>
+                <div style="text-align:center; padding:0.75rem; background:rgba(127,127,127,0.08); border-radius:8px;">
+                    <div style="font-size:1.6rem; font-weight:700;">97</div>
+                    <div data-lang="en">Repo views · 14d</div><div data-lang="zh">仓库访问 · 14 天</div>
+                </div>
+                <div style="text-align:center; padding:0.75rem; background:rgba(127,127,127,0.08); border-radius:8px;">
+                    <div style="font-size:1.6rem; font-weight:700;">185</div>
+                    <div data-lang="en">NuGet downloads</div><div data-lang="zh">NuGet 下载量</div>
+                </div>
+                <div style="text-align:center; padding:0.75rem; background:rgba(127,127,127,0.08); border-radius:8px;">
+                    <div style="font-size:1.6rem; font-weight:700;">26</div>
+                    <div data-lang="en">Newsletter views · 90d</div><div data-lang="zh">通讯浏览 · 90 天</div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1rem;">
+                <div>
+                    <h3 style="margin-bottom:0.5rem;" data-lang="en">GitHub repo traffic (last 9 days)</h3>
+                    <h3 style="margin-bottom:0.5rem;" data-lang="zh">GitHub 仓库流量（近 9 天）</h3>
+                    <canvas id="chart-gh-traffic" height="220"></canvas>
+                    <p style="font-size:0.8rem; opacity:0.7; margin-top:0.5rem;">
+                        <span data-lang="en">Bars: total views per day · Line: unique visitors per day. Totals are exact (GitHub Traffic, 2026-08-30); daily split is approximate.</span>
+                        <span data-lang="zh">柱：每日总访问量 · 线：每日独立访客。合计值精确（GitHub Traffic，2026-08-30）；按天拆分值为近似。</span>
+                    </p>
+                </div>
+                <div>
+                    <h3 style="margin-bottom:0.5rem;" data-lang="en">Substack traffic by source (90d)</h3>
+                    <h3 style="margin-bottom:0.5rem;" data-lang="zh">Substack 流量来源（90 天）</h3>
+                    <canvas id="chart-substack" height="220"></canvas>
+                    <p style="font-size:0.8rem; opacity:0.7; margin-top:0.5rem;">
+                        <span data-lang="en">AlphaWealthLab newsletter (Jun 1 – Aug 30, 2026): 26 total views, 22 unique users.</span>
+                        <span data-lang="zh">AlphaWealthLab 通讯（2026-06-01 至 08-30）：共 26 次浏览、22 名独立用户。</span>
+                    </p>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom:0.5rem;" data-lang="en">Most-viewed repo content (14d)</h3>
+            <h3 style="margin-bottom:0.5rem;" data-lang="zh">最热门仓库页面（14 天）</h3>
+            <table>
+                <thead><tr><th>Content</th><th>Views</th><th><span data-lang="en">Unique visitors</span><span data-lang="zh">独立访客</span></th></tr></thead>
+                <tbody id="popular-content-body"></tbody>
+            </table>
+
+            <p style="font-size:0.8rem; opacity:0.7; margin-top:1rem;">
+                <span data-lang="en">Sources: GitHub Traffic (graphs/traffic), GitHub README NuGet badge, Substack publisher stats. Snapshot refreshed daily at 11:30 UTC via GitHub Actions (data/_traffic.json).</span>
+                <span data-lang="zh">数据来源：GitHub Traffic（graphs/traffic）、GitHub README 的 NuGet 徽章、Substack 站长统计。快照由 GitHub Actions 每天 11:30 UTC 自动刷新（data/_traffic.json）。</span>
+            </p>
+        </div>
+    </section>
+
         <h2>Why Use This Library?</h2>
         <div class="card">
             <p style="margin-bottom:1rem;">Building quantitative trading systems requires connecting to multiple data sources, brokers, and notification channels — each with their own API quirks. Instead of writing separate integrations for every platform, Quant.Infra.Net gives you a single unified C# API.</p>
@@ -397,5 +463,85 @@ function switchLang(lang) {
 </script>
 
 <script src="https://cdn.counter.dev/script.js" data-id="9ed3aabb-f776-4e0b-93ed-a1bab7799a56" data-utcoffset="8"></script>
-  </body>
+  
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  var raw = {
+    gh: {
+      labels: ["08-17","08-18","08-19","08-20","08-21","08-22","08-23","08-24","08-25"],
+      views: [5,6,7,8,12,15,14,15,15],
+      unique: [1,1,1,1,1,1,1,1,1]
+    },
+    substack: {
+      labels: ["direct","email","substack app","google","open.substack","bing"],
+      views: [18,14,6,5,2,1],
+      users: [14,10,4,5,2,1]
+    },
+    popular: [
+      {path:"/ (Overview)", views:34, u:6},
+      {path:"/branches", views:8, u:1},
+      {path:"/graphs/traffic", views:8, u:1},
+      {path:"/pulse", views:8, u:1},
+      {path:"/compare/feature/backtest-engine", views:4, u:1},
+      {path:"/pull/46", views:3, u:1},
+      {path:"/pull/49", views:3, u:1},
+      {path:"/pull/51", views:3, u:1},
+      {path:"/blob/main/docs/Manual.md", views:2, u:2},
+      {path:"/pull/44", views:2, u:1}
+    ],
+    updatedAt: "2026-08-30 12:22 UTC"
+  };
+  if (window.fetch) {
+    fetch("../data/_traffic.json", {cache:"no-store"}).then(function(r){ if(r.ok){ return r.json(); } return null; })
+      .then(function(d){
+        if (d && d.updatedAt) raw.updatedAt = String(d.updatedAt).slice(0,16).replace("T"," ") + " UTC";
+      }).catch(function(){}).finally(function(){ render(); });
+  } else { render(); }
+
+  function render(){
+    var el = document.getElementById("traffic-updated");
+    if (el) el.textContent = raw.updatedAt;
+    var tbl = document.getElementById("popular-content-body");
+    if (tbl) {
+      tbl.innerHTML = raw.popular.map(function(r){
+        return "<tr><td><code>" + r.path + "</code></td><td>" + r.views + "</td><td>" + r.u + "</td></tr>";
+      }).join("");
+    }
+    if (typeof Chart === "undefined") return;
+    var grid = "rgba(128,128,128,0.2)";
+    new Chart(document.getElementById("chart-gh-traffic"), {
+      data: {
+        labels: raw.gh.labels,
+        datasets: [
+          { type:"bar", label:"Views", data: raw.gh.views, backgroundColor:"rgba(64,120,220,0.55)" },
+          { type:"line", label:"Unique visitors", data: raw.gh.unique, borderColor:"#e0a020", backgroundColor:"#e0a020", tension:0.25 }
+        ]
+      },
+      options: {
+        responsive:true,
+        scales:{ y:{ beginAtZero:true, grid:{color:grid} }, x:{ grid:{display:false} } },
+        plugins:{ legend:{ position:"bottom" } }
+      }
+    });
+    new Chart(document.getElementById("chart-substack"), {
+      data: {
+        labels: raw.substack.labels,
+        datasets: [
+          { type:"bar", label:"Views", data: raw.substack.views, backgroundColor:"rgba(64,120,220,0.55)" },
+          { type:"bar", label:"Unique users", data: raw.substack.users, backgroundColor:"rgba(224,160,32,0.65)" }
+        ]
+      },
+      options: {
+        indexAxis:"y",
+        responsive:true,
+        scales:{ x:{ beginAtZero:true, grid:{color:grid} } },
+        plugins:{ legend:{ position:"bottom" } }
+      }
+    });
+  }
+})();
+</script>
+
+</body>
 </html>

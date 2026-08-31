@@ -416,3 +416,6 @@ tools
 
 # transient browser/snapshot artifacts
 .playwright-cli/
+
+# AI-generated image outputs (non-essential, local only)
+/output/imagegen/xhs/

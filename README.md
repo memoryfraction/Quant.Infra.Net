@@ -17,7 +17,22 @@
 
 ---
 
-## 📈 See it work first / 先看一个真实结果
+## 🎯 Does this sound familiar? / 这些痛点，是不是也卡住过你？
+
+Building a trading system in .NET is usually not one problem — it's **four problems glued together with duct tape**:
+
+1. **Data keeps breaking.** Free feeds go stale, endpoints 404, the anti-bot wall moves — and your *strategy* is the one that suffers. 数据源三天两头抽风：免费接口过期、端点 404、反爬墙一挪，最后背锅的却是你的策略。
+2. **You can't trust your backtester.** Look-ahead bias, peeking at future bars, a hand-rolled loop that "works" in testing but behaves differently in live. 回测引擎不靠谱：前视偏差、偷看未来 bar、自己搓的循环"测试能过"却和实盘表现两码事。
+3. **Backtest and live are two codebases.** One works, the other doesn't, and you never know which to believe. 回测与实盘是两套代码：一个能跑、一个跑不了，你永远不知道信哪个。
+4. **Every broker is a rewrite.** Want to switch from Binance to Schwab or IB? Re-learn the SDK, re-test everything, re-shape your strategy. 每换一个券商就要重改：币安换嘉信/盈透，重学 SDK、重跑测试、重调策略。
+
+**Quant.Infra.Net gives you the answer to all four — one framework, one interface.** You write the strategy *once*; data sources, brokers, and backtest↔live all swap by **config, not code**.
+**Quant.Infra.Net 一次性解决这四个问题——一套框架、一个接口。** 你只写一次策略；数据源、券商、回测↔实盘都靠**改配置**切换，而不是改代码。
+
+---
+
+## ✅ The answer, in a real backtest / 解决方案：先看一个真实回测
+
 
 > **A real, reproducible backtest — not a mock.** The example below runs the bundled `QQQM reverse-MA200 DCA` strategy over **real QQQM daily closes (2020-12 → 2026-08)**, with the exact console output and equity curve from the actual run. Nothing is fabricated.
 >

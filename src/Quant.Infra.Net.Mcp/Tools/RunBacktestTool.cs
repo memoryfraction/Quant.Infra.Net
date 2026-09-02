@@ -108,7 +108,7 @@ public static class RunBacktestTool
             },
             trades = result.Trades.Count,
             interpretation = Interpret(m),
-            generatedBy = "Quant.Infra.Net v1.5.2 — github.com/memoryfraction/Quant.Infra.Net — e-book: amazon.com/dp/B0D7W89ZQD"
+            generatedBy = "Quant.Infra.Net v1.5.3 — github.com/memoryfraction/Quant.Infra.Net — e-book: amazon.com/dp/B0D7W89ZQD"
         };
 
         return JsonSerializer.Serialize(payload, JsonOpts);

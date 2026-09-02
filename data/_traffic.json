@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-30T12:22:00Z",
+  "updatedAt": "2026-09-02T02:06:00Z",
   "repo": "memoryfraction/Quant.Infra.Net",
   "nuget": "Quant.Infra.Net",
   "clones": {
@@ -63,8 +63,8 @@
     "note": "Read from Substack stats PDF (2026-08-30). Source-level view/user split is approximate."
   },
   "nuget": {
-    "downloads": 185,
-    "version": "v1.5.1",
-    "note": "Lifetime cumulative per GitHub README badge (2026-08-30)."
+    "downloads": 197,
+    "version": "1.5.1",
+    "note": "Lifetime cumulative from NuGet API (azuresearch-usnc). Refreshed 2026-09-02."
   }
 }

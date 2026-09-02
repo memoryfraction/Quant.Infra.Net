@@ -6,15 +6,15 @@
     <NoWarn>$(NoWarn);CS0579</NoWarn>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-	<Version>1.5.1</Version>   <!-- NuGet package version -->
+	<Version>1.5.2</Version>   <!-- NuGet package version -->
 
   <!-- ==================== NuGet Package Metadata ==================== -->
     <PackageId>Quant.Infra.Net</PackageId>
     <Authors>Rong (Rex) Fan</Authors>
     <Company>Rong (Rex) Fan</Company>
     <Copyright>(c) 2024-2026 Rong (Rex) Fan. All rights reserved.</Copyright>
-    <Description>A .NET quantitative trading infrastructure library that lets you fetch data, run statistical analysis, execute trades, and send notifications with minimal code. Unified broker integrations (Binance Futures, Alpaca US Equity, Charles Schwab, Interactive Brokers via InterReact), built-in statistical analysis tools, notification services, and more.</Description>
-    <PackageTags>dotnet;csharp;quantitative;trading;finance;binance;alpaca;schwab;interactive-brokers;analysis;statistics;notification</PackageTags>
+    <Description>Quant.Infra.Net is a .NET quantitative trading and backtesting framework for C# developers who want to fetch market data, backtest strategies, run statistical analysis, execute live trades, and send notifications — all with minimal code. Backtest crypto strategies (Binance Futures) and US equity strategies (Alpaca, Charles Schwab, Interactive Brokers via InterReact) from one unified IBrokerService. Ships with a strategy pipeline, a backtest engine (CAGR, Sharpe, Calmar, MaxDrawdown, WinRate, ProfitFactor), pair-trading / mean-reversion tools (OLS spread regression, spread z-score), and notification services. The .NET quant framework for C# algo-trading: build, backtest, and deploy your own crypto and equity strategies in a few lines.</Description>
+    <PackageTags>dotnet;csharp;quantitative;trading;finance;backtesting;backtest;backtest-engine;strategy;algo-trading;algorithmic-trading;crypto;cryptocurrency;binance;crypto-trading;pair-trading;mean-reversion;quant-framework;quant;execution;alpaca;schwab;interactive-brokers;ibbroker;analysis;statistics;notification;ohlc;ohlcv;signal</PackageTags>
     <PackageProjectUrl>https://memoryfraction.github.io/Quant.Infra.Net/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/memoryfraction/Quant.Infra.Net.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -23,7 +23,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <PackageReleaseNotes>v1.5.1 — Code_Standards.md compliance: added bilingual XML documentation to all public members, parameter validation audit, UTC time handling verified</PackageReleaseNotes>
+    <PackageReleaseNotes>v1.5.2 — Improved NuGet metadata: expanded keyword-rich description and tags (backtesting, crypto, pair-trading, mean-reversion, algo-trading, strategy, execution) for better NuGet search discoverability. No code change.</PackageReleaseNotes>
   <!-- =============================================================== -->
 
 	<UserSecretsId>8b042025-ae24-4b48-b89b-12b7001ca6e7</UserSecretsId>

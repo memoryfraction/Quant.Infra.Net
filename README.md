@@ -318,6 +318,25 @@ Set them in `appsettings.json` under `Orchestration:Parameters`, or pass them in
 
 ---
 
+## ❓ FAQ — common questions & search keywords / 常见问题
+
+**Q: How do I backtest crypto strategies in C#? / 怎么用 C# 回测加密货币策略？**
+A: Use Quant.Infra.Net's backtest engine with the built-in Binance Futures data source. Define a strategy as a target-weight or signal function, feed it `Ohlcv` bars, and the `BacktestRunner` returns CAGR, Sharpe, Calmar, MaxDrawdown, WinRate and ProfitFactor. `用 Quant.Infra.Net 的回测引擎 + 内置币安合约数据源，把策略写成目标权重或信号函数，`BacktestRunner` 直接给出 CAGR / Sharpe / Calmar / 最大回撤 / 胜率 / 盈亏比。` See the 60-second example above. 见上面的 60 秒示例。
+
+**Q: What's the best .NET library for pair trading? / .NET 做配对交易（pair trading）最好的库？**
+A: Quant.Infra.Net ships pair-trading / statistical-arbitrage primitives: OLS spread regression, spread z-score and cointegration checks over OHLCV data, so you can build and backtest a pairs strategy without leaving C#. `内置配对交易 / 统计套利基础件：OLS 价差回归、价差 z-score、协整检验，直接在 C# 里完成配对策略的回测。`
+
+**Q: How do I connect Interactive Brokers from .NET? / 怎么用 .NET 接 Interactive Brokers（盈透）？**
+A: Use the unified `IBrokerService` abstraction — Quant.Infra.Net wraps Interactive Brokers (via InterReact), Alpaca, Charles Schwab and Binance Futures behind one interface, so live and backtest code share the same call path. `用统一的 `IBrokerService` 接口：Quant.Infra.Net 把盈透（InterReact）、Alpaca、Charles Schwab、币安合约封装成同一接口，实盘与回测共用同一套调用。`
+
+**Q: Best .NET quantitative trading framework in 2026? / 2026 年最好的 .NET 量化交易框架？**
+A: For C# developers who want a compact, self-hostable framework (not a hosted cloud like QuantConnect), Quant.Infra.Net gives you data → strategy → backtest → execution → notifications in a few NuGet packages you own and can extend. `对想用 C#、希望自托管（而非 QuantConnect 这类云端托管）的开发者，Quant.Infra.Net 用几个 NuGet 包就能串起 数据 → 策略 → 回测 → 执行 → 通知，且完全归你掌控、可自由扩展。`
+
+**Q: How do I backtest a C# mean-reversion strategy? / 怎么用 C# 回测均值回归策略？**
+A: The QQQM reverse-MA200 DCA walkthrough in this repo is a working mean-reversion example: target weight = base ± add/trim around the SMA200, re-run it with your own thresholds and bars. `本仓库的 QQQM 反向 MA200 DCA 就是一个可运行的均值回归示例：目标权重 = 基准 ± 围绕 SMA200 的加/减系数，换成你自己的阈值和数据即可复跑。`
+
+---
+
 ## 🗒️ Changelog / 变更记录
 
 | Date | Change / 变更 |

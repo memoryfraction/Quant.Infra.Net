@@ -60,22 +60,38 @@ jobs:
           }
 
           # --- NuGet download count ---
+          # Primary: Azure Search endpoint (returns totalDownloads, same number as nuget.org website)
+          # Fallback: catalog API per-version (packageDetails.downloadCount)
+          $nugetDownloads = $null
+          $nugetVersion = $null
           try {
-            $nugetInfo = Get-Json "https://api.nuget.org/v3-flatcontainer/quant.infra.net/index.json"
-            $latest = $nugetInfo.versions | Select-Object -Last 1
-            $reg = (Invoke-WebRequest -Uri "https://api.nuget.org/v3/registration5-gz-semver2/quant.infra.net/$latest.json" -UseBasicParsing).Content
-            # decode base64 registration if needed
-            try {
-              $bytes = [Convert]::FromBase64String(($reg -replace '\s',''))
-              $regJson = [System.Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
-              $dl = $regJson | Select-Object -First 1
-            } catch { $dl = $null }
+              $search = Get-Json "https://azuresearch-usnc.nuget.org/query?q=packageid:quant.infra.net&prerelease=true"
+              if ($search.data -and $search.data[0]) {
+                  $nugetDownloads = [int]$search.data[0].totalDownloads
+                  $nugetVersion = [string]$search.data[0].version
+              }
           } catch { }
+          # Fallback: resolve latest version from flatcontainer, then pull its catalog entry
+          if (-not $nugetDownloads) {
+              try {
+                  $nugetInfo = Get-Json "https://api.nuget.org/v3-flatcontainer/quant.infra.net/index.json"
+                  if ($nugetInfo.versions) {
+                      $latest = $nugetInfo.versions | Select-Object -Last 1
+                      $nugetVersion = if ($nugetVersion) { $nugetVersion } else { $latest }
+                      $reg = (Invoke-WebRequest -Uri "https://api.nuget.org/v3/registration5-gz-semver2/quant.infra.net/index.json" -UseBasicParsing).Content | ConvertFrom-Json
+                      $dl = ($reg.items | ForEach-Object { $_.items } | ForEach-Object {
+                          if ($_.catalogEntry.packageDetails) { $_.catalogEntry }
+                      }) | Select-Object -Last 1
+                      if ($dl -and $dl.packageDetails) { $nugetDownloads = [int]$dl.packageDetails.downloadCount }
+                  }
+              } catch { }
+          }
+          if ($null -eq $nugetDownloads) { $nugetDownloads = 0 }
 
           $snap["nuget"] = @{
-            downloads = if ($dl -and $dl.packageDetails) { $dl.packageDetails.downloadCount } else { 185 }
-            version = if ($nugetInfo) { $nugetInfo.versions[-1] } else { "v1.5.1" }
-            note = "Lifetime cumulative from NuGet API."
+              downloads = $nugetDownloads
+              version = if ($nugetVersion) { $nugetVersion } else { "1.5.1" }
+              note = "Lifetime cumulative from NuGet API (azuresearch-usnc)."
           }
 
           # preserve substack + historical fields from existing file if present

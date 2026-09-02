@@ -1,6 +1,6 @@
 # Quant.Infra.Net
 
-[![Build & Test](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml/badge.svg)](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml)  [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Core](https://img.shields.io/badge/Core-1.5.1-blue.svg)](https://www.nuget.org/packages/Quant.Infra.Net)  [![Runtime](https://img.shields.io/badge/Runtime-1.6.0-green.svg)](https://www.nuget.org/packages/Quant.Infra.Net.Runtime)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Build & Test](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml/badge.svg)](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml)  [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Core](https://img.shields.io/badge/Core-1.5.3-blue.svg)](https://www.nuget.org/packages/Quant.Infra.Net)  [![Runtime](https://img.shields.io/badge/Runtime-1.6.0-green.svg)](https://www.nuget.org/packages/Quant.Infra.Net.Runtime)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > A one-stop .NET **framework** for quantitative trading: multi-source data ingestion, unified broker execution (Binance/IB/Schwab), real-time alerting, and built-in portfolio analytics — go from idea to backtest to paper to live by changing config and a strategy file, not your codebase.
 >
@@ -17,7 +17,22 @@
 
 ---
 
-## 📈 See it work first / 先看一个真实结果
+## 🎯 Does this sound familiar? / 这些痛点，是不是也卡住过你？
+
+Building a trading system in .NET is usually not one problem — it's **four problems glued together with duct tape**:
+
+1. **Data keeps breaking.** Free feeds go stale, endpoints 404, the anti-bot wall moves — and your *strategy* is the one that suffers. 数据源三天两头抽风：免费接口过期、端点 404、反爬墙一挪，最后背锅的却是你的策略。
+2. **You can't trust your backtester.** Look-ahead bias, peeking at future bars, a hand-rolled loop that "works" in testing but behaves differently in live. 回测引擎不靠谱：前视偏差、偷看未来 bar、自己搓的循环"测试能过"却和实盘表现两码事。
+3. **Backtest and live are two codebases.** One works, the other doesn't, and you never know which to believe. 回测与实盘是两套代码：一个能跑、一个跑不了，你永远不知道信哪个。
+4. **Every broker is a rewrite.** Want to switch from Binance to Schwab or IB? Re-learn the SDK, re-test everything, re-shape your strategy. 每换一个券商就要重改：币安换嘉信/盈透，重学 SDK、重跑测试、重调策略。
+
+**Quant.Infra.Net gives you the answer to all four — one framework, one interface.** You write the strategy *once*; data sources, brokers, and backtest↔live all swap by **config, not code**.
+**Quant.Infra.Net 一次性解决这四个问题——一套框架、一个接口。** 你只写一次策略；数据源、券商、回测↔实盘都靠**改配置**切换，而不是改代码。
+
+---
+
+## ✅ The answer, in a real backtest / 解决方案：先看一个真实回测
+
 
 > **A real, reproducible backtest — not a mock.** The example below runs the bundled `QQQM reverse-MA200 DCA` strategy over **real QQQM daily closes (2020-12 → 2026-08)**, with the exact console output and equity curve from the actual run. Nothing is fabricated.
 >
@@ -178,12 +193,12 @@ The project is a **family of packages**. Most users only need the top one — it
 
 | Package | Version | What it gives you |
 |---------|---------|-------------------|
-| [`Quant.Infra.Net`](https://www.nuget.org/packages/Quant.Infra.Net) | 1.5.1 | Core: data sources, broker & order execution, statistical analysis, portfolio analytics, notifications |
+| [`Quant.Infra.Net`](https://www.nuget.org/packages/Quant.Infra.Net) | 1.5.3 | Core: data sources, broker & order execution, statistical analysis, portfolio analytics, notifications |
 | [`Quant.Infra.Net.Orchestration`](https://www.nuget.org/packages/Quant.Infra.Net.Orchestration) | 1.6.0 | Event-driven strategy pipeline: signal → risk → target position → execution → portfolio state |
 | [`Quant.Infra.Net.Backtest`](https://www.nuget.org/packages/Quant.Infra.Net.Backtest) | 1.6.0 | Event-driven (bar-by-bar) backtest engine with look-ahead-bias guards |
 | [`Quant.Infra.Net.Runtime`](https://www.nuget.org/packages/Quant.Infra.Net.Runtime) | 1.6.0 | Unified `RunMode` switch (Backtest/Paper/Testnet/Live) + one-file-per-strategy plugin convention — **recommended entry point** |
 
-**Dependency chain / 依赖链:** `Runtime 1.6.0` → `Backtest 1.6.0` + `Orchestration 1.6.0` → `Quant.Infra.Net 1.5.1`
+**Dependency chain / 依赖链:** `Runtime 1.6.0` → `Backtest 1.6.0` + `Orchestration 1.6.0` → `Quant.Infra.Net 1.5.31`
 
 ```bash
 dotnet new console -n MyQuantApp && cd MyQuantApp
@@ -192,7 +207,7 @@ dotnet new console -n MyQuantApp && cd MyQuantApp
 dotnet add package Quant.Infra.Net.Runtime
 
 # ...or core only (data / broker / analysis / notifications, no strategy pipeline):
-dotnet add package Quant.Infra.Net --version 1.5.1
+dotnet add package Quant.Infra.Net --version 1.5.3
 ```
 
 > **One `dotnet add package` on `Quant.Infra.Net.Runtime` installs the whole stack.** Add `Quant.Infra.Net` alone only if you need the building blocks without the strategy pipeline.
@@ -315,6 +330,25 @@ Set them in `appsettings.json` under `Orchestration:Parameters`, or pass them in
 | [Code Standards / 代码规范](docs/CodeStandard.md) | SOLID principles, XML docs, naming conventions, checklist |
 | [**How-to Guides (docs/manual)**](docs/manual/README-en.md) / [任务导向深度指南 (中文)](docs/manual/README-ch.md) | Task-oriented deep guides for the Runtime/Orchestration/Backtest layers: full configuration reference, writing a strategy, custom risk/data source/broker, testing & deployment, FAQ |
 | [🤖 **MCP Server (AI Agent access)**](docs/manual/mcp-server-en.md) / [AI Agent 接入 (中文)](docs/manual/mcp-server-ch.md) | Drive Quant.Infra.Net from Claude Desktop / Cursor / any MCP client — `list_strategies` · `run_backtest` · `run_paper_cycle` · `fetch_ohlcv`. Natural-language prompts, SOLID data sources (Finnhub / FMP / TwelveData / LocalFile), explicit no-live-order boundary |
+
+---
+
+## ❓ FAQ — common questions & search keywords / 常见问题
+
+**Q: How do I backtest crypto strategies in C#? / 怎么用 C# 回测加密货币策略？**
+A: Use Quant.Infra.Net's backtest engine with the built-in Binance Futures data source. Define a strategy as a target-weight or signal function, feed it `Ohlcv` bars, and the `BacktestRunner` returns CAGR, Sharpe, Calmar, MaxDrawdown, WinRate and ProfitFactor. `用 Quant.Infra.Net 的回测引擎 + 内置币安合约数据源，把策略写成目标权重或信号函数，`BacktestRunner` 直接给出 CAGR / Sharpe / Calmar / 最大回撤 / 胜率 / 盈亏比。` See the 60-second example above. 见上面的 60 秒示例。
+
+**Q: What's the best .NET library for pair trading? / .NET 做配对交易（pair trading）最好的库？**
+A: Quant.Infra.Net ships pair-trading / statistical-arbitrage primitives: OLS spread regression, spread z-score and cointegration checks over OHLCV data, so you can build and backtest a pairs strategy without leaving C#. `内置配对交易 / 统计套利基础件：OLS 价差回归、价差 z-score、协整检验，直接在 C# 里完成配对策略的回测。`
+
+**Q: How do I connect Interactive Brokers from .NET? / 怎么用 .NET 接 Interactive Brokers（盈透）？**
+A: Use the unified `IBrokerService` abstraction — Quant.Infra.Net wraps Interactive Brokers (via InterReact), Alpaca, Charles Schwab and Binance Futures behind one interface, so live and backtest code share the same call path. `用统一的 `IBrokerService` 接口：Quant.Infra.Net 把盈透（InterReact）、Alpaca、Charles Schwab、币安合约封装成同一接口，实盘与回测共用同一套调用。`
+
+**Q: Best .NET quantitative trading framework in 2026? / 2026 年最好的 .NET 量化交易框架？**
+A: For C# developers who want a compact, self-hostable framework (not a hosted cloud like QuantConnect), Quant.Infra.Net gives you data → strategy → backtest → execution → notifications in a few NuGet packages you own and can extend. `对想用 C#、希望自托管（而非 QuantConnect 这类云端托管）的开发者，Quant.Infra.Net 用几个 NuGet 包就能串起 数据 → 策略 → 回测 → 执行 → 通知，且完全归你掌控、可自由扩展。`
+
+**Q: How do I backtest a C# mean-reversion strategy? / 怎么用 C# 回测均值回归策略？**
+A: The QQQM reverse-MA200 DCA walkthrough in this repo is a working mean-reversion example: target weight = base ± add/trim around the SMA200, re-run it with your own thresholds and bars. `本仓库的 QQQM 反向 MA200 DCA 就是一个可运行的均值回归示例：目标权重 = 基准 ± 围绕 SMA200 的加/减系数，换成你自己的阈值和数据即可复跑。`
 
 ---
 

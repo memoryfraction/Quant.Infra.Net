@@ -346,18 +346,19 @@ Set them in `appsettings.json` under `Orchestration:Parameters`, or pass them in
 
 Using Quant.Infra.Net in a commercial product or team? / 想在商业产品或团队中使用 Quant.Infra.Net？
 
-| Option | What you get | Start |
-|---|---|---|
-| **1 · Consulting 咨询** | 30–60 min: architecture / data / execution / backtest design | [Book 30 min](https://calendly.com/rex-fan18/30min) |
-| **2 · Integration 集成落地** | Wire it into your broker/data stack; backtest → paper → live | [Email](mailto:rex.fan18@gmail.com) |
-| **3 · Bespoke 定制开发** | Custom modules scoped to your product needs | [Email](mailto:rex.fan18@gmail.com) |
-| **4 · E-book 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) · [小红书笔记](https://www.xiaohongshu.com/discovery/item/6a9366b4000000002102fbff) |
+| Option | What you get | Starting at 起价 | Start |
+|---|---|---|---|
+| **1 · Consulting 咨询** | 30–60 min: architecture / data / execution / backtest design | **$200/hr** | [Book 30 min](https://calendly.com/rex-fan18/30min) |
+| **2 · Broker Integration 券商集成** | Wire a single broker (Schwab / Interactive Brokers / Binance / Alpaca) into your stack — auth, order routing, positions/fills sync | **$5,000** | [Book a scoping call](https://calendly.com/rex-fan18/30min) |
+| **3 · Multi-Broker Execution Layer 多券商执行层** | Unified execution across 2+ brokers; backtest → paper → live parity | **$12,000** | [Book a scoping call](https://calendly.com/rex-fan18/30min) |
+| **4 · Bespoke 定制开发** | Custom modules scoped to your product needs | **$15,000+** | [Book a scoping call](https://calendly.com/rex-fan18/30min) |
+| **5 · E-book 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | — | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) · [小红书笔记](https://www.xiaohongshu.com/discovery/item/6a9366b4000000002102fbff) |
 
 - **Email / 邮箱**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
 - **Book a call / 预约会议**: [https://calendly.com/rex-fan18/30min](https://calendly.com/rex-fan18/30min)
 
-> Open source is MIT-licensed and free for commercial use. Paid services cover consulting, onboarding, and bespoke development.
-> 开源版本遵循 MIT 许可，可免费商用；付费服务覆盖咨询、落地接入与定制开发。
+> Open source is MIT-licensed and free for commercial use. Paid services cover consulting, onboarding, and bespoke development. Prices above are starting points — final scope/quote is set on the scoping call.
+> 开源版本遵循 MIT 许可，可免费商用；付费服务覆盖咨询、落地接入与定制开发。以上为起价，最终范围与报价在通话后确认。
 
 > 完整服务与报价说明见 [docs/Commercial.md](docs/Commercial.md)。
 ---

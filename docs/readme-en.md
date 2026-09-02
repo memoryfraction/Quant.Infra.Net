@@ -407,17 +407,18 @@ This project follows the coding standards defined in [CodeStandard.md](CodeStand
 
 Using Quant.Infra.Net in a commercial product or team?
 
-| Option | What you get | Start |
-|---|---|---|
-| **1 · Consulting** | 30–60 min: architecture / data / execution / backtest design | [Book 30 min](https://calendly.com/rex-fan18/30min) |
-| **2 · Integration** | Wire it into your broker/data stack; backtest → paper → live | [Email](mailto:rex.fan18@gmail.com) |
-| **3 · Bespoke** | Custom modules scoped to your product needs | [Email](mailto:rex.fan18@gmail.com) |
-| **4 · E-book** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) · [Xiaohongshu post](https://www.xiaohongshu.com/discovery/item/6a9366b4000000002102fbff) |
+| Option | What you get | Starting at | Start |
+|---|---|---|---|
+| **1 · Consulting** | 30–60 min: architecture / data / execution / backtest design | **$200/hr** | [Book 30 min](https://calendly.com/rex-fan18/30min) |
+| **2 · Broker Integration** | Wire a single broker (Schwab / Interactive Brokers / Binance / Alpaca) into your stack — auth, order routing, positions/fills sync | **$5,000** | [Book a scoping call](https://calendly.com/rex-fan18/30min) |
+| **3 · Multi-Broker Execution Layer** | Unified execution across 2+ brokers; backtest → paper → live parity | **$12,000** | [Book a scoping call](https://calendly.com/rex-fan18/30min) |
+| **4 · Bespoke** | Custom modules scoped to your product needs | **$15,000+** | [Book a scoping call](https://calendly.com/rex-fan18/30min) |
+| **5 · E-book** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | — | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) · [Xiaohongshu post](https://www.xiaohongshu.com/discovery/item/6a9366b4000000002102fbff) |
 
 - **Email**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
 - **Book a call**: [https://calendly.com/rex-fan18/30min](https://calendly.com/rex-fan18/30min)
 
-> The open source release is MIT-licensed and free for commercial use. Paid services cover consulting, onboarding, and bespoke development.
+> The open source release is MIT-licensed and free for commercial use. Paid services cover consulting, onboarding, and bespoke development. Prices above are starting points — final scope/quote is set on the scoping call.
 
 > Full service & pricing details: [Commercial.md](Commercial.md).
 ---

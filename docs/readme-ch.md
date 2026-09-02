@@ -405,17 +405,18 @@ await dingTalk.SendStrategyAlert("AAPL/MSFT 价差均值回归触发");
 
 想在商业产品或团队中使用 Quant.Infra.Net？
 
-| 选项 | 内容 | 入口 |
-|---|---|---|
-| **1 · 付费咨询** | 30–60 分钟：架构 / 数据 / 执行 / 回测设计 | [预约 30 分钟](https://calendly.com/rex-fan18/30min) |
-| **2 · 集成落地** | 接入你的券商/数据栈；回测 → 模拟 → 实盘 | [邮箱](mailto:rex.fan18@gmail.com) |
-| **3 · 定制开发** | 按产品需求定制模块 | [邮箱](mailto:rex.fan18@gmail.com) |
-| **4 · 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) · [小红书笔记](https://www.xiaohongshu.com/discovery/item/6a9366b4000000002102fbff) |
+| 选项 | 内容 | 起价 | 入口 |
+|---|---|---|---|
+| **1 · 付费咨询** | 30–60 分钟：架构 / 数据 / 执行 / 回测设计 | **$200/小时** | [预约 30 分钟](https://calendly.com/rex-fan18/30min) |
+| **2 · 券商集成** | 接入单一券商（Schwab / Interactive Brokers / Binance / Alpaca）——鉴权、下单路由、持仓/成交同步 | **$5,000 起** | [预约通话](https://calendly.com/rex-fan18/30min) |
+| **3 · 多券商统一执行层** | 2+ 券商统一执行接口；回测 → 模拟 → 实盘一致性 | **$12,000 起** | [预约通话](https://calendly.com/rex-fan18/30min) |
+| **4 · 定制开发** | 按产品需求定制模块 | **$15,000 起** | [预约通话](https://calendly.com/rex-fan18/30min) |
+| **5 · 电子书** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | — | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) · [小红书笔记](https://www.xiaohongshu.com/discovery/item/6a9366b4000000002102fbff) |
 
 - **邮箱**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
 - **预约会议**: [https://calendly.com/rex-fan18/30min](https://calendly.com/rex-fan18/30min)
 
-> 开源版本遵循 MIT 许可，可免费商用；付费服务覆盖咨询、落地接入与定制开发。
+> 开源版本遵循 MIT 许可，可免费商用；付费服务覆盖咨询、落地接入与定制开发。以上为起价，最终范围与报价在通话后确认。
 
 > 完整服务与报价说明见 [Commercial.md](Commercial.md)。
 

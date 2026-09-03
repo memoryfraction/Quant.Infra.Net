@@ -1,70 +1,163 @@
 {
-  "updatedAt": "2026-09-02T02:06:00Z",
+  "updatedAt": "2026-09-03T23:08:54Z",
   "repo": "memoryfraction/Quant.Infra.Net",
-  "nuget": "Quant.Infra.Net",
-  "clones": {
-    "total14d": 97,
-    "uniqueCloners14d": 58,
-    "daily": [
-      { "date": "2026-08-17", "clones": 8,  "cloners": 6 },
-      { "date": "2026-08-18", "clones": 12, "cloners": 8 },
-      { "date": "2026-08-19", "clones": 15, "cloners": 9 },
-      { "date": "2026-08-20", "clones": 18, "cloners": 11 },
-      { "date": "2026-08-21", "clones": 14, "cloners": 9 },
-      { "date": "2026-08-22", "clones": 16, "cloners": 10 },
-      { "date": "2026-08-23", "clones": 14, "cloners": 8 }
-    ],
-    "note": "Totals are exact from GitHub Traffic snapshot (2026-08-30). Per-day series is approximate (estimated from chart)."
-  },
-  "visitors": {
-    "totalViews14d": 97,
-    "uniqueVisitors14d": 6,
-    "daily": [
-      { "date": "2026-08-17", "views": 5,  "uniqueVisitors": 1 },
-      { "date": "2026-08-18", "views": 6,  "uniqueVisitors": 1 },
-      { "date": "2026-08-19", "views": 7,  "uniqueVisitors": 1 },
-      { "date": "2026-08-20", "views": 8,  "uniqueVisitors": 1 },
-      { "date": "2026-08-21", "views": 12, "uniqueVisitors": 1 },
-      { "date": "2026-08-22", "views": 15, "uniqueVisitors": 1 },
-      { "date": "2026-08-23", "views": 14, "uniqueVisitors": 1 },
-      { "date": "2026-08-24", "views": 15, "uniqueVisitors": 1 },
-      { "date": "2026-08-25", "views": 15, "uniqueVisitors": 1 }
-    ],
-    "note": "Totals are exact from GitHub Traffic snapshot (2026-08-30). Per-day series is approximate (estimated from chart)."
-  },
-  "referringSites": [
-    { "site": "github.com", "views": 14, "uniqueVisitors": 5 },
-    { "site": "memoryfraction.github.io", "views": 8, "uniqueVisitors": 1 }
-  ],
-  "popularContent": [
-    { "path": "/ (Overview)", "views": 34, "uniqueVisitors": 6 },
-    { "path": "/branches", "views": 8, "uniqueVisitors": 1 },
-    { "path": "/graphs/traffic", "views": 8, "uniqueVisitors": 1 },
-    { "path": "/pulse", "views": 8, "uniqueVisitors": 1 },
-    { "path": "/compare/feature/backtest-engine", "views": 4, "uniqueVisitors": 1 },
-    { "path": "/pull/46", "views": 3, "uniqueVisitors": 1 },
-    { "path": "/pull/49", "views": 3, "uniqueVisitors": 1 },
-    { "path": "/pull/51", "views": 3, "uniqueVisitors": 1 },
-    { "path": "/blob/main/docs/Manual.md", "views": 2, "uniqueVisitors": 2 },
-    { "path": "/pull/44", "views": 2, "uniqueVisitors": 1 }
-  ],
   "substack": {
     "period": "2026-06-01/2026-08-30",
     "totalViews": 26,
     "totalUsers": 22,
     "sources": [
-      { "source": "direct", "views": 18, "users": 14 },
-      { "source": "email opens", "views": 14, "users": 10 },
-      { "source": "substack app", "views": 6, "users": 4 },
-      { "source": "google.com (search)", "views": 5, "users": 5 },
-      { "source": "open.substack.com", "views": 2, "users": 2 },
-      { "source": "bing.com (search)", "views": 1, "users": 1 }
+      {
+        "source": "direct",
+        "views": 18,
+        "users": 14
+      },
+      {
+        "source": "email opens",
+        "views": 14,
+        "users": 10
+      },
+      {
+        "source": "substack app",
+        "views": 6,
+        "users": 4
+      },
+      {
+        "source": "google.com (search)",
+        "views": 5,
+        "users": 5
+      },
+      {
+        "source": "open.substack.com",
+        "views": 2,
+        "users": 2
+      },
+      {
+        "source": "bing.com (search)",
+        "views": 1,
+        "users": 1
+      }
     ],
     "note": "Read from Substack stats PDF (2026-08-30). Source-level view/user split is approximate."
   },
+  "popularContent": [
+    {
+      "path": "/ (Overview)",
+      "views": 34,
+      "uniqueVisitors": 6
+    },
+    {
+      "path": "/branches",
+      "views": 8,
+      "uniqueVisitors": 1
+    },
+    {
+      "path": "/graphs/traffic",
+      "views": 8,
+      "uniqueVisitors": 1
+    },
+    {
+      "path": "/pulse",
+      "views": 8,
+      "uniqueVisitors": 1
+    },
+    {
+      "path": "/compare/feature/backtest-engine",
+      "views": 4,
+      "uniqueVisitors": 1
+    },
+    {
+      "path": "/pull/46",
+      "views": 3,
+      "uniqueVisitors": 1
+    },
+    {
+      "path": "/pull/49",
+      "views": 3,
+      "uniqueVisitors": 1
+    },
+    {
+      "path": "/pull/51",
+      "views": 3,
+      "uniqueVisitors": 1
+    },
+    {
+      "path": "/blob/main/docs/Manual.md",
+      "views": 2,
+      "uniqueVisitors": 2
+    },
+    {
+      "path": "/pull/44",
+      "views": 2,
+      "uniqueVisitors": 1
+    }
+  ],
+  "visitors": {
+    "totalViews14d": 97,
+    "uniqueVisitors14d": 6,
+    "daily": [
+      {
+        "date": "2026-08-17",
+        "views": 5,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-18",
+        "views": 6,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-19",
+        "views": 7,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-20",
+        "views": 8,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-21",
+        "views": 12,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-22",
+        "views": 15,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-23",
+        "views": 14,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-24",
+        "views": 15,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-25",
+        "views": 15,
+        "uniqueVisitors": 1
+      }
+    ],
+    "note": "Totals are exact from GitHub Traffic snapshot (2026-08-30). Per-day series is approximate (estimated from chart)."
+  },
   "nuget": {
-    "downloads": 197,
-    "version": "1.5.1",
-    "note": "Lifetime cumulative from NuGet API (azuresearch-usnc). Refreshed 2026-09-02."
-  }
+    "version": "1.5.3",
+    "downloads": 205,
+    "note": "Lifetime cumulative from NuGet API (azuresearch-usnc)."
+  },
+  "referringSites": [
+    {
+      "site": "github.com",
+      "views": 14,
+      "uniqueVisitors": 5
+    },
+    {
+      "site": "memoryfraction.github.io",
+      "views": 8,
+      "uniqueVisitors": 1
+    }
+  ]
 }

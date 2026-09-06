@@ -2,7 +2,7 @@
 
 [![Build & Test](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml/badge.svg)](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml)  [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Version](https://img.shields.io/badge/Version-1.5.1-blue.svg)](https://github.com/memoryfraction/Quant.Infra.Net/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> A one-stop .NET **framework** for quantitative trading: multi-source data ingestion, unified broker execution (Binance/IB/Schwab), real-time alerting, and built-in portfolio analytics — go from idea to backtest to paper to live by changing config and a strategy file, not your codebase.
+> The **agent-native** .NET framework for quantitative trading: AI agents drive the full backtest → paper → live pipeline through a built-in MCP server, and humans write strategies once and swap data sources, brokers, and environments by config — not code.
 
 > 📖 [Documentation / GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/)
 

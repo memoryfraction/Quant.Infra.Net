@@ -2,9 +2,8 @@
 
 [![Build & Test](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml/badge.svg)](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml)  [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Core](https://img.shields.io/badge/Core-1.5.3-blue.svg)](https://www.nuget.org/packages/Quant.Infra.Net)  [![Runtime](https://img.shields.io/badge/Runtime-1.6.0-green.svg)](https://www.nuget.org/packages/Quant.Infra.Net.Runtime)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> A one-stop .NET **framework** for quantitative trading: multi-source data ingestion, unified broker execution (Binance/IB/Schwab), real-time alerting, and built-in portfolio analytics — go from idea to backtest to paper to live by changing config and a strategy file, not your codebase.
->
-> 面向量化交易的一站式 .NET **框架**：多源数据接入、统一券商执行（币安/盈透/嘉信）、实时消息推送与内置组合分析工具——从想法到回测、模拟盘、实盘，改配置、改一个策略文件就行，不用改动你的代码库。
+> The **agent-native** .NET framework for quantitative trading: AI agents drive the full backtest → paper → live pipeline through a built-in MCP server, and humans write strategies once and swap data sources, brokers, and environments by config — not code.
+> 一套 .NET **agent 原生**量化框架：AI agent 通过内置 MCP server 直接驱动「回测 → 模拟 → 实盘」完整管线；人类开发者只需写一次策略，数据源、券商、回测/实盘全走配置切换，一行代码都不用改。
 >
 > 📖 [Documentation / GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/) · 📦 [NuGet packages](https://www.nuget.org/profiles/memoryfraction)
 

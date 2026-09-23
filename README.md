@@ -7,6 +7,12 @@
 >
 > 📖 [Documentation / GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/) · 📦 [NuGet packages](https://www.nuget.org/profiles/memoryfraction)
 
+> 💬 **Hit a problem, or need a feature? Talk to me!** / **遇到问题或需要支持某个功能？请联系我！**
+>
+> [![Report a bug / Request a feature](https://img.shields.io/badge/Report_a_bug_%2F_Request_a_feature-GitHub_Issues-red?logo=github)](https://github.com/memoryfraction/Quant.Infra.Net/issues/new)  [![Ask a question / Discuss](https://img.shields.io/badge/Ask_a_question_%2F_Discuss-GitHub_Discussions-blue?logo=github)](https://github.com/memoryfraction/Quant.Infra.Net/discussions)
+>
+> 🐞 Bug or feature request → [open an Issue](https://github.com/memoryfraction/Quant.Infra.Net/issues/new) · 💡 Usage question or idea → [start a Discussion](https://github.com/memoryfraction/Quant.Infra.Net/discussions) — I read every one. / 报 Bug、提功能需求 → [提交 Issue](https://github.com/memoryfraction/Quant.Infra.Net/issues/new)；使用疑问、想法交流 → [发起讨论](https://github.com/memoryfraction/Quant.Infra.Net/discussions)，每一条我都会看。
+
 ---
 
 ## Languages / 语言
@@ -373,7 +379,22 @@ A: The QQQM reverse-MA200 DCA walkthrough in this repo is a working mean-reversi
 
 ---
 
+## 🙋 Support & Feedback / 问题反馈与功能支持
 
+Hit a problem, or need Quant.Infra.Net to support something it doesn't yet? **Contact me — that's how the roadmap gets built.**
+遇到问题，或者需要框架支持某个还没有的功能？**请直接联系我——路线图就是这样来的。**
+
+| I want to… / 我想… | Go to / 前往 |
+|---|---|
+| 🐞 Report a bug / 报告 Bug | [**Open an Issue →**](https://github.com/memoryfraction/Quant.Infra.Net/issues/new) |
+| ✨ Request a feature, broker, or data source / 需要支持新功能、券商或数据源 | [**Open an Issue →**](https://github.com/memoryfraction/Quant.Infra.Net/issues/new) |
+| 💡 Ask a usage question, share an idea / 使用疑问、想法交流 | [**Start a Discussion →**](https://github.com/memoryfraction/Quant.Infra.Net/discussions) |
+| 🔒 Report a security vulnerability / 报告安全漏洞 | [SECURITY.md](https://github.com/memoryfraction/Quant.Infra.Net/blob/main/SECURITY.md) (please don't file a public issue / 请勿公开提交) |
+
+> Tip: include your package version, .NET version, and a minimal repro — it gets you an answer much faster.
+> 小提示：附上包版本、.NET 版本和最小复现代码，能大大加快回复速度。
+
+---
 
 ## 💼 Business Inquiries / 商务合作
 

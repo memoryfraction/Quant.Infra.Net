@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-09-03T23:08:54Z",
-  "repo": "memoryfraction/Quant.Infra.Net",
+  "referringSites": [
+    {
+      "site": "github.com",
+      "views": 14,
+      "uniqueVisitors": 5
+    },
+    {
+      "site": "memoryfraction.github.io",
+      "views": 8,
+      "uniqueVisitors": 1
+    }
+  ],
   "substack": {
     "period": "2026-06-01/2026-08-30",
     "totalViews": 26,
@@ -39,6 +49,12 @@
     ],
     "note": "Read from Substack stats PDF (2026-08-30). Source-level view/user split is approximate."
   },
+  "nuget": {
+    "version": "1.5.3",
+    "downloads": 426,
+    "note": "Lifetime cumulative from NuGet API (azuresearch-usnc)."
+  },
+  "repo": "memoryfraction/Quant.Infra.Net",
   "popularContent": [
     {
       "path": "/ (Overview)",
@@ -91,6 +107,7 @@
       "uniqueVisitors": 1
     }
   ],
+  "updatedAt": "2026-11-01T17:12:36Z",
   "visitors": {
     "totalViews14d": 97,
     "uniqueVisitors14d": 6,
@@ -142,22 +159,5 @@
       }
     ],
     "note": "Totals are exact from GitHub Traffic snapshot (2026-08-30). Per-day series is approximate (estimated from chart)."
-  },
-  "nuget": {
-    "version": "1.5.3",
-    "downloads": 205,
-    "note": "Lifetime cumulative from NuGet API (azuresearch-usnc)."
-  },
-  "referringSites": [
-    {
-      "site": "github.com",
-      "views": 14,
-      "uniqueVisitors": 5
-    },
-    {
-      "site": "memoryfraction.github.io",
-      "views": 8,
-      "uniqueVisitors": 1
-    }
-  ]
+  }
 }

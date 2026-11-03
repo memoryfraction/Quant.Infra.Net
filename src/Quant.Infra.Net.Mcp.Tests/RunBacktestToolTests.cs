@@ -113,7 +113,7 @@ public sealed class RunBacktestToolTests
                 symbol: "AAPL",
                 startDate: "2024-01-01",
                 endDate: "2024-06-30",
-                dataSource: "Yahoo");
+                dataSource: "NotARealProvider");
             Assert.Fail("Expected ArgumentException");
         }
         catch (ArgumentException) { }

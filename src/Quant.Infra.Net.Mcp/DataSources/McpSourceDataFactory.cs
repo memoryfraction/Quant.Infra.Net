@@ -3,48 +3,94 @@ using System.Net.Http;
 namespace Quant.Infra.Net.Mcp.DataSources;
 
 /// <summary>
-/// 数据源工厂（SOLID: 单一职责 — 只负责"根据配置选择哪个 Provider"）。
-/// Data source factory (SOLID: Single Responsibility — picks a provider from config).
+/// 数据源工厂（SOLID: 单一职责 — 只负责"根据名字/配置选择哪个 Provider"）。
+/// Data source factory (SOLID: Single Responsibility — picks a provider from a name / config).
 /// </summary>
 /// <remarks>
-/// 配置来源优先级：
-/// 1. 显式传入的 <paramref name="provider"/> + <paramref name="apiKey"/>
-/// 2. appsettings.json 的 <c>QuantInfraNet:DataSources:{Finnhub|Fmp|TwelveData}:ApiKey</c>
-/// 3. 环境变量 <c>FINNHUB_API_KEY</c> / <c>FMP_API_KEY</c> / <c>TWELVEDATA_API_KEY</c>
+/// API key 解析优先级 / API key resolution order:
+/// 1. 显式传入的 apiKey / explicit apiKey argument
+/// 2. appsettings.json 的 <c>QuantInfraNet:DataSources:{Section}:ApiKey</c>
+/// 3. 环境变量 / env var (<c>TIINGO_API_KEY</c>, <c>FINNHUB_API_KEY</c>, <c>FMP_API_KEY</c>, <c>TWELVEDATA_API_KEY</c>)
 ///
-/// 放弃 Stooq：已被测试证明不稳定，工厂不暴露该 Provider。
+/// 免 key：Yahoo（股票/ETF/指数/外汇/港股/A股）、Binance（加密）、LocalFile。
+/// No key: Yahoo (stocks/ETFs/indices/FX/HK/China A), Binance (crypto), LocalFile.
+/// 放弃 Stooq：已被测试证明不稳定，工厂不暴露该 Provider。/ Stooq is intentionally not exposed (proven unstable).
 /// </remarks>
 public sealed class McpSourceDataFactory
 {
     /// <summary>
     /// 受支持的 Provider 枚举 / Supported provider enum.
     /// </summary>
-    public enum Provider { Finnhub, Fmp, TwelveData, LocalFile }
+    public enum Provider { Finnhub, Fmp, TwelveData, LocalFile, Yahoo, Binance, Tiingo }
+
+    /// <summary>该 Provider 是否需要 API key / Whether the provider needs an API key.</summary>
+    public static bool RequiresKey(Provider p) => p is Provider.Finnhub or Provider.Fmp or Provider.TwelveData or Provider.Tiingo;
 
     /// <summary>
-    /// 根据 Provider + 显式 key 创建数据源 / Creates a data source for the given provider + explicit key.
+    /// 把用户输入的名字解析成 Provider（大小写与常见别名不敏感）；Demo 返回 null。
+    /// Parses a user-supplied name into a Provider (case-insensitive, common aliases); returns null for Demo.
     /// </summary>
-    /// <exception cref="ArgumentException">API key 缺失时抛出（fail-fast，不静默回退）。/ Thrown when API key is missing.</exception>
-    public IMcpSourceDataService Create(Provider provider, string? apiKey = null, string? localFilePath = null, HttpClient? httpClient = null)
+    /// <exception cref="ArgumentException">未知或被刻意放弃的数据源 / Unknown or intentionally unsupported source.</exception>
+    public static Provider? Parse(string? raw)
     {
-        var key = provider == Provider.LocalFile
-            ? (localFilePath ?? apiKey ?? ResolveKey(provider))
-            : (apiKey ?? ResolveKey(provider));
-        if (string.IsNullOrWhiteSpace(key) && provider != Provider.LocalFile)
-            throw new ArgumentException(
-                $"API key is required for {provider}. Add it to appsettings.json under " +
-                $"\"QuantInfraNet\" → \"DataSources\" → \"{SectionName(provider)}\" → \"ApiKey\", " +
-                $"or set env var {EnvVarName(provider)}. Free tier: {RegisterUrl(provider)}.",
-                nameof(apiKey));
-
-        return provider switch
+        var name = (raw ?? "").Trim().ToLowerInvariant().Replace(" ", "").Replace("_", "").Replace("-", "");
+        return name switch
         {
+            "" or "demo" or "synthetic" or "offline" => null,
+            "yahoo" or "yahoofinance" or "yf" => Provider.Yahoo,
+            "binance" or "crypto" => Provider.Binance,
+            "tiingo" => Provider.Tiingo,
+            "finnhub" => Provider.Finnhub,
+            "fmp" or "financialmodelingprep" => Provider.Fmp,
+            "twelvedata" or "12data" => Provider.TwelveData,
+            "localfile" or "local" or "file" or "csv" => Provider.LocalFile,
+            "stooq" => throw new ArgumentException(
+                "Stooq is intentionally not exposed on the MCP surface — it has proven unstable. Use Yahoo (no key) or Tiingo (free key)."),
+            _ => throw new ArgumentException(
+                $"Unsupported dataSource '{raw}'. Supported: Demo | Yahoo | Binance | Tiingo | LocalFile | Finnhub | Fmp | TwelveData " +
+                "(call list_data_sources for details).")
+        };
+    }
+
+    /// <summary>
+    /// 根据 Provider 创建数据源（网络源默认包一层磁盘缓存）。
+    /// Creates a data source for the given provider (network sources are wrapped in a disk cache by default).
+    /// </summary>
+    /// <exception cref="ArgumentException">API key 缺失时抛出（fail-fast，不静默回退）。/ Thrown when an API key is missing.</exception>
+    public IMcpSourceDataService Create(Provider provider, string? apiKey = null, string? localFilePath = null, HttpClient? httpClient = null, bool useCache = true)
+    {
+        if (provider == Provider.LocalFile)
+        {
+            var path = localFilePath ?? apiKey;
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("LocalFile requires localFilePath (CSV: date,open,high,low,close,volume[,adjusted_close] or JSON array).", nameof(localFilePath));
+            return new LocalFileSourceDataService(path);
+        }
+
+        string? key = null;
+        if (RequiresKey(provider))
+        {
+            key = apiKey ?? ResolveKey(provider);
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentException(
+                    $"API key is required for {provider}. Set env var {EnvVarName(provider)} (in your MCP client config \"env\" block), " +
+                    $"or appsettings.json \"QuantInfraNet\" → \"DataSources\" → \"{SectionName(provider)}\" → \"ApiKey\". " +
+                    $"Free key: {RegisterUrl(provider)}. No-key alternatives: Yahoo (stocks/ETFs) or Binance (crypto).",
+                    nameof(apiKey));
+        }
+
+        IMcpSourceDataService svc = provider switch
+        {
+            Provider.Yahoo => new YahooSourceDataService(httpClient),
+            Provider.Binance => new BinanceSourceDataService(httpClient),
+            Provider.Tiingo => new TiingoSourceDataService(key!, httpClient),
             Provider.Finnhub => new FinnhubSourceDataService(key!, httpClient),
             Provider.Fmp => new FmpSourceDataService(key!, httpClient),
             Provider.TwelveData => new TwelveDataSourceDataService(key!, httpClient),
-            Provider.LocalFile => new LocalFileSourceDataService(key!),
             _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, "Unsupported provider.")
         };
+
+        return useCache && CachingSourceDataService.Enabled ? new CachingSourceDataService(svc) : svc;
     }
 
     /// <summary>
@@ -58,7 +104,7 @@ public sealed class McpSourceDataFactory
     }
 
     /// <summary>
-    /// 从 appsettings.json 读取 / Reads from appsettings.json.
+    /// 从 appsettings.json 读取（自程序目录向上找 6 层）/ Reads from appsettings.json (walks up 6 levels).
     /// </summary>
     private static string? ReadKeyFromAppSettings(Provider provider)
     {
@@ -78,7 +124,7 @@ public sealed class McpSourceDataFactory
                         p.TryGetProperty("ApiKey", out var k))
                         return k.GetString();
                 }
-                var parent = System.IO.Path.GetDirectoryName(dir);
+                var parent = System.IO.Path.GetDirectoryName(dir.TrimEnd(System.IO.Path.DirectorySeparatorChar));
                 if (parent is null || parent == dir) break;
                 dir = parent;
             }
@@ -87,37 +133,26 @@ public sealed class McpSourceDataFactory
         return null;
     }
 
-    /// <summary>
-    /// appsettings.json 的 section 名 / appsettings.json section name.
-    /// </summary>
-    private static string SectionName(Provider provider) => provider switch
-    {
-        Provider.Finnhub => "Finnhub",
-        Provider.Fmp => "Fmp",
-        _ => "TwelveData"
-    };
+    /// <summary>appsettings.json 的 section 名 / appsettings.json section name.</summary>
+    private static string SectionName(Provider provider) => provider.ToString();
 
-    /// <summary>
-    /// 环境变量名 / Environment variable name.
-    /// </summary>
+    /// <summary>环境变量名 / Environment variable name.</summary>
     public static string EnvVarName(Provider provider) => provider switch
     {
         Provider.Finnhub => "FINNHUB_API_KEY",
         Provider.Fmp => "FMP_API_KEY",
-        _ => "TWELVEDATA_API_KEY"
+        Provider.Tiingo => "TIINGO_API_KEY",
+        Provider.TwelveData => "TWELVEDATA_API_KEY",
+        _ => ""
     };
 
-    /// <summary>
-    /// 注册页 URL / Registration URL.
-    /// </summary>
+    /// <summary>注册页 URL / Registration URL.</summary>
     public static string RegisterUrl(Provider provider) => provider switch
     {
         Provider.Finnhub => "https://finnhub.io/register",
-        Provider.Fmp => "https://financialmodelingprep.com/subscription",
-        _ => "https://twelvedata.com/pricing"
+        Provider.Fmp => "https://site.financialmodelingprep.com/developer/docs",
+        Provider.Tiingo => "https://www.tiingo.com/account/api/token",
+        Provider.TwelveData => "https://twelvedata.com/pricing",
+        _ => ""
     };
 }
-
-
-
-

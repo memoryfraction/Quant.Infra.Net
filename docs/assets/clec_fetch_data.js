@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * clec_fetch_data.js — refresh docs/assets/_clec_yfinance.json (real daily closes for the CLEC
- * allocation backtests: QQQ = base index, QLD = 2x leveraged ETF, BIL = cash / T-bills).
+ * allocation backtests: QQQ = base index, QLD = 2x leveraged ETF, BIL = cash / T-bills,
+ * SPY = S&P 500 benchmark).
  *
  * Closes are Yahoo's dividend- and split-ADJUSTED closes ("adjclose"), so the backtest is a
  * total-return backtest (BIL's T-bill interest arrives as distributions, which only show up in
@@ -15,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const SYMBOLS = ['QQQ', 'QLD', 'BIL'];
+const SYMBOLS = ['QQQ', 'QLD', 'BIL', 'SPY'];
 const START = Date.UTC(2007, 5, 1); // BIL starts 2007-05-30; QLD 2006-06-21 → common window from 2007-06
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 

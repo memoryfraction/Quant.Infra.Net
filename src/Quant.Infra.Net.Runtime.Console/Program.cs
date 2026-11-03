@@ -26,6 +26,16 @@ if (args.Length > 0 && args[0] == "QqqmDoc")
     return QqqmDocWalkthrough.RunAsync().GetAwaiter().GetResult();
 }
 
+if (args.Length > 0 && args[0] == "ClecDoc")
+{
+    return ClecAllocationDoc.RunAsync().GetAwaiter().GetResult();
+}
+
+if (args.Length > 0 && args[0] == "ClecOptimize")
+{
+    return ClecAllocationDoc.OptimizeAsync().GetAwaiter().GetResult();
+}
+
 if (sp.GetRequiredService<RuntimeOptions>().RunMode == RunMode.Backtest)
 {
     var t0 = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc); // 固定窗口起点（Demo 数据源确定性输出）/ fixed window origin (deterministic Demo source)

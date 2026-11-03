@@ -37,8 +37,8 @@ public static class FetchOhlcvTool
         "Fetch daily OHLCV bars for a symbol over a UTC window. Returns at most 500 bars (hard cap). " +
         "When the window produces more than 500 bars, the response is truncated to the FIRST 500 " +
         "(oldest first) with truncated=true and the total bar count. Use a smaller window for more bars. " +
-        "Data source: Demo (offline synthetic, no API key) or one of Finnhub / FMP / TwelveData " +
-        "(real daily bars; requires a free API key in appsettings.json or an env var). " +
+        "Data source: Demo (offline synthetic, default), Yahoo (FREE, no key: stocks/ETFs/indices/FX), Binance (FREE, no key: crypto), " +
+        "Tiingo (free key), LocalFile, or Finnhub / FMP / TwelveData (API key). See list_data_sources. " +
         "Read-only, no orders.")]
     public static async Task<string> FetchOhlcv(
         [Description("Symbol, e.g. AAPL, TSLA, MSFT.")]
@@ -47,7 +47,7 @@ public static class FetchOhlcvTool
         string startDate,
         [Description("Window end, UTC, e.g. 2024-06-30.")]
         string endDate,
-        [Description("Data source: Demo (default, offline) | Finnhub | Fmp | TwelveData (real; needs API key).")]
+        [Description("Data source: Demo (default, offline) | Yahoo | Binance | Tiingo | LocalFile | Finnhub | Fmp | TwelveData.")]
         string? dataSource = null,
         [Description("Optional: explicit API key override (not needed if already in appsettings.json or env var).")]
         string? apiKey = null,
@@ -128,21 +128,7 @@ public static class FetchOhlcvTool
             return (new DemoMcpSource(), "Demo");
         }
 
-        McpSourceDataFactory.Provider provider;
-        switch (name)
-        {
-            case "Finnhub" or "finnhub":
-                provider = McpSourceDataFactory.Provider.Finnhub; break;
-            case "Fmp" or "fmp" or "FMP":
-                provider = McpSourceDataFactory.Provider.Fmp; break;
-            case "TwelveData" or "twelvedata" or "12data":
-                provider = McpSourceDataFactory.Provider.TwelveData; break;
-            case "LocalFile" or "localfile" or "local" or "file":
-                provider = McpSourceDataFactory.Provider.LocalFile; break;
-            default:
-                throw new ArgumentException(
-                    $"Unsupported dataSource \x27{name}\x27. Supported: Demo | Finnhub | Fmp | TwelveData | LocalFile. Use localFilePath to specify the file path.");
-        }
+        var provider = McpSourceDataFactory.Parse(name) ?? throw new ArgumentException("unreachable: Demo handled above");
 
         var factory = new McpSourceDataFactory();
         return (factory.Create(provider, apiKey, localFilePath), provider.ToString());

@@ -6,10 +6,36 @@
     <LangVersion>12.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
     <!-- MCP server host for Quant.Infra.Net: stdio-based, read-only + backtest + paper cycle only.
          量化基础设施工具的 MCP 宿主（stdio 传输）：只读 / 回测 / 纸面模拟，绝不暴露 Testnet/Live 下单。 -->
+
+    <!-- 作为 .NET 工具 + NuGet MCP 服务器包发布：dotnet tool install -g Quant.Infra.Net.Mcp 或 dnx Quant.Infra.Net.Mcp
+         Ships as a .NET tool + NuGet MCP server package: `dotnet tool install -g Quant.Infra.Net.Mcp` or `dnx Quant.Infra.Net.Mcp`. -->
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>quant-infra-mcp</ToolCommandName>
+    <PackageType>McpServer</PackageType>
+    <!-- net8 构建，在 net9/net10 运行时上也能跑 / built for net8, runs on net9/net10 runtimes too -->
+    <RollForward>Major</RollForward>
+
+    <PackageId>Quant.Infra.Net.Mcp</PackageId>
+    <Version>1.6.0</Version>
+    <Authors>Rong (Rex) Fan</Authors>
+    <Description>MCP server for natural-language backtesting with Claude / Copilot / any MCP client: free data (Yahoo, Binance, no API key), multi-factor rotation, HTML reports with charts, regime analysis, parameter optimization with out-of-sample validation, and walk-forward analysis. Read-only research — never places live orders.</Description>
+    <PackageTags>mcp;mcp-server;model-context-protocol;backtest;backtesting;quant;quantitative-finance;trading;multi-factor;walk-forward;claude;ai-agent</PackageTags>
+    <PackageProjectUrl>https://github.com/memoryfraction/Quant.Infra.Net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/memoryfraction/Quant.Infra.Net.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>1.6.0: free no-key data (Yahoo, Binance) + Tiingo; disk cache; MultiFactor strategy; HTML reports; benchmark + regime analysis; optimize_strategy (out-of-sample); walk_forward; list_data_sources; MCP prompts; automatic warm-up; next-open fills by default.</PackageReleaseNotes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <!-- NuGet.org 用它生成 MCP 客户端配置 / NuGet.org uses this to generate MCP client configuration -->
+    <None Include=".mcp\server.json" Pack="true" PackagePath="\.mcp\" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- Official C# MCP SDK (Model Context Protocol). Pinned to the latest stable 2.x line —

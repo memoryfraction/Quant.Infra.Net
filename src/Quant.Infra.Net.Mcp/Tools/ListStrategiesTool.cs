@@ -38,9 +38,32 @@ public static class ListStrategiesTool
                 {
                   "name": "PairTradingZScore",
                   "description": "Pairs trading on the z-score of the spread between SymbolA and SymbolB; enters when |z| >= EntryZ, exits when |z| <= ExitZ.",
-                  "parameters": { "SymbolA": "required, e.g. AAA", "SymbolB": "required, e.g. BBB", "LookbackBars": "int, default 100", "EntryZ": "double, default 2.0", "ExitZ": "double, default 0.5" }
+                  "parameters": { "SymbolA": "required, e.g. KO", "SymbolB": "required, e.g. PEP", "LookbackBars": "int, default 100", "EntryZ": "double, default 2.0", "ExitZ": "double, default 0.5" }
+                },
+                {
+                  "name": "MultiFactor",
+                  "description": "Cross-sectional multi-factor rotation. Every RebalanceDays bars, score each symbol in Universe by a weighted sum of factor z-scores, hold the TopK best equal-weight. Optional absolute-momentum filter (skip names with momentum <= 0) and regime filter (RegimeSymbol below its SMA -> cash or DefensiveSymbol). Use it for rotation / ranking / dual-momentum / risk-parity-lite / multi-asset ideas.",
+                  "factors": {
+                    "momentum": "trailing return over MomentumLookback bars, skipping the last SkipRecent bars (12-1 momentum: MomentumLookback=252;SkipRecent=21)",
+                    "lowvol": "negative daily-return volatility over VolLookback (prefers calmer assets)",
+                    "trend": "close / SMA(TrendPeriod) - 1",
+                    "reversal": "negative 5-bar return (short-term mean reversion)",
+                    "riskadjmom": "momentum divided by volatility (Sharpe-like momentum)"
+                  },
+                  "parameters": {
+                    "Universe": "required, 2+ symbols, e.g. SPY,QQQ,IWM,EFA,EEM,TLT,GLD,DBC",
+                    "Factors": "weights, default momentum=1, e.g. momentum=1,lowvol=0.5",
+                    "TopK": "int, default round(universe/3)",
+                    "RebalanceDays": "int, default 21",
+                    "MomentumLookback": "int, default 126", "SkipRecent": "int, default 0",
+                    "VolLookback": "int, default 63", "TrendPeriod": "int, default 200",
+                    "AbsMomentumFilter": "bool, default true",
+                    "RegimeSymbol": "optional, e.g. SPY", "RegimeSmaPeriod": "int, default 200",
+                    "DefensiveSymbol": "optional, e.g. SHY / TLT / GLD"
+                  }
                 }
               ],
+              "sizing": "Default position size: 100% for single-symbol strategies, 50% per pair leg, 100%/TopK for MultiFactor (override with positionSizePct).",
               "notes": "Custom strategies discovered from your own assembly are NOT listed here (the MCP server only knows the built-in catalog); pass any valid name to run_backtest / run_paper_cycle."
             }
             """;

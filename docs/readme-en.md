@@ -1,428 +1,228 @@
 # Quant.Infra.Net
 
-[![Build & Test](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml/badge.svg)](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml)  [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![Version](https://img.shields.io/badge/Version-1.5.1-blue.svg)](https://github.com/memoryfraction/Quant.Infra.Net/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Build & Test](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml/badge.svg)](https://github.com/memoryfraction/Quant.Infra.Net/actions/workflows/ci.yml)  [![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)](https://dotnet.microsoft.com/download/dotnet/8.0)  [![MCP](https://img.shields.io/badge/MCP_server-1.6.0-orange.svg)](https://www.nuget.org/packages/Quant.Infra.Net.Mcp)  [![Runtime](https://img.shields.io/badge/Runtime-1.6.0-green.svg)](https://www.nuget.org/packages/Quant.Infra.Net.Runtime)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
 
-> The **agent-native** .NET framework for quantitative trading: AI agents drive the full backtest → paper → live pipeline through a built-in MCP server, and humans write strategies once and swap data sources, brokers, and environments by config — not code.
+🌐 **English** · [中文](readme-ch.md) · [Home](../README.md)
 
-> 📖 [Documentation / GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/)
+## Ask a trading question in plain language. Get the data, the backtest, the tuned parameters, and an honest answer.
+
+**Quant.Infra.Net** is a free, open-source (MIT) quant framework for .NET with a built-in **MCP server**. Describe an idea to Claude, Copilot or Cursor. The agent finds free market data, runs realistic backtests, tunes the parameters, checks them on data they've never seen, and hands back a report with charts. When you're ready to go live, the same strategy runs in C# against Binance, Alpaca, Charles Schwab or Interactive Brokers.
+
+> ⭐ If this saves you time, **star the repo**. That's how other people find it.
 
 ---
 
-## 📈 See it work first / 先看一个真实结果
+## ✨ One loop, five steps
 
-> **A real, reproducible backtest — not a mock.** The example below runs the bundled `QQQM reverse-MA200 DCA` strategy over **real QQQM daily closes (2021 → 2026)**, with the exact console output and equity curve from the actual run. Nothing is fabricated.
+```mermaid
+flowchart LR
+    A["💬 Ask<br/>in plain language"] --> B["🔎 Find data<br/>free, no API key"]
+    B --> C["⏱️ Backtest<br/>bar by bar, no look-ahead"]
+    C --> D["🎛️ Tune<br/>grid search"]
+    D --> E["🏆 Pick the best<br/>that survives out-of-sample"]
+    E --> F["📄 HTML report<br/>vs benchmark"]
+    F -. "make it monthly · add a filter · try another market" .-> A
+```
 
-![QQQM reverse-MA200 DCA backtest equity curve](assets/qqqm-reverse-dca-equity-curve.png)
+| Step | What happens | Built in |
+|---|---|---|
+| 💬 **Natural language** | You talk; the AI agent calls the tools. No code, no notebook. | MCP server for Claude Desktop / Claude Code / Copilot / Cursor, plus guided prompts (`quickstart`, `strategy_research`, `regime_check`) |
+| 🔎 **Find data** | The agent picks a source, fetches the history and the warm-up bars, and caches them on disk. | `list_data_sources`, `fetch_ohlcv`. **Yahoo** (US, HK, China A-shares, ETFs, indices, FX, futures, dividend-adjusted) and **Binance** (crypto) need no key. Tiingo, your own CSV |
+| ⏱️ **Backtest** | Bar-by-bar replay, fills at the **next bar's open**, commission and slippage included. | `run_backtest` returns metrics vs buy-and-hold, a market-regime breakdown, yearly/monthly returns, warnings and a self-contained **HTML report** |
+| 🎛️ **Tune** | Grid search over the strategy's parameters. | `optimize_strategy` holds back an **out-of-sample** tail and flags overfitting |
+| 🏆 **Find the best parameters and strategy** | Trust what *survives*, not what peaked in-sample. | `walk_forward` re-optimizes on rolling windows and stitches the unseen results; strategies include `MaCross`, `MeanReversion`, `PairTradingZScore`, `MultiFactor` |
 
-![Target weight over time](assets/qqqm-reverse-dca-target-weight.png)
+Behind the loop is a full C# stack: **one strategy file runs in Backtest, Paper, Testnet and Live**, with data sources, brokers and notifications swapped by config, not code.
 
-> Target weight over time — the strategy holds more when price is below the SMA200 and trims when above (the contrarian buy-the-dip in action).
+---
 
-**Real run result (real QQQM daily closes, 2021-01-04 → 2026-08-28):**
+## 🏆 Proof: a CLEC (James) allocation that beat the S&P 500 on CAGR, Sharpe and Calmar
 
-| Metric | Value | What it means |
-|--------|-------|---------------|
-| Initial equity | **$10,000** | starting capital |
-| Final equity | **$14,435** | **+44.4%** over ~5.7 years |
-| CAGR | **7.73%** | annualized return |
-| Max Drawdown | **−18.97%** | worst peak-to-trough (2022 bear market) |
-| Sharpe | **0.04** | a different risk/return trade-off than buy-and-hold — not better or worse; depends on your risk tolerance, income, and stage of life |
-| Win Rate | **53.3%** | |
-| Trades | **673** | daily rebalancing decisions |
+> **The question:** *"The CLEC Handbook splits money into an index fund, a 2x leveraged ETF and cash (the famous 433). Within its rules, which mix and which rebalancing schedule works best? Does it beat the S&P 500 on return, Sharpe **and** Calmar, including on years it has never seen?"*
 
-> **This is a comparison, not a verdict.** Reverse-DCA holds more when price is below the SMA200 and trims when above. Over the same window it shows a *different* risk/return profile (shallower drawdown, lower return). **Neither is objectively better or worse** — the right fit depends on *your* risk tolerance, your income, and your stage of life. Quant.Infra.Net is a tool: it produces the numbers, **you** make the decision.
+**What the tool did:** it pulled 19 years of free, dividend-adjusted daily prices (QQQ, QLD, BIL, SPY, 2007-06 → 2026-10, including 2008, 2020 and 2022). It enumerated every CLEC-valid mix (cash ≥ 20%, leveraged ≤ base, leveraged ≤ cash) × 4 rebalancing rules = **88 bar-by-bar backtests with trading costs**. It chose on **2007–2018** only and then checked the choice on **2019–2026**.
 
-**Run it yourself (offline, no API keys):**
+**The answer: 334 = 30% QQQ / 30% QLD / 40% cash, rebalanced once a year.**
+
+| | **CLEC 334 · annual** | S&P 500 (SPY) |
+|---|---:|---:|
+| CAGR, full period | **14.51%** ✅ | 10.55% |
+| Sharpe, full period | **0.81** ✅ | 0.61 |
+| Calmar, full period | **0.31** ✅ | 0.19 |
+| Max drawdown | **−46.8%** | −55.2% |
+| CAGR / Sharpe / Calmar, *out-of-sample 2019–2026* | **20.3% / 0.99 / 0.69** ✅ | 16.9% / 0.91 / 0.50 |
+| $10,000 in June 2007 → October 2026 | **$138,803** | $70,008 |
+
+```mermaid
+xychart-beta
+    title "Growth of $10,000: CLEC 334 annual (line 1) vs S&P 500 (line 2)"
+    x-axis ["2007-06", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026"]
+    y-axis "USD" 0 --> 140000
+    line [9993, 10653, 7001, 10413, 12207, 12343, 14260, 19262, 22507, 24103, 25328, 33161, 32646, 44649, 63057, 78451, 57191, 88196, 107786, 125992, 138803]
+    line [9993, 9619, 6078, 7681, 8838, 9006, 10447, 13823, 15685, 15879, 17784, 21646, 20657, 27108, 32078, 41295, 33789, 42634, 53246, 62682, 70008]
+```
+
+**The part most backtests leave out:**
+
+- ❌ **The first selection rule failed, and the tool caught it.** Picking the highest in-sample Calmar led to a cash-heavy 316 mix that beat SPY through 2018 but lagged it on return afterwards (13.0% vs 16.9% a year). The out-of-sample check exists for exactly this.
+- ⚠️ **The winning rule (maximize the weakest of the three ratios vs SPY) was written after that failure**, so its out-of-sample result is a strong hint, not blind proof.
+- ✅ **It isn't one magic setting.** 25 of 88 candidates beat SPY on all three metrics out-of-sample, every one of them with beta 0.8–1.0. The classic 433 · annual is among them. Annual rebalancing beat quarterly, monthly and drift-band rebalancing.
+
+📊 Full study with every table and chart: [Optimization study](backtests/clec-optimization.md) · one report per mix: [10 CLEC mixes](backtests/README.md) · try any mix interactively: [Alpha Wealth Lab · 433 Allocation](https://www.alpha-wealth-lab.com/planner/allocation/)
+
+<sub>Run with the framework's C# backtester (`dotnet run --project src/Quant.Infra.Net.Runtime.Console -- ClecOptimize`) using the same in-sample / out-of-sample discipline that `optimize_strategy` and `walk_forward` apply when you ask in natural language. Fixed-weight multi-asset allocation as a built-in MCP strategy is on the roadmap. The CLEC method belongs to its authors (James, *CLEC Handbook*); this project is not affiliated with or endorsed by them. Past results, one strong index: not a forecast.</sub>
+
+---
+
+## 🌊 Markets change. Nobody can predict the future.
+
+A strategy that worked for ten years can stop working next month. Growth gives way to value, low rates give way to high rates, calm gives way to crisis. **No backtest, no optimizer and no person can tell you what the market will do next.** This project won't pretend otherwise.
+
+What it gives you is **methods** to see and handle style shifts. It does **not** give you a ready-made "solution" that is supposed to keep working forever.
+
+| Method | What it tells you | Tool |
+|---|---|---|
+| **Diagnose** | *When* did the edge disappear? Returns split by regime (bull/bear × calm/volatile), plus a rolling 6-month Sharpe. | every `run_backtest` report |
+| **Validate** | Is the best setting real, or just luck in-sample? | `optimize_strategy` (out-of-sample holdout) |
+| **Adapt** | What would re-tuning on a rolling basis actually have earned? | `walk_forward` |
+| **Defend** | Can the strategy step aside when the market turns? Regime filter, absolute-momentum filter, factor blending. | `MultiFactor` options |
+| **Stress-test** | How bad was it in 2008, 2020 and 2022? Could you have held on? | stress tables in every report |
+
+You decide what to do with the answers. Your risk tolerance, income, taxes and stage of life aren't in any dataset.
+
+---
+
+## 🚀 Get started
+
+### Path A: no code, talk to an AI agent
+
+Requires the [.NET 8+ SDK](https://dotnet.microsoft.com/download).
+
+```bash
+dotnet tool install -g Quant.Infra.Net.Mcp
+```
+
+Claude Desktop (`claude_desktop_config.json`):
+
+```json
+{ "mcpServers": { "quant-infra-net": { "command": "quant-infra-mcp" } } }
+```
+
+Claude Code:
+
+```bash
+claude mcp add quant-infra-net -- quant-infra-mcp
+```
+
+Then just ask:
+
+> *"Which moving-average period works best for QQQ since 2010, and does it still hold out of sample?"*
+>
+> *"Rotate between SPY, QQQ, IWM, EFA, EEM, TLT, GLD and DBC since 2008. Each month hold the 3 with the strongest momentum, and switch to SHY when SPY is below its 200-day average. Compare to SPY and give me the report."*
+>
+> *"Does this only work in bull markets? Run a walk-forward."*
+
+📖 Full guide: [MCP Server](manual/mcp-server-en.md). The MCP server is read-only and **never places live orders**.
+
+### Path B: C# developer
+
+```bash
+git clone https://github.com/memoryfraction/Quant.Infra.Net.git
+```
+
+```bash
+cd Quant.Infra.Net
+```
 
 ```bash
 dotnet run --project src/Quant.Infra.Net.Runtime.Console -- QqqmDoc
 ```
 
-The example reads a **local cached snapshot** of real QQQM daily closes (`docs/assets/_qqqm_yfinance.json`) first - zero network, fully deterministic. If that file is missing, it falls back to the free public Stooq feed. Refresh with `node docs/assets/qqqm_fetch_data.js`.
-
-Full walkthrough with the verbatim console output, both charts, and how to modify the strategy: [Complete Walkthrough (EN)](CompleteWalkthrough-en.md).
-
----
-
-## 📡 Data Sources — the thing people get wrong / 数据来源——很多人踩坑的地方
-
-> **Data source is the #1 reason a quant project quietly dies.** The classic failure: you build on a .NET wrapper for Yahoo Finance, then Yahoo changes their API, the wrapper's author doesn't update for 3–6 months, and your whole pipeline is dead. **This repo is designed so that can't be your single point of failure.**
-
-**The core idea: data source is a *swappable interface*, not a hard dependency.** `ITraditionalFinanceSourceDataService` / `ICryptoSourceDataService` are the contract; the implementation is a config value (`Runtime:DataSource`). When one source breaks or goes stale, you **swap the source, not the strategy**.
-
-**Recommended default, then fallbacks, in order of preference:**
-
-| # | Source | Mechanism | Why |
-|---|--------|-----------|-----|
-| ⭐ | **Alpaca Market Data** (free IEX tier) — `DataSourceKind.Alpaca` | Core library's `AlpacaClient`, on the **officially maintained** `Alpaca.Markets` .NET SDK | The only layer with an actual SDK maintainer, not a reverse-engineered endpoint. Free API key, no credit card. This is what "run in 60s" points at once you're past the zero-network demo. |
-| 2 | **Yahoo Finance via `yfinance`** (Python) | `pythonnet` runs the Python `yfinance` directly | Community-maintained, patched fast — but still an unofficial wrapper. Fine for research. |
-| 3 | **Yahoo Finance Chart API** (direct HTTP) | Thin in-repo C# client (`query1.finance.yahoo.com/v8/finance/chart`) | If `yfinance` breaks, this ~50-line endpoint is *your* code to patch. Still unofficial/undocumented. |
-| 4 | **Stooq** (free public daily bars) | Plain HTTP to `stooq.com` | Last-resort independent free feed; has intermittently required browser verification (anti-bot) — best-effort, not a dependency to build on. |
-
-> **Bottom line:** the .NET-ecosystem "unofficial wrapper" risk is real for Yahoo/Stooq — which is why the *recommended* path is Alpaca's officially maintained SDK, with Yahoo/`yfinance`/Stooq kept as free, zero-signup fallbacks for research. **You write the strategy once; you swap data sources by config.** All of these are for **research/backtesting only** — for live trading, point the same interface at your broker's feed (Binance/Alpaca/Schwab/IB); the strategy code is unchanged.
-
----
-
-## ✍️ Modify the strategy — validate your own idea / 改一下策略，验证自己的想法
-
-**This is the moment that convinces people.** The entire QQQM strategy is **one ~30-line method** in `src/Quant.Infra.Net.Runtime.Console/Strategies/QqqmReverseDcaStrategy.cs`. Change the numbers, change the symbol, add your own logic — and re-run the exact same backtest. No framework changes.
-
-**The strategy in one sentence:** every day, compute `SMA200` of QQQM closes — if price is *below* the MA (cheap), increase target weight; if *above* (expensive), reduce it.
-
-**Tweak parameters (zero code) / 调参数（零代码）:**
-
-| Parameter | Default | Meaning |
-|-----------|---------|---------|
-| `Symbol` | `QQQM` | any symbol your data source serves |
-| `MaPeriod` | `200` | SMA window |
-| `BaseWeight` | `0.5` | target weight at the MA |
-| `AddIntensity` | `1.5` | how hard to add when *below* the MA |
-| `TrimIntensity` | `1.0` | how hard to trim when *above* the MA |
-
-Set them in `appsettings.json` under `Orchestration:Parameters`, then re-run the **same** `dotnet run` command and read the new metrics — **your hypothesis, measured against the same real data.**
-
-**Add a brand-new strategy (one file):** create a class implementing `IStrategyDescriptor` (wrapping an `ISignalGenerator`), see `ExampleCustomStrategy.cs` for the minimal case; the `AddQuantInfraNet(..., strategyAssemblies: ...)` reflection scan discovers it automatically; set `Orchestration:Parameters:Strategy = "MyStrategy"`. It now runs in **Backtest, Paper, Testnet, and Live** with identical logic.
-
----
-
-## What Is This?
-
-Quant.Infra.Net provides a unified C# API that abstracts away the complexity of connecting to multiple financial data sources, brokers, and notification channels. Instead of writing separate integrations for each platform, you write strategy logic once — the library handles the rest.
-
-**Core Capabilities / 核心基础设施:**
-
-| Module | What It Does / 能力说明 |
-|--------|------------------------|
-| **Data Source / 数据源** | Unified market data ingestion from Yahoo Finance & Binance (Spot/Futures), with local CSV/SQL persistence. <br>聚合多源行情（Yahoo/Binance），并支持本地持久化。 |
-| **Broker & Orders / 订单执行** | Standardized trading interfaces for Binance Futures, seamlessly switching between testnet simulation and live execution. <br>币安合约标准化交易接口，无缝切换测试网模拟与实盘下单。 |
-| **Notification / 通知推送** | Real-time strategy alerts via DingTalk bots, WeChat Work webhooks, and SMTP/Brevo email pipelines. <br>内置钉钉、企业微信及邮件通道，实现策略信号的即时触达。 |
-
-> For full module details and usage examples, see [User Manual](Manual.md) and [Architecture Overview](Architect.md).
-
-> **🤖 AI Agent access (new):** drive Quant.Infra.Net from Claude Desktop / Cursor / any MCP client with natural language. See [MCP Server guide](manual/mcp-server-en.md).
-
-### Architecture Overview
-
-| Module | Responsibility | Key Interfaces / Services |
-|--------|---------------|---------------------------|
-| **SourceData** | Multi-source market data ingestion | `ITraditionalFinanceSourceDataService`, `ICryptoSourceDataService` — Yahoo Finance (via yfinance/pythonnet), Binance spot/futures klines, Alpaca US equity, CSV/MySQL/MongoDB readers |
-| **Broker** | Unified broker execution layer | `IBrokerService`, `IUSEquityBrokerService` — Binance Futures (spot/order/liquidate with Testnet/Paper/Live switching), Alpaca US Equity, Charles Schwab (quotes/options/orders/positions), Interactive Brokers via InterReact (TWS/Gateway) |
-| **Analysis** | Quantitative/statistical tooling | `IAnalysisService` — ADF stationarity test, OLS regression, Z-Score, Shapiro-Wilk normality test, pair-trading spread calculation, rolling statistics |
-| **Portfolio** | Position tracking and performance | `PortfolioSnapshot`, `StrategyPerformanceAnalyzer` — CAGR, Sharpe ratio, Calmar ratio, max drawdown, equity curve charting (ScottPlot) |
-| **Notification** | Strategy alert dispatch | `IDingtalkService`, `IWeChatService`, `IEmailService` — DingTalk bot, WeChat Work webhook, personal/commercial bulk email |
-| **Order** | Order modeling and lifecycle | Unified order models across brokers, order state machine, fill tracking |
-| **Shared** | Cross-cutting utilities | `IntervalTrigger`, `RollingWindow<T>`, resolution conversion helpers, extension methods, DataFrame I/O (Deedle) |
-
----
-
-## Orchestration Layer (Beta)
-
-`Quant.Infra.Net.Orchestration` turns the modules above into a single, runnable pipeline: `DataIngest → Analysis → Signal → TargetPosition → Risk → Execution → PortfolioState → Notification`. Instead of writing glue code, you register one extension method and pick a built-in strategy.
-
-**3 built-in strategies** (switch by changing one config value, no code changes):
-
-| Strategy | `Parameters.Strategy` | Style |
-|----------|------------------------|-------|
-| Pair trading z-score | `PairTradingZScore` | Statistical arbitrage (OLS spread + z-score) |
-| Classic 200-day MA | `MaCross` | Trend following |
-| Mean reversion z-score | `MeanReversion` | Oscillation / mean reversion |
-
-**Try it in under a minute** — the demo defaults to the single-symbol `MaCross` strategy on a synthetic `AAPL` series generated in-process (no network, no API keys, no real market data — see below for exactly what runs):
+That runs a real QQQM reverse-MA200 backtest offline in about a minute. Then reproduce the CLEC case study above:
 
 ```bash
-git clone https://github.com/memoryfraction/Quant.Infra.Net.git
-cd Quant.Infra.Net/src
-dotnet run --project Quant.Infra.Net.Runtime.Console
+dotnet run --project src/Quant.Infra.Net.Runtime.Console -- ClecOptimize
 ```
 
-> Since R6 there is a single unified host: `Quant.Infra.Net.Runtime.Console` (the old standalone demo hosts are retired). One switch in `appsettings.json` — `Runtime:RunMode` — selects the mode: the default `Backtest` prints the performance report directly; set it to `Paper` to see the full event trail: data ingest → signal → risk check → paper execution → portfolio snapshot. A single symbol means one signal / one target position / one execution report, so the whole run is easy to verify by eye. Switch strategies or symbols by editing `Quant.Infra.Net.Runtime.Console/appsettings.json` and re-run.
-
-**What data source, symbol, and strategy does the demo actually use — and how do I swap in my own?** See the dedicated [Orchestration Quick Start Guide](OrchestrationQuickStart-en.md) for the full breakdown plus step-by-step instructions for plugging in a real data source, changing symbols, and writing a custom strategy.
-
-**Use it in your own host** (`Environment` defaults to `Paper` — pure in-memory, zero network calls, safe by default):
-
-```csharp
-var builder = Host.CreateApplicationBuilder(args);
-builder.Services.Configure<OrchestrationOptions>(builder.Configuration.GetSection("Orchestration"));
-builder.Services.AddQuantInfraNetOrchestration();   // Paper environment + pipeline assembled from "Strategy"
-
-var host = builder.Build();
-await host.RunAsync();
-```
-
-Extension points: pass `customStages`, `customSignalGenerator`, or `customExecutionModel` to `AddQuantInfraNetOrchestration(...)` to replace any part of the default pipeline with your own implementation.
-
-Going live requires two explicit steps — nothing defaults to real trading: set `"Environment": "Testnet"` or `"Live"` in configuration, and register a live `IBinanceUsdFutureService` yourself before calling `AddQuantInfraNetOrchestration()` (it only auto-registers the Paper broker).
-
-Full contract (interfaces, milestones, risk-rule defaults, extension points) is documented in [Orchestration Layer Design](OrchestrationLayerDesign.md).
-
----
-
-## Backtest Engine (Beta)
-
-`Quant.Infra.Net.Backtest` replays historical data through that **same** pipeline: bar by bar, the same 8-stage `StrategyPipeline`, the same strategy code — with zero network, zero live broker, and no look-ahead bias by construction. A backtest is never a *separate strategy implementation*; it is the identical code path that runs under Paper, re-driven over history.
-
-**Try it in under a minute** — the demo runs `MaCross` over 260 synthetic daily bars (no network, no API keys; the series is synthetic, not real AAPL data):
+Add the stack to your own project:
 
 ```bash
-git clone https://github.com/memoryfraction/Quant.Infra.Net.git
-cd Quant.Infra.Net
-dotnet run --project src/Quant.Infra.Net.Runtime.Console
+dotnet add package Quant.Infra.Net.Runtime
 ```
 
-(Same unified host; defaults to `Runtime:RunMode = "Backtest"`.)
-
-Expected output (deterministic):
-
-```
-Backtest complete: 260 bars, 4 trades
-CAGR=13.56%   Sharpe=0.54   Calmar=0.00
-MaxDrawdown=0.00%   WinRate=100.0%   ProfitFactor=∞   Commission=0 USD
-WinRate=80.0%   ProfitFactor=23.12   Commission=0 USD
-```
-
-**What's inside:**
-
-| Capability | Detail |
-|---|---|
-| **Event-driven replay** | One `StrategyPipeline.RunAsync` per bar — the exact code path of a Paper session, re-driven over history |
-| **No look-ahead bias** | `HistoricalDataSet.SliceUpTo(symbol, asOfUtc)` caps visible history at the bar being replayed (pinned by `LookAheadBiasTests`) |
-| **Backtest broker** | `BacktestBrokerService` (an `IBinanceUsdFutureService`): accounting identical to the Paper broker, plus commission/slippage and an append-only trade log |
-| **Fill timing** | `SameBarClose` (default) or `NextBarOpen` (fill at the next bar's open — causally honest for close-based signals) |
-| **Costs** | `CommissionBps` + `SlippageBps`, recorded per trade and summing into `Metrics.TotalCommissionUsd` |
-| **Metrics** | `BacktestResult.Metrics` — CAGR / Sharpe / Calmar / max drawdown (reusing `StrategyPerformanceAnalyzer`) + win rate / profit factor / total commission (trade-level), from `EquityCurve` + `Trades` |
-| **Parameter sweeps** | `ParameterSweepRunner` — each grid point gets its own broker + its own DI container under `Parallel.ForEachAsync`; results indexed back into grid order |
-| **Warm-up** | `WarmupBars` suppresses trading on the first N bars for indicator warm-up |
-
-**Use it in your own host** (offline by design — `Environment` is forced to `Paper`, so no live broker can be wired in):
-
-```csharp
-var services = new ServiceCollection();
-services.AddQuantInfraNetBacktest(
-    configureBacktest: b => { b.InitialEquityUsd = 10000m; b.WarmupBars = 20; },
-    configureOrchestration: o =>
-    {
-        o.Parameters["Symbol"] = "AAPL";
-        o.Parameters["Strategy"] = "MaCross";
-    });
-
-using var provider = services.BuildServiceProvider();
-var result = await provider.GetRequiredService<BacktestRunner>().RunAsync(myHistoricalDataSet, new[] { "AAPL" });
-// result.EquityCurve, result.Trades, result.Metrics
-```
-
-Custom or the 3 built-in strategies: set `Parameters.Strategy` (`MaCross` / `MeanReversion` / `PairTradingZScore`) or pass `customSignalGenerator` — the **same class** then serves both backtest and Paper. Feed real data by building `HistoricalDataSet` from any `Ohlcv` series (fetched once, up-front — never inside the loop).
-
-Full contract and guardrails (fill-timing matrix, milestones B0–B6, dependency white-list) are documented in [Trading Runtime Design](TradingRuntimeDesign.md); step-by-step usage is in the [Backtest Quick Start Guide](BacktestQuickStart-en.md).
+Switch between `Backtest`, `Paper`, `Testnet` and `Live` with one config value (`Runtime:RunMode`). Add a strategy by dropping one class into your project; see [Writing a strategy](manual/README-en.md) and [`ExampleCustomStrategy.cs`](../src/Quant.Infra.Net.Runtime.Console/Strategies/ExampleCustomStrategy.cs).
 
 ---
 
-## Packages / NuGet 包
-
-The project is published as a family of NuGet packages. Most users only need the top one — its dependencies pull in the rest automatically:
+## 📦 Packages
 
 | Package | Version | What it gives you |
-|---------|---------|-------------------|
-| `Quant.Infra.Net` | 1.5.1 | Core infrastructure: data sources (Yahoo/Binance/Alpaca/Schwab/IB), broker & order execution, statistical analysis, portfolio analytics, notifications |
-| `Quant.Infra.Net.Orchestration` | 1.6.0 | Event-driven strategy pipeline: signal → risk → target position → execution → portfolio state |
-| `Quant.Infra.Net.Backtest` | 1.6.0 | Event-driven (bar-by-bar) backtest engine with look-ahead-bias guards |
-| `Quant.Infra.Net.Runtime` | 1.6.0 | Unified `RunMode` switch (Backtest/Paper/Testnet/Live) + one-file-per-strategy plugin convention — **recommended entry point** |
-
-Dependency chain: `Runtime 1.6.0` → `Backtest 1.6.0` + `Orchestration 1.6.0` → `Quant.Infra.Net 1.5.1`. One `dotnet add package` on `Quant.Infra.Net.Runtime` installs the whole stack; install `Quant.Infra.Net` alone if you only need data/broker/analysis/notification building blocks.
-
----
-
-## Credentials
-
-![EPAT® Certificate of Excellence](assets/credentials/epat-certificate.png)
-
-> **Maintainer certified in Algorithmic Trading — EPAT®, QuantInsti (2024).**
->
-> 📝 EPAT graduation project: [Crypto Perpetual Contract Pair Trading](https://blog.quantinsti.com/crypto-perpetual-contract-pair-trading-project-rong-fan/) (QuantInsti Blog).
+|---|---|---|
+| [`Quant.Infra.Net.Mcp`](https://www.nuget.org/packages/Quant.Infra.Net.Mcp) | 1.6.0 | .NET tool / MCP server: natural-language backtesting, optimization, walk-forward, HTML reports, free data |
+| [`Quant.Infra.Net.Runtime`](https://www.nuget.org/packages/Quant.Infra.Net.Runtime) | 1.6.0 | One `RunMode` switch (Backtest / Paper / Testnet / Live), one-file strategy plugins. **Recommended entry point** |
+| [`Quant.Infra.Net.Backtest`](https://www.nuget.org/packages/Quant.Infra.Net.Backtest) | 1.6.0 | Event-driven, bar-by-bar engine with look-ahead guards and parameter sweeps |
+| [`Quant.Infra.Net.Orchestration`](https://www.nuget.org/packages/Quant.Infra.Net.Orchestration) | 1.6.0 | 8-stage pipeline: data → analysis → signal → target → risk → execution → portfolio → notification |
+| [`Quant.Infra.Net`](https://www.nuget.org/packages/Quant.Infra.Net) | 1.5.3 | Core: data sources, brokers (Binance Futures, Alpaca, Schwab, IB), statistics (ADF, OLS, Z-score, cointegration), notifications (DingTalk, WeChat Work, email) |
 
 ---
 
-## Why Use This Library?
+## 🧱 Architecture
 
-### Pain Points in Quant Development
-
-When building quantitative trading systems, most developers encounter these challenges:
-
-| Challenge | What Happens Without This Library | How Quant.Infra.Net Solves It |
-|-----------|----------------------------------|-------------------------------|
-| **Data source fragmentation** | Each API (Yahoo, Binance, Alpaca, Schwab) returns data in its own format — you write converters for every provider | Unified `ITraditionalFinanceSourceDataService` and `ICryptoSourceDataService` with standardized OHLCV models; new sources are just another implementation of the same interface |
-| **Broker boilerplate** | Connecting to Binance futures requires handling API keys, rate limits, WebSocket reconnects; Schwab requires OAuth flow; IB needs TWS/Gateway IPC | Single `IBrokerService` abstraction — swap brokers by changing configuration, not code |
-| **Reinventing analysis math** | Implementing ADF tests, regressions, Z-Score normalization from scratch every time | `IAnalysisService` provides 10+ statistical methods ready to call |
-| **No alerting pipeline** | Strategies run silently — you only discover results after hours of waiting | Built-in DingTalk, WeChat Work, and email notifications fire on strategy events |
-| **Performance tracking is manual** | Computing CAGR, Sharpe, max drawdown requires writing formulas that may contain bugs | `StrategyPerformanceAnalyzer` implements standard metrics with unit tests; ScottPlot integration for charting |
-
-### Who Is This For?
-
-- Quantitative researchers and traders building strategies on the .NET platform
-- Developers who want a single NuGet package to handle data, execution, and alerting
-- Teams that need consistent broker abstractions across Binance, Alpaca, Schwab, and Interactive Brokers
-- Anyone tired of writing the same integration code for every new project
-
----
-
-## Quick Start
-
-### Step 1: Install via NuGet
-
-```bash
-# Create a project (or use an existing one)
-dotnet new console -n MyQuantApp
-cd MyQuantApp
-
-# Full stack: unified runtime + backtest engine + orchestration pipeline + core
-# (one command pulls in everything via the dependency chain above)
-dotnet add package Quant.Infra.Net.Runtime
-
-# Core only (data / broker / analysis / notifications - no strategy pipeline)
-dotnet add package Quant.Infra.Net --version 1.5.1
-
-# Required for Python-based data sources (Yahoo Finance via yfinance)
-dotnet add package pythonnet
-
-# Recommended for dependency injection
-dotnet add package Microsoft.Extensions.DependencyInjection
-
-# Then run your strategy with ONE config switch - see the Unified Runtime Quick Start
-# "Runtime:RunMode" = Backtest | Paper | Testnet | Live
-services.AddQuantInfraNet(rt => rt.RunMode = RunMode.Backtest,
-                           o => o.Parameters["Strategy"] = "MaCross",
-                           b => b.InitialEquityUsd = 10000);
+```mermaid
+flowchart TB
+    AI["AI agent<br/>Claude · Copilot · Cursor"] -->|MCP| MCP["Quant.Infra.Net.Mcp<br/>run_backtest · optimize_strategy · walk_forward"]
+    DEV["Your C# strategy<br/>one file"] --> RT
+    MCP --> RT["Runtime: RunMode = Backtest | Paper | Testnet | Live"]
+    RT --> PIPE["Same 8-stage pipeline in every mode<br/>Data → Analysis → Signal → Target → Risk → Execution → Portfolio → Notify"]
+    PIPE --> DATA["Data<br/>Yahoo · Binance · Alpaca · Tiingo · CSV · your feed"]
+    PIPE --> BRK["Brokers<br/>Binance Futures · Alpaca · Schwab · Interactive Brokers"]
+    PIPE --> NOTE["Notifications<br/>DingTalk · WeChat Work · Email"]
 ```
 
-### Step 2: Use in Code
-
-```csharp
-using Quant.Infra.Net.SourceData.Service;
-using Quant.Infra.Net.Analysis.Service;
-using Quant.Infra.Net.Broker.Service;
-using Quant.Infra.Net.Notification.Service;
-using Microsoft.Extensions.DependencyInjection;
-
-// Register services via DI
-var services = new ServiceCollection();
-services.AddQuantInfraNet();  // registers all modules
-
-// --- Data: Fetch OHLCV from multiple sources ---
-var dataService = services.BuildServiceProvider()
-    .GetService<ITraditionalFinanceService>();
-var bars = await dataService.GetOhlcvListAsync("AAPL", DateTime.Now.AddDays(-30), DateTime.Now);
-
-// --- Analysis: Pair-trading correlation & ADF test ---
-var analysis = services.BuildServiceProvider()
-    .GetService<IAnalysisService>();
-var correlation = await analysis.CalculateCorrelationAsync(aaplPrices, msftPrices);
-var isStationary = await analysis.TestStationarityAsync(spreadSeries);
-
-// --- Broker: Place orders across platforms ---
-var broker = services.BuildServiceProvider()
-    .GetService<IBrokerService>();
-var orderResult = await broker.PlaceOrderAsync(new OrderRequest { Symbol = "AAPL", Side = Side.Buy, Quantity = 10 });
-
-// --- Portfolio: Performance analytics ---
-var portfolio = services.BuildServiceProvider()
-    .GetService<IPortfolioSnapshotService>();
-var snapshot = await portfolio.GetSnapshotAsync(accountId);
-
-// --- Notification: Strategy alerts ---
-var dingTalk = services.BuildServiceProvider()
-    .GetService<IDingtalkService>();
-await dingTalk.SendStrategyAlert("Mean reversion triggered for AAPL/MSFT spread");
-```
-
-### Step 3: Configuration
-
-```json
-// appsettings.json
-{
-  "BinanceApi": {
-    "ApiKey": "your-api-key",
-    "SecretKey": "your-secret-key",
-    "Environment": "testnet"   // testnet | paper | live
-  },
-  "YahooFinance": {
-    "PythonPath": "C:\\Users\\you\\Anaconda3\\python.exe"
-  }
-}
-```
+Because every mode goes through the same pipeline, what you backtest is what you deploy.
 
 ---
 
-## Version History
+## 📚 Documentation
 
-| Version | Date | Description |
-|---------|------|-------------|
-| **1.6.0** *(current)* | 2026-08-29 | **Three new NuGet packages** — `Quant.Infra.Net.Orchestration` 1.6.0 (event-driven 8-stage strategy pipeline), `Quant.Infra.Net.Backtest` 1.6.0 (bar-by-bar backtest engine with look-ahead-bias guards), `Quant.Infra.Net.Runtime` 1.6.0 (unified `RunMode` switch: Backtest/Paper/Testnet/Live + one-file-per-strategy plugin convention). Core `Quant.Infra.Net` stays at 1.5.1, unchanged. See [Trading Runtime Design](TradingRuntimeDesign.md) and [Complete Walkthrough](CompleteWalkthrough-en.md) |
-| **1.5.2** | 2026-08-28 | **Orchestration Layer (Beta)** — new `Quant.Infra.Net.Orchestration` package: `AddQuantInfraNetOrchestration()` DI entry point, 8-stage pipeline, 3 built-in strategies (PairTradingZScore/MaCross/MeanReversion), Paper (in-memory, zero-network) execution by default, risk gate with kill-switch, severity-routed notifications, and a runnable console demo. See [Orchestration Layer Design](OrchestrationLayerDesign.md) |
-| 1.5.1 | 2026-08-12 | Code_Standards.md compliance — bilingual XML documentation on all public members, parameter validation audit, version alignment |
-| 1.5.0 | 2026-05-28 | **Interactive Brokers (InterReact)** full integration — order, market data, account management via TWS/Gateway; **Charles Schwab** full broker service — quotes, option chains, orders, positions; license changed to MIT; enhanced analysis service unit tests |
-| 1.4.0 | 2024-05-16 | Updated API integrations to handle recent broker changes, added comprehensive documentation |
-| 1.3.0 | 2024-04-05 | Enhanced notification services with email templates and improved error handling |
-| 1.2.0 | 2024-03-10 | Improved Python integration stability and added new statistical analysis methods |
-| 1.1.0 | 2024-02-20 | Added support for Schwab broker integration and enhanced portfolio performance metrics |
-| 1.0.0 | 2024-01-15 | Initial release with core features: data acquisition, statistical analysis, trade execution, and notifications |
+| Document | What's inside |
+|---|---|
+| [CLEC backtests](backtests/README.md) · [Optimization study](backtests/clec-optimization.md) | 10 allocation mixes vs the S&P 500, one report each, plus the out-of-sample search |
+| [MCP Server](manual/mcp-server-en.md) | Install, client config, every tool and prompt, data sources, safety boundary |
+| [Complete Walkthrough](CompleteWalkthrough-en.md) | From a few lines of code to the real QQQM backtest |
+| [Unified Runtime Quick Start](UnifiedRuntimeQuickStart-en.md) | One config value for Backtest / Paper; swapping data, strategy, credentials |
+| [Backtest Quick Start](BacktestQuickStart-en.md) | Bar-by-bar engine, look-ahead guards, metrics, sweeps |
+| [How-to Guides](manual/README-en.md) | Configuration reference, writing strategies, custom risk / data / broker, deployment, FAQ |
+| [GitHub Pages](https://memoryfraction.github.io/Quant.Infra.Net/) | Documentation site |
 
 ---
 
-## Code Standards
+## 👤 About the author
 
-This project follows the coding standards defined in [CodeStandard.md](CodeStandard.md):
-- Bilingual (Chinese + English) XML documentation on all public members
-- SOLID principles for design
-- Parameter validation on all entry points
-- UTC time handling and consistent enum management
+Built and maintained by **Rong Fan** ([@memoryfraction](https://github.com/memoryfraction)), a .NET engineer and quant developer.
 
----
+- 🎓 **EPAT® Certificate of Excellence**, QuantInsti (2024). Graduation project: [Crypto Perpetual Contract Pair Trading](https://blog.quantinsti.com/crypto-perpetual-contract-pair-trading-project-rong-fan/)
+- 📘 Author of the e-book *Blockchain Quant Trading in Practice* ([Amazon](https://www.amazon.com/dp/B0D7W89ZQD))
+- 🧮 Runs [Alpha Wealth Lab](https://www.alpha-wealth-lab.com/planner/), free wealth-planning calculators (433 allocation, pledge lifespan, rebalancing, withdrawal)
+- 🔧 Other open source: [LLSDA](https://github.com/memoryfraction/LLSDA-Lightning-Location-System-Data-Analyzer) (lightning data analysis, cited in a TechRxiv preprint) · [HealthData-Interoperability-Csharp](https://github.com/memoryfraction/HealthData-Interoperability-Csharp) (FHIR R4/R5 engine)
 
-## Notes on Testing
-
-> ⚠️ **Cryptocurrency Exchange Region Notice**: Cryptocurrency exchange regulations vary by country/region. For example, Binance API may not be accessible from Mainland,China or the US but works in Singapore. This repository only provides technical solutions—comply with local laws and take full responsibility for your own actions.
->
-> ```bash
-> dotnet test --filter "FullyQualifiedName!~Binance"
-> ```
+![EPAT® Certificate of Excellence](../images/credentials/epat-certificate.png)
 
 ---
 
-## Ecosystem
+## 🤝 Feedback and working together
 
-| Project | Description |
-|---------|-------------|
-| **Quant.Infra.Net** (this repo) | Core quantitative trading library — data, analysis, execution, notifications |
-| [**Quant.Infra.Net.Pro**](https://github.com/memoryfraction/Quant.Infra.Net.Pro) | Production-grade Charles Schwab web application with unattended OAuth token management and full dashboard |
+The code is free under the MIT license, commercial use included. Your feedback shapes the roadmap.
+
+| I want to… | Go to |
+|---|---|
+| 🐞 Report a bug, or ✨ ask for a feature, broker or data source | [Open an Issue](https://github.com/memoryfraction/Quant.Infra.Net/issues/new) |
+| 💡 Ask a question or share an idea | [Start a Discussion](https://github.com/memoryfraction/Quant.Infra.Net/discussions) |
+| 🔒 Report a security problem | [SECURITY.md](../SECURITY.md) (please don't open a public issue) |
+| 💼 Consulting, broker integration or custom development | [Book a 30-minute call](https://calendly.com/rex-fan18/30min) · [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com) · [Services & pricing](Commercial.md) |
 
 ---
 
-## License
+## ⚖️ Disclaimer
 
-[MIT](LICENSE) — © 2024–2026 Rong (Rex) Fan
-
-
-
-## 💼 Business Inquiries
-
-Using Quant.Infra.Net in a commercial product or team?
-
-| Option | What you get | Starting at | Start |
-|---|---|---|---|
-| **1 · Consulting** | 30–60 min: architecture / data / execution / backtest design | **$200/hr** | [Book 30 min](https://calendly.com/rex-fan18/30min) |
-| **2 · Broker Integration** | Wire a single broker (Schwab / Interactive Brokers / Binance / Alpaca) into your stack — auth, order routing, positions/fills sync | **$5,000** | [Book a scoping call](https://calendly.com/rex-fan18/30min) |
-| **3 · Multi-Broker Execution Layer** | Unified execution across 2+ brokers; backtest → paper → live parity | **$12,000** | [Book a scoping call](https://calendly.com/rex-fan18/30min) |
-| **4 · Bespoke** | Custom modules scoped to your product needs | **$15,000+** | [Book a scoping call](https://calendly.com/rex-fan18/30min) |
-| **5 · E-book** | 《区块链量化投资实战 / Blockchain Quant Trading in Practice》 | — | [Amazon](https://www.amazon.com/dp/B0D7W89ZQD) · [Xiaohongshu post](https://www.xiaohongshu.com/discovery/item/6a9366b4000000002102fbff) |
-
-- **Email**: [rex.fan18@gmail.com](mailto:rex.fan18@gmail.com)
-- **Book a call**: [https://calendly.com/rex-fan18/30min](https://calendly.com/rex-fan18/30min)
-
-> The open source release is MIT-licensed and free for commercial use. Paid services cover consulting, onboarding, and bespoke development. Prices above are starting points — final scope/quote is set on the scoping call.
-
-> Full service & pricing details: [Commercial.md](Commercial.md).
----
-
-> **Disclaimer**: See [DISCLAIMER.md](Disclaimer.md) for full disclaimer and limitation of liability / 详见 [免责声明](Disclaimer.md) 了解完整免责条款与责任限制。
-
-
+Quant.Infra.Net is a research and engineering tool. **Nothing here is investment advice.** Backtests describe the past; they don't predict the future. Market style can change at any time, and strategies that worked can stop working. Free data sources have no SLA. You are responsible for your own decisions and results. Strategy methods referenced here (such as the CLEC allocation mixes) belong to their authors; this project is not affiliated with or endorsed by them. Full text: [DISCLAIMER](DISCLAIMER.md).

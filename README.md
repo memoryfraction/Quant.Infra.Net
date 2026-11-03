@@ -71,6 +71,59 @@ Building a trading system in .NET is usually not one problem — it's **four pro
 
 ---
 
+## 🤖 0. No code: backtest in plain language with Claude / 零代码：用自然语言让 Claude 帮你回测
+
+> **New in MCP server 1.6** — install one .NET tool, add one line to your AI client, then *talk* to it. Free data and no API key are needed.
+> **MCP server 1.6 新增**——装一个 .NET 工具，在 AI 客户端里加一行配置，然后直接*对话*。数据免费，不需要 API key。
+
+**① Install / 安装**（需要 [.NET 8+ SDK](https://dotnet.microsoft.com/download)）
+
+```bash
+dotnet tool install -g Quant.Infra.Net.Mcp
+```
+
+**② Add to Claude Desktop / 加到 Claude Desktop**（`claude_desktop_config.json`；Claude Code 用 `claude mcp add quant-infra-net -- quant-infra-mcp`）
+
+```json
+{ "mcpServers": { "quant-infra-net": { "command": "quant-infra-mcp" } } }
+```
+
+> With the .NET 10 SDK you can skip step ① and use `"command": "dnx", "args": ["Quant.Infra.Net.Mcp", "--yes"]`.
+> 装了 .NET 10 SDK 可以跳过第①步，直接用 `"command": "dnx", "args": ["Quant.Infra.Net.Mcp", "--yes"]`。
+
+**③ Just ask / 直接问**
+
+> *"Rotate between SPY, QQQ, IWM, EFA, EEM, TLT, GLD and DBC since 2008. Each month hold the 3 with the strongest momentum, preferring calmer ones, and switch to SHY when SPY is below its 200-day average. Compare to SPY and give me the report."*
+> *"在 SPY、QQQ、IWM、EFA、EEM、TLT、GLD、DBC 之间轮动，从 2008 年开始。每月持有动量最强的 3 只，同等条件下优先选波动小的；SPY 跌破 200 日均线时切到 SHY。和 SPY 对比，给我报告。"*
+> *"Which MA period works best for QQQ — and does it still hold out of sample?"* / *"QQQ 用多少日均线最好？样本外还成立吗？"*
+> *"Does this only work in bull markets? Run a walk-forward."* / *"这个策略是不是只在牛市有效？做一次滚动前推检验。"*
+
+**What you get / 你会得到：** metrics vs a buy-and-hold benchmark, a market-regime breakdown, calendar-year and monthly returns, and automatic warnings. You also get a **self-contained HTML report with charts** showing equity vs benchmark, drawdown, rolling Sharpe, a regime table, a monthly heatmap and the fills. Keep the conversation going ("make it monthly", "add a low-vol factor", "what if I skip the last month?") and the AI re-runs it in seconds, since downloaded data is cached.
+指标与"买入持有"基准的对比、市场状态拆解、年度/月度收益、自动风险提示，外加一份**自包含的图文 HTML 报告**：权益 vs 基准、回撤、滚动夏普、市场状态表、月度热力图、成交明细。然后继续对话迭代（"改成月度调仓""加一个低波动因子""跳过最近一个月试试"），数据有缓存，几秒出结果。
+
+| Tool / 工具 | What it does / 作用 |
+|---|---|
+| `run_backtest` | One backtest: metrics, benchmark, regimes and HTML report. Strategies: `MaCross`, `MeanReversion`, `PairTradingZScore`, **`MultiFactor`** / 单次回测 + 基准 + 市场状态 + 图文报告 |
+| `optimize_strategy` | Grid search with an **out-of-sample holdout**: reports the most *robust* parameters (not just the in-sample best) and flags overfitting / 网格调参 + 样本外检验，给出最稳健参数并识别过拟合 |
+| `walk_forward` | Rolling re-optimize → trade the next unseen window, stitched out-of-sample: % profitable windows, parameter stability, WF efficiency / 滚动前推：每段训练选参、下一段盲测，拼接样本外曲线 |
+| `list_data_sources` | Free sources first: **Yahoo** and **Binance** need no key; **Tiingo** needs a free key; **LocalFile** uses your CSVs / 免费数据源目录 |
+| `list_strategies` · `fetch_ohlcv` · `run_paper_cycle` | Catalog, raw bars, one paper-trading cycle / 策略目录、原始 K 线、单次纸面模拟 |
+| Prompts: `quickstart` · `strategy_research` · `regime_check` | One-click guided workflows in Claude Desktop / Claude Desktop 里一键启动的引导流程 |
+
+**Free data, no key / 免费免 key 数据：** `Yahoo` covers US, HK and China A stocks, ETFs, indices such as `^GSPC`, FX such as `EURUSD=X` and futures such as `GC=F`, with prices adjusted for dividends and splits. `Binance` covers crypto such as `BTCUSDT`. Warm-up history before your start date is fetched automatically. Fills default to the **next bar's open**, so there is no look-ahead. Everything is read-only: **the MCP server never places live orders**.
+`Yahoo`：美股、港股、A 股、ETF、指数（如 `^GSPC`）、外汇（如 `EURUSD=X`）、期货（如 `GC=F`），已按分红和拆股复权。`Binance`：加密货币（如 `BTCUSDT`）。起始日之前的预热数据自动补齐；默认按**下一根 K 线开盘价**成交，避免用到未来价格。全部只读：**MCP 永不实盘下单**。
+
+**When strategies stop working (style / regime shifts) / 风格切换怎么办：** a strategy that worked in one period often fails in the next. The server attacks this in four layers:
+一个策略在某段时间有效、换一段就失效，是常态。这里分四层应对：
+1. **Diagnose / 诊断** — every report splits returns by regime (Bull/Bear × Calm/Volatile) and plots a rolling 6-month Sharpe, so you can see *when* the edge disappears. / 每份报告都按"牛熊 × 平稳/动荡"拆解收益，并画滚动 6 个月夏普，看清优势在*哪段时间*消失。
+2. **Validate / 验证** — `optimize_strategy` keeps an out-of-sample tail and `walk_forward` re-tests across many windows. You trust parameters that *survive*, not the ones that peaked in-sample. / 只相信在样本外*活下来*的参数，不信样本内的峰值。
+3. **Adapt / 自适应** — `walk_forward` re-optimizes on a rolling basis, and its stitched out-of-sample curve shows what adaptive re-tuning would actually have earned. / 滚动重新优化，拼接出的样本外曲线就是"持续自适应调参"真实能拿到的收益。
+4. **Defend / 防御** — `MultiFactor` has a regime filter (`regimeSymbol`: go to cash or a `defensiveSymbol` when the market is below its 200-day average), an absolute-momentum filter, and factor blending (momentum + low-vol + trend), so you aren't betting on one style. / 市场状态过滤（跌破 200 日均线就切到现金或防御资产）+ 绝对动量过滤 + 多因子混合，不把鸡蛋押在单一风格上。
+
+📖 Full guide / 完整指南：[MCP Server (EN)](docs/manual/mcp-server-en.md) · [AI Agent 接入（中文）](docs/manual/mcp-server-ch.md)
+
+---
+
 ## Is this for you? / 这适合我吗？
 
 **You are the target reader if / 如果你是：**
@@ -334,7 +387,7 @@ Set them in `appsettings.json` under `Orchestration:Parameters`, or pass them in
 | [Architecture Overview / 架构概览](docs/Architect.md) | System design, module relationships, data flow |
 | [Code Standards / 代码规范](docs/CodeStandard.md) | SOLID principles, XML docs, naming conventions, checklist |
 | [**How-to Guides (docs/manual)**](docs/manual/README-en.md) / [任务导向深度指南 (中文)](docs/manual/README-ch.md) | Task-oriented deep guides for the Runtime/Orchestration/Backtest layers: full configuration reference, writing a strategy, custom risk/data source/broker, testing & deployment, FAQ |
-| [🤖 **MCP Server (AI Agent access)**](docs/manual/mcp-server-en.md) / [AI Agent 接入 (中文)](docs/manual/mcp-server-ch.md) | Drive Quant.Infra.Net from Claude Desktop / Cursor / any MCP client — `list_strategies` · `run_backtest` · `run_paper_cycle` · `fetch_ohlcv`. Natural-language prompts, SOLID data sources (Finnhub / FMP / TwelveData / LocalFile), explicit no-live-order boundary |
+| [🤖 **MCP Server (AI Agent access)**](docs/manual/mcp-server-en.md) / [AI Agent 接入 (中文)](docs/manual/mcp-server-ch.md) | `dotnet tool install -g Quant.Infra.Net.Mcp`, then drive it from Claude Desktop / Claude Code / Copilot / Cursor. Tools: `run_backtest` (HTML report + regimes), `optimize_strategy` (out-of-sample), `walk_forward`, `list_data_sources`, `list_strategies`, `fetch_ohlcv`, `run_paper_cycle`. Free no-key data (Yahoo, Binance) + Tiingo / LocalFile; `MultiFactor` rotation; explicit no-live-order boundary |
 
 ---
 
@@ -352,6 +405,12 @@ A: Use the unified `IBrokerService` abstraction — Quant.Infra.Net wraps Intera
 **Q: Best .NET quantitative trading framework in 2026? / 2026 年最好的 .NET 量化交易框架？**
 A: For C# developers who want a compact, self-hostable framework (not a hosted cloud like QuantConnect), Quant.Infra.Net gives you data → strategy → backtest → execution → notifications in a few NuGet packages you own and can extend. `对想用 C#、希望自托管（而非 QuantConnect 这类云端托管）的开发者，Quant.Infra.Net 用几个 NuGet 包就能串起 数据 → 策略 → 回测 → 执行 → 通知，且完全归你掌控、可自由扩展。`
 
+**Q: Can I backtest a strategy just by describing it to Claude / ChatGPT-style AI? / 能不能用自然语言让 AI 帮我回测？**
+A: Yes. Install the MCP server (`dotnet tool install -g Quant.Infra.Net.Mcp`), add it to Claude Desktop or Claude Code, and describe your idea. It uses free Yahoo / Binance data, writes an HTML report with charts, and can optimize and walk-forward-test the strategy on request. See [section 0](#-0-no-code-backtest-in-plain-language-with-claude--零代码用自然语言让-claude-帮你回测). `可以：装 MCP server、加到 Claude，然后用一句话描述策略即可。`
+
+**Q: Does it support multi-factor backtests? / 支持多因子回测吗？**
+A: Yes, via the `MultiFactor` strategy. It does cross-sectional rotation over a universe, scoring with weighted z-scores of momentum, low volatility, trend, short-term reversal and risk-adjusted momentum. It holds the top K with equal weights and periodic rebalancing, and has optional absolute-momentum and regime filters. Fundamental factors such as value and quality need a fundamentals feed and are not built in yet. `支持价格/波动类多因子横截面轮动；估值、质量等基本面因子需要财报数据，暂未内置。`
+
 **Q: How do I backtest a C# mean-reversion strategy? / 怎么用 C# 回测均值回归策略？**
 A: The QQQM reverse-MA200 DCA walkthrough in this repo is a working mean-reversion example: target weight = base ± add/trim around the SMA200, re-run it with your own thresholds and bars. `本仓库的 QQQM 反向 MA200 DCA 就是一个可运行的均值回归示例：目标权重 = 基准 ± 围绕 SMA200 的加/减系数，换成你自己的阈值和数据即可复跑。`
 
@@ -361,6 +420,7 @@ A: The QQQM reverse-MA200 DCA walkthrough in this repo is a working mean-reversi
 
 | Date | Change / 变更 |
 |---|---|
+| 2026-11-03 | **MCP server 1.6.0 — `Quant.Infra.Net.Mcp` ships as a .NET tool / NuGet MCP server package** (`dotnet tool install -g Quant.Infra.Net.Mcp` or `dnx`). Free no-key data sources (Yahoo, Binance) + Tiingo, disk cache, `MultiFactor` rotation strategy, self-contained HTML reports with charts, benchmark + market-regime analysis, `optimize_strategy` (out-of-sample holdout), `walk_forward`, `list_data_sources`, MCP prompts, automatic warm-up, next-bar-open fills by default. Default sizing changed to 100% for single-symbol strategies (was 30%). / MCP 1.6：免费数据源、多因子、图文报告、市场状态分析、样本外优化、滚动前推。 |
 | 2026-08-29 | **v1.6.0 — three new NuGet packages**: `Quant.Infra.Net.Orchestration`, `Quant.Infra.Net.Backtest`, `Quant.Infra.Net.Runtime` (all 1.6.0) on top of core `Quant.Infra.Net` 1.5.1. Unified `RunMode` switch + one-file-per-strategy plugin convention. Core package unchanged at 1.5.1. |
 | 2026-07-20 | Phase 2 unified runtime (feature/backtest-engine): `AddQuantInfraNet` one entry + `RunMode` one switch; Backtest↔Paper parity regression tests; demo hosts converged into `Quant.Infra.Net.Runtime.Console` |
 

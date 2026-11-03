@@ -13,7 +13,8 @@ namespace Quant.Infra.Net.Mcp;
 /// </summary>
 /// <remarks>
 /// 工具目录（全部只读 / 模拟，绝不触真实资金）：
-///   list_strategies / run_backtest / run_paper_cycle / fetch_ohlcv
+///   list_strategies / list_data_sources / run_backtest / optimize_strategy / walk_forward / run_paper_cycle / fetch_ohlcv
+///   提示词 / prompts: quickstart / strategy_research / regime_check
 ///   （完整说明见 docs/manual/mcp-server-en.md / mcp-server-ch.md）
 /// </remarks>
 public static class QuantInfraNetMcpServer
@@ -33,7 +34,8 @@ public static class QuantInfraNetMcpServer
         builder.Services
             .AddMcpServer()
             .WithStdioServerTransport()
-            .WithToolsFromAssembly(typeof(QuantInfraNetMcpServer).Assembly);
+            .WithToolsFromAssembly(typeof(QuantInfraNetMcpServer).Assembly)
+            .WithPromptsFromAssembly(typeof(QuantInfraNetMcpServer).Assembly);
 
         foreach (var descriptor in services)
         {

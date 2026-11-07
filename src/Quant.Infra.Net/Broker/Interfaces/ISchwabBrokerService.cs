@@ -73,6 +73,13 @@ namespace Quant.Infra.Net.Broker.Interfaces
         Task<List<SchwabOrder>> GetOrdersAsync(int maxResults = 100);
 
         /// <summary>
+        /// Gets account transactions of the given Schwab types (comma-separated, e.g. "ACH_RECEIPT,WIRE_OUT")
+        /// between two UTC times. Ranges longer than one year are fetched in yearly chunks.
+        /// 获取两个 UTC 时间之间指定类型（逗号分隔）的账户交易记录；超过一年的区间按年分段拉取。
+        /// </summary>
+        Task<List<SchwabTransaction>> GetTransactionsAsync(DateTime startUtc, DateTime endUtc, string types);
+
+        /// <summary>
         /// Checks whether the market is open.
         /// 检查市场是否开盘。
         /// </summary>

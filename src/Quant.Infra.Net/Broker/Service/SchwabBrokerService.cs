@@ -666,6 +666,91 @@ namespace Quant.Infra.Net.Broker.Service
             }
         }
 
+        /// <inheritdoc />
+        public async Task<List<SchwabTransaction>> GetTransactionsAsync(DateTime startUtc, DateTime endUtc, string types)
+        {
+            if (string.IsNullOrWhiteSpace(types))
+                throw new ArgumentException("At least one transaction type is required.", nameof(types));
+            if (endUtc <= startUtc)
+                return new List<SchwabTransaction>();
+
+            var accountHash = await GetAccountHashAsync();
+            var result = new List<SchwabTransaction>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+
+            // Schwab caps one request at a one-year window, so walk the range in chunks.
+            // Schwab 单次请求最多一年，按段拉取。
+            var chunkStart = startUtc;
+            while (chunkStart < endUtc)
+            {
+                var chunkEnd = chunkStart.AddDays(360) < endUtc ? chunkStart.AddDays(360) : endUtc;
+                var query = $"startDate={Uri.EscapeDataString(chunkStart.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))}" +
+                            $"&endDate={Uri.EscapeDataString(chunkEnd.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))}" +
+                            $"&types={Uri.EscapeDataString(types)}";
+
+                var request = new HttpRequestMessage(HttpMethod.Get, $"accounts/{accountHash}/transactions?{query}");
+                var response = await SendWithAuthAsync(request);
+                response.EnsureSuccessStatusCode();
+                var content = await response.Content.ReadAsStringAsync();
+                var array = JsonSerializer.Deserialize<JsonElement>(content);
+                if (array.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in array.EnumerateArray())
+                    {
+                        var tx = ParseTransaction(item);
+                        var key = string.IsNullOrEmpty(tx.ActivityId) ? item.GetRawText() : tx.ActivityId;
+                        if (seen.Add(key))
+                            result.Add(tx);
+                    }
+                }
+
+                chunkStart = chunkEnd;
+            }
+
+            UtilityService.LogAndWriteLine($"[Schwab] Loaded {result.Count} transactions");
+            return result.OrderBy(t => t.TimeUtc).ToList();
+        }
+
+        private static SchwabTransaction ParseTransaction(JsonElement item)
+        {
+            var timeText = GetJsonString(item, "time");
+            if (string.IsNullOrEmpty(timeText))
+                timeText = GetJsonString(item, "tradeDate");
+            DateTime.TryParse(timeText, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
+                out var timeUtc);
+
+            var tx = new SchwabTransaction
+            {
+                ActivityId = GetJsonString(item, "activityId"),
+                TimeUtc = timeUtc,
+                Type = GetJsonString(item, "type"),
+                Status = GetJsonString(item, "status"),
+                NetAmount = GetJsonDecimal(item, "netAmount"),
+                Description = GetJsonString(item, "description"),
+            };
+
+            if (item.TryGetProperty("transferItems", out var legs) && legs.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var leg in legs.EnumerateArray())
+                {
+                    var hasInstrument = leg.TryGetProperty("instrument", out var instrument) && instrument.ValueKind == JsonValueKind.Object;
+                    tx.TransferItems.Add(new SchwabTransferItem
+                    {
+                        Symbol = hasInstrument ? GetJsonString(instrument, "symbol") : string.Empty,
+                        AssetType = hasInstrument ? GetJsonString(instrument, "assetType") : string.Empty,
+                        Amount = GetJsonDecimal(leg, "amount"),
+                        Cost = GetJsonDecimal(leg, "cost"),
+                        Price = GetJsonDecimal(leg, "price"),
+                        FeeType = GetJsonString(leg, "feeType"),
+                        PositionEffect = GetJsonString(leg, "positionEffect"),
+                    });
+                }
+            }
+
+            return tx;
+        }
+
         private SchwabOrder ParseOrder(JsonElement orderData)
         {
             JsonElement orderLeg = default;

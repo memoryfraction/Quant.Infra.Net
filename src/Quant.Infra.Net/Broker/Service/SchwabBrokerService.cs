@@ -720,7 +720,7 @@ namespace Quant.Infra.Net.Broker.Service
                 System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
                 out var timeUtc);
 
-            return new SchwabTransaction
+            var tx = new SchwabTransaction
             {
                 ActivityId = GetJsonString(item, "activityId"),
                 TimeUtc = timeUtc,
@@ -729,6 +729,26 @@ namespace Quant.Infra.Net.Broker.Service
                 NetAmount = GetJsonDecimal(item, "netAmount"),
                 Description = GetJsonString(item, "description"),
             };
+
+            if (item.TryGetProperty("transferItems", out var legs) && legs.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var leg in legs.EnumerateArray())
+                {
+                    var hasInstrument = leg.TryGetProperty("instrument", out var instrument) && instrument.ValueKind == JsonValueKind.Object;
+                    tx.TransferItems.Add(new SchwabTransferItem
+                    {
+                        Symbol = hasInstrument ? GetJsonString(instrument, "symbol") : string.Empty,
+                        AssetType = hasInstrument ? GetJsonString(instrument, "assetType") : string.Empty,
+                        Amount = GetJsonDecimal(leg, "amount"),
+                        Cost = GetJsonDecimal(leg, "cost"),
+                        Price = GetJsonDecimal(leg, "price"),
+                        FeeType = GetJsonString(leg, "feeType"),
+                        PositionEffect = GetJsonString(leg, "positionEffect"),
+                    });
+                }
+            }
+
+            return tx;
         }
 
         private SchwabOrder ParseOrder(JsonElement orderData)

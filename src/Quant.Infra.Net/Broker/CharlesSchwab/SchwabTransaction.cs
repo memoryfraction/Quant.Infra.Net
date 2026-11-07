@@ -25,4 +25,35 @@ public class SchwabTransaction
 
     /// <summary>Schwab description. 描述。</summary>
     public string Description { get; set; } = string.Empty;
+
+    /// <summary>Instrument legs (shares moved, fees, cash). 交易明细腿（股数变动、费用、现金）。</summary>
+    public System.Collections.Generic.List<SchwabTransferItem> TransferItems { get; set; } = new();
+}
+
+/// <summary>
+/// One leg of a Schwab transaction.
+/// Schwab 交易记录中的一条明细。
+/// </summary>
+public class SchwabTransferItem
+{
+    /// <summary>Instrument symbol, e.g. SPY or CURRENCY_USD. 证券代码。</summary>
+    public string Symbol { get; set; } = string.Empty;
+
+    /// <summary>Instrument asset type, e.g. EQUITY, COLLECTIVE_INVESTMENT, OPTION, CURRENCY. 资产类型。</summary>
+    public string AssetType { get; set; } = string.Empty;
+
+    /// <summary>Quantity moved (Schwab "amount"). 变动数量。</summary>
+    public decimal Amount { get; set; }
+
+    /// <summary>Cash cost of this leg (negative = paid). 本腿现金成本（负数为支出）。</summary>
+    public decimal Cost { get; set; }
+
+    /// <summary>Price per unit. 单价。</summary>
+    public decimal Price { get; set; }
+
+    /// <summary>Fee type when this leg is a fee. 费用类型。</summary>
+    public string FeeType { get; set; } = string.Empty;
+
+    /// <summary>OPENING / CLOSING. 开仓/平仓。</summary>
+    public string PositionEffect { get; set; } = string.Empty;
 }

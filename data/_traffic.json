@@ -1,6 +1,70 @@
 {
-  "updatedAt": "2026-09-03T23:08:54Z",
   "repo": "memoryfraction/Quant.Infra.Net",
+  "visitors": {
+    "totalViews14d": 97,
+    "uniqueVisitors14d": 6,
+    "daily": [
+      {
+        "date": "2026-08-17",
+        "views": 5,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-18",
+        "views": 6,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-19",
+        "views": 7,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-20",
+        "views": 8,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-21",
+        "views": 12,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-22",
+        "views": 15,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-23",
+        "views": 14,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-24",
+        "views": 15,
+        "uniqueVisitors": 1
+      },
+      {
+        "date": "2026-08-25",
+        "views": 15,
+        "uniqueVisitors": 1
+      }
+    ],
+    "note": "Totals are exact from GitHub Traffic snapshot (2026-08-30). Per-day series is approximate (estimated from chart)."
+  },
+  "updatedAt": "2026-11-13T18:39:22Z",
+  "referringSites": [
+    {
+      "site": "github.com",
+      "views": 14,
+      "uniqueVisitors": 5
+    },
+    {
+      "site": "memoryfraction.github.io",
+      "views": 8,
+      "uniqueVisitors": 1
+    }
+  ],
   "substack": {
     "period": "2026-06-01/2026-08-30",
     "totalViews": 26,
@@ -91,73 +155,9 @@
       "uniqueVisitors": 1
     }
   ],
-  "visitors": {
-    "totalViews14d": 97,
-    "uniqueVisitors14d": 6,
-    "daily": [
-      {
-        "date": "2026-08-17",
-        "views": 5,
-        "uniqueVisitors": 1
-      },
-      {
-        "date": "2026-08-18",
-        "views": 6,
-        "uniqueVisitors": 1
-      },
-      {
-        "date": "2026-08-19",
-        "views": 7,
-        "uniqueVisitors": 1
-      },
-      {
-        "date": "2026-08-20",
-        "views": 8,
-        "uniqueVisitors": 1
-      },
-      {
-        "date": "2026-08-21",
-        "views": 12,
-        "uniqueVisitors": 1
-      },
-      {
-        "date": "2026-08-22",
-        "views": 15,
-        "uniqueVisitors": 1
-      },
-      {
-        "date": "2026-08-23",
-        "views": 14,
-        "uniqueVisitors": 1
-      },
-      {
-        "date": "2026-08-24",
-        "views": 15,
-        "uniqueVisitors": 1
-      },
-      {
-        "date": "2026-08-25",
-        "views": 15,
-        "uniqueVisitors": 1
-      }
-    ],
-    "note": "Totals are exact from GitHub Traffic snapshot (2026-08-30). Per-day series is approximate (estimated from chart)."
-  },
   "nuget": {
     "version": "1.5.3",
-    "downloads": 205,
-    "note": "Lifetime cumulative from NuGet API (azuresearch-usnc)."
-  },
-  "referringSites": [
-    {
-      "site": "github.com",
-      "views": 14,
-      "uniqueVisitors": 5
-    },
-    {
-      "site": "memoryfraction.github.io",
-      "views": 8,
-      "uniqueVisitors": 1
-    }
-  ]
+    "note": "Lifetime cumulative from NuGet API (azuresearch-usnc).",
+    "downloads": 452
+  }
 }
